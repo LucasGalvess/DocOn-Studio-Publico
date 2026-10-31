@@ -322,7 +322,7 @@ body.resizing.h{cursor:row-resize}
         <a class="btn sm ghost" id="newTab" href="https://claude.ai/artifact/SEU-STUDIO" target="_blank" rel="noopener" role="menuitem">Abrir em nova aba ↗</a>
       </div></span>
     <button class="btn" id="sendAprov" type="button">Enviar para aprovação</button>
-    <button class="btn pri" id="exportVid" type="button" title="Liberado depois que o cliente aprova">Exportar vídeo</button>
+    <button class="btn pri" id="exportVid" type="button" title="Exportar o vídeo pronto (MP4, MOV, MP3 ou WAV)">Exportar vídeo</button>
   </header>
 
   <div class="work">
@@ -559,7 +559,7 @@ function renderTop() {
   sel.disabled = !ids.length;
   const p = cur(); const pill = document.getElementById('stPill'); const sa = document.getElementById('sendAprov'), ex = document.getElementById('exportVid');
   if (pill) { pill.hidden = !p; pill.textContent = S.savingRaw ? (S.savingRawMsg || 'salvando o bruto…') : stOf(p); pill.dataset.s = S.savingRaw ? '' : stOf(p); }
-  if (sa && p) { const ap = stOf(p) === 'aprovado'; sa.hidden = ap; sa.textContent = openAprovFor(S.cur) ? 'Reenviar para aprovação' : 'Enviar para aprovação'; sa.className = 'btn ' + (ap ? '' : 'pri'); ex.className = 'btn ' + (ap ? 'pri' : 'ghost'); ex.textContent = ap ? 'Exportar vídeo' : 'Exportar 🔒'; }
+  if (sa && p) { const ap = stOf(p) === 'aprovado'; sa.hidden = ap; sa.textContent = openAprovFor(S.cur) ? 'Reenviar para aprovação' : 'Enviar para aprovação'; sa.className = 'btn'; ex.className = 'btn pri'; ex.textContent = 'Exportar vídeo'; }
 }
 
 /* ======================= render: aba Projeto ======================= */
@@ -2268,15 +2268,10 @@ async function exportVideo(fmt, q, say, bar) {
 }
 function openExportFinal() {
   const p = cur(); if (!p) { toast('Abra um projeto'); return; }
-  if (stOf(p) !== 'aprovado') {
-    document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="lkT"><h3 id="lkT">Exportação liberada após a aprovação</h3>
-      <p>Status atual: <span class="stpill" data-s="${stOf(p)}">${stOf(p)}</span></p><p class="hint">Envie o vídeo para o cliente aprovar. Assim que ele aprovar, o projeto fica “aprovado” e a exportação em MP4, MOV, MP3 e WAV é liberada aqui.</p>
-      <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn" type="button" id="lkX">Fechar</button><button class="btn pri" type="button" id="lkS">${openAprovFor(S.cur) ? 'Reenviar para aprovação' : 'Enviar para aprovação'}</button></div></div></div>`;
-    document.getElementById('lkX').onclick = () => document.getElementById('modalRoot').innerHTML = ''; document.getElementById('lkS').onclick = () => sendToApproval(); return;
-  }
   const map = cutMap(p); const temBruto = !!S.media.src && !!S.videoDur && !S.viewOnly; const vs = (p.versoes || []).filter((v) => v.asset_id);
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="xT"><h3 id="xT">Exportar vídeo</h3>
     <p class="hint">Gera o arquivo pronto, como no Premiere ou no CapCut: o vídeo bruto com os cortes, efeitos, painéis, legenda, sons e trilha, do jeito que aparece em “Como vai ficar”. Tudo é feito neste computador; nada é enviado.</p>
+    ${stOf(p) !== 'aprovado' ? `<p class="hint">Status: <span class="stpill" data-s="${stOf(p)}">${stOf(p)}</span>. A exportação é livre; a aprovação do cliente é opcional.</p>` : ''}
     ${temBruto ? '' : `<div class="card" style="border-color:var(--warn)"><b>Abra o vídeo bruto primeiro</b><p>O arquivo bruto fica só no seu computador; abra-o com “Abrir vídeo bruto” para exportar.</p></div>`}
     <div class="row2"><div class="f"><label for="xFmt">Formato</label><select id="xFmt"><option value="mp4">MP4 · vídeo (H.264 + AAC)</option><option value="mov">MOV · vídeo QuickTime</option><option value="mp3">MP3 · só áudio</option><option value="wav">WAV · só áudio, sem perda</option></select></div>
     <div class="f"><label for="xQ">Qualidade</label><select id="xQ"><option value="final">Final · 1080 × 1920</option><option value="rapida">Rápida · 720 × 1280</option></select></div></div>
@@ -2856,7 +2851,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.10.31-l';
+const STUDIO_VERSAO = '2026.10.31-m';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
