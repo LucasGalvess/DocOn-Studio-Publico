@@ -1,0 +1,254 @@
+"""DocOn Cinema · modo briefing: do briefing exportado pelo DocOn Studio ao MP4 final, em um comando.
+
+uso:
+  python3 run_brief.py BRIEF.json VIDEO WORK [--out SAIDA.mp4] [--media PASTA_BROLL] [--fixes fixes.json]
+                       [--stage all|prep|preview|render] [--preview t1,t2,...]
+
+Etapas (cada uma pula se o resultado já existe em WORK):
+  prep     transcreve, analisa (cortes, matte, landmarks se talking head) e faz o grade completo
+  preview  monta a edição a partir do briefing e grava WORK/preview.jpg (+ WORK/plano.txt com os tempos resolvidos)
+  render   vídeo final + trilha + mix + mux + folha de contato + versão H.264 ≤ 14 MB para a web (Studio, aprovação, download)
+
+fixes.json (opcional): [{"old": "Buddercol", "new": "Border"}, {"after": "Border", "near": 8.2, "insert": [["Collie", 8.6]]}, ...]
+Cada bloco do briefing é sincronizado pela frase do campo `gatilho` (busca aproximada na transcrição, perto do
+tempo `inicio`). Sem gatilho, vale o tempo da timeline (segundos do bruto).
+"""
+import sys, os, json, re, subprocess, difflib, argparse, math
+HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
+MODELS = os.path.expanduser('~/.docon/models')
+
+ap = argparse.ArgumentParser(); ap.add_argument('brief'); ap.add_argument('video'); ap.add_argument('work')
+ap.add_argument('--out'); ap.add_argument('--media', default=None); ap.add_argument('--fixes'); ap.add_argument('--stage', default='all')
+ap.add_argument('--preview', default=None)
+ap.add_argument('--formatos', default='mp4', help='mp4,mov,wav,mp3: formatos extras da entrega final')
+A = ap.parse_args(); os.makedirs(A.work, exist_ok=True)
+# ---- histórico: cada execução guarda o briefing (e os fixes) usados; nada é sobrescrito
+import time, shutil
+HIST = os.path.join(A.work, 'historico'); os.makedirs(HIST, exist_ok=True); STAMP = time.strftime('%Y%m%d-%H%M%S')
+shutil.copy(A.brief, os.path.join(HIST, f'{STAMP}_{A.stage}_briefing.json'))
+if A.fixes: shutil.copy(A.fixes, os.path.join(HIST, f'{STAMP}_{A.stage}_fixes.json'))
+def versioned(path):
+    if not os.path.exists(path): return path
+    base, ext = os.path.splitext(path); k = 2
+    while os.path.exists(f'{base}_v{k}{ext}'): k += 1
+    return f'{base}_v{k}{ext}'
+BR = json.load(open(A.brief)); PJ = BR['projeto']; ST = BR.get('estilo') or {}; IMG = ST.get('imagem', {})
+TALK = PJ.get('formato', ST.get('formato')) in ('talking_head', 'misto')
+def sh(cmd):
+    print('$', ' '.join(cmd) if isinstance(cmd, list) else cmd, flush=True)
+    subprocess.run(cmd, check=True, shell=isinstance(cmd, str))
+def have(f): return os.path.exists(os.path.join(A.work, f))
+
+# ------------------------------------------------------------------ prep
+if A.stage in ('all', 'prep'):
+    if not have('words_raw.json'): sh(['python3', HERE + '/transcribe.py', A.video, A.work, MODELS + '/parakeet'])
+    if not have('shots.json'): sh(['python3', HERE + '/analyze.py', A.video, A.work, MODELS] + (['--faces'] if TALK else []))
+    if not have('graded.mkv'):
+        sh(['python3', HERE + '/grade.py', A.video, A.work, 'full'] + (['--skin'] if IMG.get('suavizar_pele') and TALK else []) + (['--dof'] if IMG.get('desfoque_fundo') else []))
+    if A.stage == 'prep': sys.exit(0)
+
+# ------------------------------------------------------------------ montar a edição
+from core import *
+import audio
+def rgb(h): h = h.lstrip('#'); return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+gfx.set_fonts((ST.get('fontes') or {}).get('titulo'), (ST.get('fontes') or {}).get('texto'))   # fontes do estilo (Google Fonts)
+if ST.get('paleta'):
+    gfx.set_palette({k: rgb(v) for k, v in ST['paleta'].items() if isinstance(v, str) and v.startswith('#')})
+blocks = sorted(BR.get('blocos', []), key=lambda b: b.get('inicio', 0))
+fixes = json.load(open(A.fixes)) if A.fixes else []
+for f in fixes:
+    if 'insert' in f: f['insert'] = [tuple(x) for x in f['insert']]
+remove = [(b['inicio'], b['fim']) for b in blocks if b['tipo'] == 'corte']
+ed = Edit(A.video, A.work, speed=float(IMG.get('velocidade', 1.08)), tail=1.3, cut_pauses=IMG.get('cortar_pausas', True) is not False,
+          fixes=fixes, remove=remove)
+T = ed.t; NW = [norm(d['w']) for d in ed.WORDS]; plan = []
+
+def find(phrase, near=None, after_out=None):
+    """tempo de saída da primeira palavra da frase-gatilho (busca aproximada; desempata pelo tempo mais próximo de `near`)."""
+    toks = [norm(x) for x in str(phrase or '').split() if norm(x)]
+    if not toks: return None
+    n = len(toks); best = None
+    for i in range(len(NW) - n + 1):
+        if after_out is not None and ed.WORDS[i]['os'] < after_out - 0.05: continue
+        r = difflib.SequenceMatcher(None, ' '.join(toks), ' '.join(NW[i:i + n])).ratio()
+        if r < 0.72: continue
+        dist = abs(ed.WORDS[i]['s'] - near) if near is not None else 0
+        key = (round(r, 2), -dist)
+        if best is None or key > best[0]: best = (key, i)
+    return ed.WORDS[best[1]]['os'] if best else None
+def when(b, default_out):
+    t = find(b.get('gatilho'), b.get('inicio'))
+    src = 'gatilho' if t is not None else 'timeline'
+    if t is None: t = default_out
+    return t, src
+def out_of(src_t): return ed.src2out(src_t)
+import glob
+BANK = os.path.join(A.work, 'banco')            # o agente baixa aqui os itens do banco do Studio: <id>.<ext>
+def bank_file(bid):
+    if not bid: return None
+    m = sorted(glob.glob(os.path.join(BANK, bid + '.*'))); m = [x for x in m if not x.endswith('.wav')] or m
+    return m[0] if m else None
+def bank_wav(bid):
+    f = bank_file(bid)
+    if not f: return None
+    w = os.path.join(BANK, bid + '.wav')
+    if not os.path.exists(w): subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', f, '-vn', '-ac', '2', '-ar', '48000', w], check=True)
+    return w
+
+# ---- gancho (sempre a partir da primeira palavra)
+hk = next((b for b in blocks if b['tipo'] == 'gancho'), None)
+icon_hook = (hk or {}).get('icone') or 'sparkle'
+if hk and hk.get('frase'):
+    nwords = len(hk['frase'].split())
+else:  # primeira frase da fala
+    nwords = next((i + 1 for i, d in enumerate(ed.WORDS) if d['w'][-1] in '.?!'), min(12, len(ed.WORDS)))
+nwords = min(max(nwords, 3), 18)
+kw = norm((hk or {}).get('palavra_chave', ''))
+words = [ed.WORDS[i]['w'].upper() for i in range(nwords)]
+pages, lines, cur = [], [], ''
+for w in words:
+    if kw and norm(w) == kw:
+        if cur: lines.append(cur); cur = ''
+        lines.append(w); continue
+    if len(cur) + len(w) + 1 > 15 and cur: lines.append(cur); cur = w
+    else: cur = (cur + ' ' + w).strip()
+    if w[-1] in '.?!' and cur: lines.append(cur + '|'); cur = ''        # '|' = fim de frase: fecha a página
+if cur: lines.append(cur)
+pg = []
+for ln in lines:
+    end = ln.endswith('|'); pg.append(ln.rstrip('|'))
+    cap = 4 if kw and any(norm(x) == kw for x in ' '.join(pg).split()) else 3
+    if end or len(pg) == cap: pages.append(pg); pg = []
+if pg: pages.append(pg)
+while any(len(p) > 4 for p in pages):                                   # frase longa demais: divide a página
+    k = next(i for i, p in enumerate(pages) if len(p) > 4); pages[k:k + 1] = [pages[k][:3], pages[k][3:]]
+def posy(b, d):  # pos_y do Studio = % do topo onde o bloco começa (vazio = posição padrão)
+    v = (b or {}).get('pos_y')
+    try: return d if v in (None, '') else float(v) / 100 * 1920
+    except (TypeError, ValueError): return d
+HOOK_C = posy(hk, 0.56 * 1920) + 195           # centro do gancho (padrão 1270)
+def ys_for(pg):
+    hs = [150 if kw and kw in [norm(x) for x in l.split()] else 112 for l in pg]; y = HOOK_C - sum(hs) / 2; out = []
+    for h in hs: out.append(y + h / 2); y += h
+    return tuple(int(v) for v in out)
+ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=860)
+plan.append(f'gancho {ed.hook_end:.2f}s · {nwords} palavras · {len(pages)} página(s)')
+
+# ---- CTA (precisa vir antes da legenda)
+cta = next((b for b in blocks if b['tipo'] == 'cta'), None)
+if cta:
+    t0, src = when(cta, out_of(cta['inicio']))
+    t0 = min(t0, ed.TOTAL - 2.5)                     # o cartão final sempre aparece inteiro e vai até o último quadro
+    ed.end_card(t0 - 0.05, (cta.get('kicker') or PJ.get('tema') or '').upper()[:34] or 'DOCON', (cta.get('titulo') or 'Me conta nos comentários').split('\n')[:2],
+                cta.get('subtitulo') or '', PJ['profissional'].get('nome') or '', cta.get('botao') or 'Agende sua avaliação',
+                foot=cta.get('rodape') or None, icon=cta.get('icone') or icon_hook, y=int(posy(cta, 640)))
+    plan.append(f'cta {t0:.2f}s ({src})')
+
+# ---- blocos
+topics = []; kws = [k.strip() for k in (PJ.get('legenda', {}).get('palavras_chave') or '').split(',') if k.strip()]
+ic = lambda n, s=70: ICONS.get(n, ICONS['check'])(s)
+for b in blocks:
+    tp = b['tipo']
+    if tp in ('gancho', 'cta', 'corte'): continue
+    t0, src = when(b, out_of(b['inicio']))
+    if t0 >= ed.TOTAL - 0.2: plan.append(f'AVISO {tp} depois do fim do vídeo ({b["inicio"]}s): ignorado'); continue
+    if tp == 'fx':                                   # efeito visual: dura o que a timeline diz (sem mínimo de 1,6 s)
+        t1 = min(max(out_of(b['fim']), t0 + 0.15), ed.TOTAL)
+        ed.fx.add(b.get('efeito', 'zoom'), t0, t1, b.get('intensidade', 'média')); plan.append(f'fx {b.get("efeito")} {t0:.2f}-{t1:.2f} ({src})'); continue
+    t1 = min(max(out_of(b['fim']), t0 + 1.6), ed.TOTAL)
+    if ed.ec0 is not None: t1 = min(t1, ed.ec0 - 0.1)
+    if tp == 'destaque': kws += [k.strip() for k in (b.get('palavras') or '').split(',') if k.strip()]; continue
+    if tp == 'nome':
+        ed.lower_third(t0 - 0.05, t1, b.get('nome') or PJ['profissional'].get('nome', ''), b.get('subtitulo') or PJ['profissional'].get('subtitulo', ''), y=int(posy(b, 1290)))
+        topics.append(t0); plan.append(f'nome {t0:.2f}-{t1:.2f} ({src}) {b.get("nome")}'); continue
+    if tp == 'som':
+        w = bank_wav(b.get('banco_id'))
+        if w: ed.sfx.append((t0, 'file:' + w, {'discreto': 1.0, 'médio': 1.8, 'presente': 3.0}.get(b.get('volume'), 1.0))); plan.append(f'som {t0:.2f} {b.get("nome")}')
+        else: plan.append(f'AVISO efeito sem arquivo (banco_id {b.get("banco_id")}): baixe para WORK/banco/')
+        continue
+    if tp == 'broll':
+        f = b.get('arquivo') or ''
+        cand = [bank_file(b.get('banco_id')) or '', f, os.path.join(A.media or '', f), os.path.join(os.path.dirname(A.brief), f)]
+        path = next((c for c in cand if c and os.path.isfile(c)), None)
+        if path: ed.broll(path, t0, min(t1, t0 + 3.0), mode='band' if b.get('modo') == 'faixa' else 'full'); plan.append(f'broll {t0:.2f} {f}')
+        else: plan.append(f'AVISO broll sem arquivo em {b["inicio"]}s · busca: {b.get("busca")}')
+        continue
+    if tp == 'painel':
+        items = [i for i in b.get('itens', []) if i.get('texto')]; lay = b.get('layout', 'lista')
+        tit = (b.get('titulo') or '').strip(); n = len(items)
+        h = 46 + 52 + 22 + (0 if lay == 'destaque' or not tit else 64 * len(tit.split('\n'))) + (112 if lay == 'destaque' else 0) + \
+            (150 if lay == 'linha_do_tempo' else 230 if lay == 'opcoes' else 92 * n) + 30
+        h = min(max(h, 220), 540); y = int(min(max(1200 - h / 2, 930), 1470 - h)) if b.get('pos_y') in (None, '') else int(min(max(posy(b, 0), 60), 1880 - h))
+        p = ed.panel(t0 - 0.1, t1, y=y, h=h); topics.append(t0)
+        it_t = [find(i.get('gatilho'), b['inicio'] - 1, t0 - 0.3) for i in items]
+        it_t = [x if x is not None and x < t1 - 0.3 else t0 + 0.35 + 0.45 * k for k, x in enumerate(it_t)]
+        if lay == 'destaque':
+            p.add(pill(b.get('kicker') or 'DESTAQUE', MONT(800, 26)), 56, 46, p.t0)
+            big = gold_gradient_text(tit or '—', MONT(900, 92), pad=0)
+            if big.width > 820: big = big.resize((820, int(big.height * 820 / big.width)))
+            p.add(big, 56, 118, t0 + 0.05, anim='pop'); ed.sfx.append((t0 + 0.05, 'tick')); yy = 246
+            for k, it in enumerate(items): ed.row(p, ic(it.get('icone'), 64), it['texto'], yy + 84 * k, it_t[k], size=42)
+        elif lay == 'linha_do_tempo':
+            yy = ed.kicker_title(p, b.get('kicker') or 'PASSO A PASSO', tit, tsize=52) if tit else (p.add(pill(b.get('kicker') or 'PASSO A PASSO', MONT(800, 26)), 56, 46, p.t0) or 130)
+            xs = [int(140 + k * (660 / max(n - 1, 1))) for k in range(n)] if n > 1 else [470]; ly = yy + 40
+            line = Image.new('RGBA', (940, 12), (0, 0, 0, 0)); ImageDraw.Draw(line).line([(xs[0], 6), (xs[-1], 6)], fill=tuple(P['border']) + (120,), width=3); p.add(line, 0, ly - 6, p.t0 + 0.1)
+            for k, (it, x) in enumerate(zip(items, xs)):
+                dot = Image.new('RGBA', (120, 120), (0, 0, 0, 0)); dd = ImageDraw.Draw(dot); dd.ellipse([24, 24, 96, 96], fill=tuple(P['icon']) + (255,)); dd.ellipse([46, 46, 74, 74], fill=tuple(P['glass']) + (255,))
+                p.add(dot.resize((40, 40), Image.LANCZOS), x - 20, ly - 20, it_t[k], tick=True, anim='pop')
+                ls = text_sprite(it['texto'], INTER('Bold', 38), P['text'], pad=0); p.add(ls, max(10, x - ls.width // 2), ly + 40, it_t[k] + 0.05)
+        elif lay == 'opcoes':
+            yy = ed.kicker_title(p, b.get('kicker') or 'QUAL VOCÊ PREFERE?', tit, tsize=56) if tit else 130
+            xs = [int(470 + (k - (n - 1) / 2) * min(310, 820 / max(n, 1))) for k in range(n)]
+            for k, (it, x) in enumerate(zip(items, xs)):
+                p.add(ic(it.get('icone'), 140), x - 70, yy, it_t[k], tick=True, anim='pop')
+                ls = text_sprite(it['texto'], INTER('Bold', 38), P['text'], pad=0); p.add(ls, x - ls.width // 2, yy + 146, it_t[k] + 0.05)
+                if k < n - 1:
+                    ou = text_sprite('ou', INTER('Medium', 32), P['key'], pad=0); p.add(ou, (x + xs[k + 1]) // 2 - ou.width // 2, yy + 56, it_t[k] + 0.2)
+        else:
+            yy = ed.kicker_title(p, b.get('kicker') or '', tit, tsize=52) if tit else (p.add(pill(b.get('kicker') or '', MONT(800, 26)), 56, 46, p.t0) or 128)
+            for k, it in enumerate(items): ed.row(p, ic(it.get('icone')), it['texto'], yy + 92 * k, it_t[k], size=44)
+        plan.append(f'painel {t0:.2f}-{t1:.2f} ({src}) {lay} · {b.get("kicker")} · itens {[round(x, 2) for x in it_t]}')
+
+ed.camera(topics=sorted(topics))
+leg = PJ.get('legenda', {}).get('estilo', ST.get('legenda', {}).get('estilo', 'docon'))
+if leg != 'nenhuma':
+    kwords = sorted({w for k in kws for w in k.split()})
+    ed.captions(style='subtle' if leg == 'subtle' else 'docon', y=1600 if leg == 'subtle' else 1585, maxc=30 if leg == 'subtle' else 26, keywords=kwords)
+warn = ed.check(); plan += ['AVISO ' + w for w in warn]
+open(os.path.join(A.work, 'plano.txt'), 'w').write(f'duração final {ed.TOTAL:.2f}s · segmentos {[(round(a, 2), round(b, 2)) for a, b in ed.SEGS]}\n' + '\n'.join(plan) + '\n')
+print(open(os.path.join(A.work, 'plano.txt')).read())
+
+# ------------------------------------------------------------------ preview / render
+G = os.path.join(A.work, 'graded.mkv')
+if A.stage in ('all', 'preview') and (A.preview or A.stage == 'preview'):
+    ts = [float(x) for x in A.preview.split(',')] if A.preview else [round(x, 1) for x in
+          sorted({0.6, ed.hook_end - 0.3} | {max(p.t0 + 0.9, p.t1 - 0.6) for p in ed.panels if p is not ed.ec} | ({ed.ec0 + 0.8} if ed.ec0 else set()))][:20]
+    ed.render(G, None, preview=ts, sheet=os.path.join(A.work, 'preview.jpg')); shutil.copy(os.path.join(A.work, 'preview.jpg'), os.path.join(HIST, f'{STAMP}_preview.jpg'))
+    print('prévia:', os.path.join(A.work, 'preview.jpg'), ts)
+    if A.stage == 'preview': sys.exit(0)
+if A.stage in ('all', 'render'):
+    out = versioned(A.out or os.path.join(A.work, 'final.mp4'))      # nunca sobrescreve uma entrega anterior
+    ed.render(G, os.path.join(A.work, 'video_only.mp4'))
+    mu = PJ.get('musica', {}); music = None
+    vol = {'discreta': -15, 'média': -12, 'presente': -9}.get(mu.get('volume', 'discreta'), -15)
+    if mu.get('ativa'):
+        music = bank_wav(mu.get('banco_id')) or (mu.get('arquivo') if mu.get('arquivo') and os.path.isfile(mu.get('arquivo')) else os.path.join(A.work, 'music.wav'))
+        if not os.path.isfile(music): sh(['python3', HERE + '/music.py', music, f'{ed.TOTAL + 0.5:.2f}', '--bpm', str(mu.get('bpm', 92)), '--key', 'D', '--mood', mu.get('clima', 'warm')])
+    audio.build(ed, os.path.join(A.work, 'mix.wav'), music=music, music_db=vol, duck_db=7, voice='light')
+    sh(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(A.work, 'video_only.mp4'), '-i', os.path.join(A.work, 'mix.wav'), '-map', '0:v', '-map', '1:a', '-c:v', 'copy',
+        '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', '-movflags', '+faststart', out])
+    base = os.path.splitext(out)[0]
+    fm = {f.strip().lower() for f in A.formatos.split(',')}
+    if 'mov' in fm: sh(['ffmpeg', '-v', 'error', '-y', '-i', out, '-c', 'copy', '-f', 'mov', base + '.mov'])
+    if 'wav' in fm: sh(['ffmpeg', '-v', 'error', '-y', '-i', out, '-vn', '-c:a', 'pcm_s16le', '-ar', '48000', base + '.wav'])
+    if 'mp3' in fm: sh(['ffmpeg', '-v', 'error', '-y', '-i', out, '-vn', '-c:a', 'libmp3lame', '-b:a', '192k', base + '.mp3'])
+    sh(['ffmpeg', '-v', 'error', '-y', '-i', out, '-vf', 'fps=1/5,scale=216:384,tile=5x4', '-frames:v', '1', base + '_folha.jpg'])
+    kbps = max(900, int((14 * 8 * 1024) / (ed.TOTAL + 0.5)) - 140)       # cabe em ~14 MB com AAC 128k
+    lg = os.path.join(A.work, 'x265pass')
+    # H.264 (não HEVC): a versão da web precisa tocar em qualquer navegador, inclusive Chrome no Windows
+    sh(['ffmpeg', '-v', 'error', '-y', '-i', out, '-c:v', 'libx264', '-preset', 'slow', '-b:v', f'{kbps}k', '-pass', '1', '-passlogfile', lg, '-an', '-f', 'null', '/dev/null'])
+    sh(['ffmpeg', '-v', 'error', '-y', '-i', out, '-c:v', 'libx264', '-preset', 'slow', '-b:v', f'{kbps}k', '-pass', '2', '-passlogfile', lg, '-profile:v', 'high',
+        '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', base + '_download.mp4'])
+    r = subprocess.run(['ffmpeg', '-nostats', '-i', out, '-af', 'ebur128=peak=true', '-f', 'null', '-'], capture_output=True, text=True).stderr
+    I = re.findall(r'I:\s+(-?[\d.]+) LUFS', r); Pk = re.findall(r'Peak:\s+(-?[\d.]+) dBFS', r)
+    print(f'PRONTO {out} · {ed.TOTAL:.1f}s · {I[-1] if I else "?"} LUFS · pico {Pk[-1] if Pk else "?"} dBTP · download {base}_download.mp4 · folha {base}_folha.jpg')

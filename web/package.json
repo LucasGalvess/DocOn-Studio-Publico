@@ -1,0 +1,18 @@
+{
+  "name": "docon-studio-web",
+  "version": "1.0.0",
+  "description": "DocOn Studio · site próprio com Claude Opus 5.5 e agente de edição na nuvem",
+  "scripts": {
+    "start": "node server.mjs",
+    "materiais": "node materiais.mjs",
+    "agente": "node agente-setup.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  }
+}

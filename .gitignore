@@ -1,0 +1,16 @@
+# mídia e saídas de render nunca vão para o repositório
+work/
+WORK/
+*.mp4
+*.mov
+*.mkv
+*.wav
+*.mp3
+*.m4a
+*.npy
+__pycache__/
+.claude/skills/docon-cinema/scripts/fonts
+# site próprio: banco, arquivos e dependências ficam fora do git
+web/data/
+web/node_modules/
+web/.env

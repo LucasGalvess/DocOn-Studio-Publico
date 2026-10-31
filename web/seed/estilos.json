@@ -1,0 +1,86 @@
+{
+ "docon-cinema": {
+  "descricao": "Padrão aprovado em estética: gancho tipográfico dourado, painéis de vidro espresso na altura do peito, legenda com pop e sublinhado, sem trilha.",
+  "formato": "talking_head",
+  "id": "docon-cinema",
+  "imagem": {
+   "cortar_pausas": true,
+   "desfoque_fundo": false,
+   "suavizar_pele": true,
+   "velocidade": 1.08
+  },
+  "legenda": {
+   "estilo": "docon"
+  },
+  "musica": {
+   "ativa": false,
+   "bpm": 92,
+   "clima": "warm"
+  },
+  "nome": "DocOn Cinema (estética)",
+  "ordem": 1,
+  "paleta": {
+   "border": "#e8d3b0",
+   "button": "#b76e79",
+   "button_fg": "#f8f3ea",
+   "glass": "#34241e",
+   "grad1": "#f6deac",
+   "grad2": "#c99660",
+   "icon": "#e9c48c",
+   "key": "#f2d6a6",
+   "pill_bg": "#f2d6a6",
+   "pill_fg": "#34241e",
+   "text": "#f8f3ea"
+  },
+  "regras": "Cor natural com contraste suave. Um painel por ideia, títulos curtos. Lower third na apresentação. Cartão final com botão rosê. Sem desfoque de fundo.",
+  "fontes": {
+   "titulo": "Montserrat",
+   "texto": "Inter"
+  },
+  "efeitos": [
+   "leak"
+  ]
+ },
+ "vlog-vet": {
+  "descricao": "Narração sobre cenas, vidro verde-petróleo, menta e coral, legenda sutil, trilha acolhedora com ducking.",
+  "formato": "vlog",
+  "id": "vlog-vet",
+  "imagem": {
+   "cortar_pausas": true,
+   "desfoque_fundo": false,
+   "suavizar_pele": false,
+   "velocidade": 1.08
+  },
+  "legenda": {
+   "estilo": "subtle"
+  },
+  "musica": {
+   "ativa": true,
+   "bpm": 92,
+   "clima": "warm"
+  },
+  "nome": "Vlog veterinário",
+  "ordem": 2,
+  "paleta": {
+   "border": "#aae4d0",
+   "button": "#f08068",
+   "button_fg": "#ffffff",
+   "glass": "#0a3c3e",
+   "grad1": "#c8f6e2",
+   "grad2": "#48bea0",
+   "icon": "#7edbbc",
+   "key": "#a0e8cd",
+   "pill_bg": "#a0e8cd",
+   "pill_fg": "#063638",
+   "text": "#f4faf7"
+  },
+  "regras": "Cartões compactos que não cubram o animal. Ficha do paciente com dados citados. Ícone de pata no gancho e no CTA. Palavra-chave da legenda em branco com sublinhado menta.",
+  "fontes": {
+   "titulo": "Montserrat",
+   "texto": "Inter"
+  },
+  "efeitos": [
+   "leak"
+  ]
+ }
+}
