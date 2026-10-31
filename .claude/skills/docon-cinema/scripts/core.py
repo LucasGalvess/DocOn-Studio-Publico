@@ -117,7 +117,7 @@ class Edit:
             self.WORDS.append(dict(w=w, s=s, e=e, os=self.src2out(s), oe=self.src2out(e)))
         self.panels, self.sfx, self.hook_items, self.brolls = [], [], [], []
         self.fx = FX()                                         # efeitos visuais dos blocos fx (scripts/fx.py)
-        self.lt = None; self.ec = None; self.ec0 = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
+        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
         self.anchor_y = anchor_y
         self._face_track()
     # ---------------- tempo
@@ -205,6 +205,13 @@ class Edit:
         return np.clip(f * self.vignette(), 0, 1)
 
     # ================================================================== elementos
+    def bg_blur(self, t0, t1, k=0.4):
+        """camada de desfoque do vídeo de fundo (k = 0..1, igual à % do Studio): entra em 0,4 s e sai em 0,3 s"""
+        if k > 0: self.bg_blurs.append((t0, t1, k))
+    def _blur_mix(self, fr, a, k):
+        bl = cv2.GaussianBlur(cv2.resize(fr, (W // 6, H // 6)), (0, 0), 3)
+        m = a * min(1.0, 1.7 * k)
+        return fr * (1 - m) + cv2.resize(bl, (W, H)) * (1 - 0.16 * k) * m
     def panel(self, t0, t1, y=950, h=420, x=70, w=940, r=34, s=1.0):
         p = Panel(self, t0, t1, x, y, w, h, r, s); self.panels.append(p); return p
     def kicker_title(self, p, kicker, title, tsize=58, ksize=26):
@@ -227,8 +234,8 @@ class Edit:
         lt = Panel(self, t0, t1, x, y, int((max(n_.width, s_.width) + 110) * s), int(170 * s), int(34 * s), s)
         lt.add(Image.new('RGBA', (6, 104), tuple(P['accent']) + (255,)), 40, 33, t0 + 0.05)
         lt.add(n_, 66, 32, t0 + 0.1); lt.add(s_, 66, 104, t0 + 0.22); self.panels.append(lt); return lt
-    def end_card(self, t0, kicker, title_lines, subtitle, name, button, foot=None, icon='sparkle', h=760, y=640, s=1.0):
-        self.ec0 = t0; ec = Panel(self, t0, self.TOTAL + 1, int(90 + 900 * (1 - s) / 2), y, int(900 * s), int(h * s), int(34 * s), s)
+    def end_card(self, t0, kicker, title_lines, subtitle, name, button, foot=None, icon='sparkle', h=760, y=640, s=1.0, blur=0.5):
+        self.ec0 = t0; self.ec_blur = blur; ec = Panel(self, t0, self.TOTAL + 1, int(90 + 900 * (1 - s) / 2), y, int(900 * s), int(h * s), int(34 * s), s)
         def center(spr, yy, t, anim='rise'): ec.add(spr, (900 - spr.width) // 2, yy, t, anim=anim)
         center(pill(kicker, MONT(800, 28)), 70, t0)
         yy = 160
@@ -389,14 +396,14 @@ class Edit:
         self.draw_broll(fr, t)
         self.light_leak(fr, t)
         if fx and fx.items: fr[:] = fx.under(fr, t)
+        for b0, b1, k in self.bg_blurs:          # desfoque de fundo como camada (atrás dos grafismos)
+            if b0 <= t <= b1: fr[:] = self._blur_mix(fr, ease_out((t - b0) / 0.4) * (1 - ease((t - (b1 - 0.3)) / 0.3)), k)
         if t < self.hook_end + 0.25: self.draw_hook(fr, t)
         for p in self.panels:
             if p is not self.ec: p.draw(fr, t)
         self.draw_caps(fr, t)
         if self.ec0 is not None and t >= self.ec0:
-            a = ease_out((t - self.ec0) / 0.4)
-            bl = cv2.GaussianBlur(cv2.resize(fr, (W // 6, H // 6)), (0, 0), 3)
-            fr[:] = fr * (1 - a * 0.85) + cv2.resize(bl, (W, H)) * 0.92 * a * 0.85
+            if self.ec_blur > 0: fr[:] = self._blur_mix(fr, ease_out((t - self.ec0) / 0.4), self.ec_blur)   # 0,5 = o desfoque padrão de antes
             self.ec.draw(fr, t)
         if fx and fx.items: fr = fx.top(fr, t)
         return fr

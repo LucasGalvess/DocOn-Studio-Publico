@@ -132,6 +132,16 @@ def escala(b):
     try: v = float((b or {}).get('escala') or 0)
     except (TypeError, ValueError): v = 0
     return min(1.6, max(0.4, v / 100)) if v > 0 else 1.0
+def bgk(b):   # desfoque do fundo (0..1): CTA ligado por padrão (50%), outros só com a caixa marcada (40%)
+    b = b or {}; tp = b.get('tipo')
+    if tp == 'fx': on, d = b.get('efeito') == 'fundo_desfocado', 50
+    elif tp == 'cta': on, d = b.get('desfoque_fundo') is not False, 50
+    elif tp in ('painel', 'gancho', 'nome'): on, d = b.get('desfoque_fundo') is True, 40
+    else: return 0.0
+    if not on: return 0.0
+    try: v = float(b.get('desfoque_pct') or d)
+    except (TypeError, ValueError): v = d
+    return min(1.0, max(0.05, v / 100))
 def txt(b):
     try: v = float((b or {}).get('texto_px') or 0)
     except (TypeError, ValueError): v = 0
@@ -144,6 +154,7 @@ def ys_for(pg):
     for h in hs: out.append(y + h / 2); y += h
     return tuple(int(v) for v in out)
 ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=min(1000, int(860 * HK_S)), size=int(92 * HK_S), kw_size=int(150 * HK_S))
+if hk and bgk(hk) > 0: ed.bg_blur(0, ed.hook_end + 0.2, bgk(hk)); plan.append(f'desfoque de fundo com o gancho {round(bgk(hk) * 100)}%')
 plan.append(f'gancho {ed.hook_end:.2f}s · {nwords} palavras · {len(pages)} página(s)')
 
 # ---- CTA (precisa vir antes da legenda)
@@ -153,7 +164,7 @@ if cta:
     t0 = min(t0, ed.TOTAL - 2.5)                     # o cartão final sempre aparece inteiro e vai até o último quadro
     ed.end_card(t0 - 0.05, (cta.get('kicker') or PJ.get('tema') or '').upper()[:34] or 'DOCON', (cta.get('titulo') or 'Me conta nos comentários').split('\n')[:2],
                 cta.get('subtitulo') or '', PJ['profissional'].get('nome') or '', cta.get('botao') or 'Agende sua avaliação',
-                foot=cta.get('rodape') or None, icon=cta.get('icone') or icon_hook, y=int(posy(cta, 640)), s=escala(cta) * txt(cta))
+                foot=cta.get('rodape') or None, icon=cta.get('icone') or icon_hook, y=int(posy(cta, 640)), s=escala(cta) * txt(cta), blur=bgk(cta))
     plan.append(f'cta {t0:.2f}s ({src})')
 
 # ---- blocos
@@ -166,9 +177,11 @@ for b in blocks:
     if t0 >= ed.TOTAL - 0.2: plan.append(f'AVISO {tp} depois do fim do vídeo ({b["inicio"]}s): ignorado'); continue
     if tp == 'fx':                                   # efeito visual: dura o que a timeline diz (sem mínimo de 1,6 s)
         t1 = min(max(out_of(b['fim']), t0 + 0.15), ed.TOTAL)
+        if b.get('efeito') == 'fundo_desfocado': ed.bg_blur(t0, t1, bgk(b)); plan.append(f'desfoque de fundo {t0:.2f}-{t1:.2f} {round(bgk(b) * 100)}%'); continue
         ed.fx.add(b.get('efeito', 'zoom'), t0, t1, b.get('intensidade', 'média')); plan.append(f'fx {b.get("efeito")} {t0:.2f}-{t1:.2f} ({src})'); continue
     t1 = min(max(out_of(b['fim']), t0 + 1.6), ed.TOTAL)
     if ed.ec0 is not None: t1 = min(t1, ed.ec0 - 0.1)
+    if bgk(b) > 0: ed.bg_blur(t0 - 0.1, t1, bgk(b)); plan.append(f'desfoque de fundo com {tp} {round(bgk(b) * 100)}%')
     if tp == 'destaque': kws += [k.strip() for k in (b.get('palavras') or '').split(',') if k.strip()]; continue
     if tp == 'nome':
         ed.lower_third(t0 - 0.05, t1, b.get('nome') or PJ['profissional'].get('nome', ''), b.get('subtitulo') or PJ['profissional'].get('subtitulo', ''), y=int(posy(b, 1290)), s=escala(b) * txt(b))

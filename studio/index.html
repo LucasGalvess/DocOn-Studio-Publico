@@ -418,6 +418,7 @@ const FX = [
   {k: 'whip', cat: 'transicao', n: 'Whip pan', d: 'Chicote lateral com desfoque de movimento', dur: 0.35, a: 'fxWhip'},
   {k: 'glow', cat: 'filtro', n: 'Brilho suave', d: 'Halo luminoso no trecho', dur: 1.5, a: 'fxGlow'},
   {k: 'desfoque', cat: 'transicao', n: 'Desfoque de transição', d: 'Sai e volta do foco', dur: 0.6, a: 'fxBlur'},
+  {k: 'fundo_desfocado', cat: 'filtro', n: 'Desfoque de fundo', d: 'Camada que desfoca e escurece o vídeo atrás dos textos, na % que você escolher', dur: 3, a: 'fxBlur'},
   {k: 'grao', cat: 'filtro', n: 'Grão de filme', d: 'Textura de película no trecho', dur: 3, a: 'fxGrain'},
   {k: 'vinheta', cat: 'filtro', n: 'Vinheta forte', d: 'Escurece as bordas para focar no rosto', dur: 3, a: 'fxVig'},
   {k: 'bokeh', cat: 'filtro', n: 'Bokeh', d: 'Partículas de luz desfocadas', dur: 3, a: 'fxBokeh'},
@@ -717,9 +718,11 @@ function renderInsp() {
     ${TXT_BASE[b.tipo] ? `<div class="row2"><div class="f"><label for="b_esc">${b.tipo === 'gancho' ? 'Tamanho do gancho' : b.tipo === 'nome' ? 'Tamanho da assinatura' : 'Tamanho do painel'} (%)</label><input id="b_esc" type="number" min="40" max="160" step="5" placeholder="100" value="${numOk(b.escala) ? +b.escala : ''}"></div>
       <div class="f"><label for="b_tpx">Texto (px)</label><input id="b_tpx" type="number" min="12" max="240" step="1" placeholder="${TXT_BASE[b.tipo]} (padrão)" value="${numOk(b.texto_px) ? +b.texto_px : ''}"></div></div>
       <p class="hint">Vazio = padrão DocOn. A % muda o ${b.tipo === 'gancho' ? 'gancho' : 'retângulo'} inteiro; os px mudam o texto ${b.tipo === 'painel' ? '(itens; título e kicker acompanham)' : 'principal'}, medidos numa tela de 1080 de largura.</p>` : ''}
+    ${BG_TIPOS.includes(b.tipo) || (b.tipo === 'fx' && b.efeito === 'fundo_desfocado') ? `<div class="row2" style="align-items:end">${b.tipo !== 'fx' ? `<label class="chk" style="font-size:13px"><input type="checkbox" id="b_bgon" ${bgPct(b) ? 'checked' : ''}> Desfocar o vídeo de fundo</label>` : '<span class="hint">Camada de desfoque do vídeo de fundo</span>'}
+      <div class="f"><label for="b_bgpct">Desfoque (%)</label><input id="b_bgpct" type="number" min="5" max="100" step="5" value="${bgPct(b) || (b.tipo === 'cta' ? 50 : 40)}" ${b.tipo === 'fx' || bgPct(b) ? '' : 'disabled'}></div></div>` : ''}
     <div class="f"><label for="b_obs">Observações para o editor</label><textarea id="b_obs" rows="3" data-k="obs">${esc(b.obs)}</textarea></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" type="button" id="b_go">Ir para o início</button><button class="btn sm" type="button" id="b_dup">Duplicar</button><button class="btn sm ghost" type="button" id="b_del" style="color:var(--bad)">Excluir bloco</button></div></div>`;
-  el.querySelectorAll('[data-k]').forEach((e) => e.addEventListener(e.dataset.bool ? 'change' : 'input', () => { const k = e.dataset.k; b[k] = e.dataset.bool ? e.checked : e.dataset.num ? Math.max(0, +e.value || 0) : e.value; if (k === 'ate_o_fim' && b.ate_o_fim) b.fim = +projDur(p).toFixed(2); if (k === 'fim') b.ate_o_fim = false; if (k === 'banco_id' && S.bank[e.value]) { if (b.tipo === 'som') b.nome = S.bank[e.value].nome; else b.arquivo = S.bank[e.value].nome; } if (k === 'fim' && b.fim <= b.inicio) b.fim = +(b.inicio + 0.5).toFixed(1); touch('p', S.cur, 'Editar ' + label(b)); renderTL(); renderStage(); if (k === 'layout') renderInsp(); }));
+  el.querySelectorAll('[data-k]').forEach((e) => e.addEventListener(e.dataset.bool ? 'change' : 'input', () => { const k = e.dataset.k; b[k] = e.dataset.bool ? e.checked : e.dataset.num ? Math.max(0, +e.value || 0) : e.value; if (k === 'efeito') setTimeout(renderInsp, 0); if (k === 'ate_o_fim' && b.ate_o_fim) b.fim = +projDur(p).toFixed(2); if (k === 'fim') b.ate_o_fim = false; if (k === 'banco_id' && S.bank[e.value]) { if (b.tipo === 'som') b.nome = S.bank[e.value].nome; else b.arquivo = S.bank[e.value].nome; } if (k === 'fim' && b.fim <= b.inicio) b.fim = +(b.inicio + 0.5).toFixed(1); touch('p', S.cur, 'Editar ' + label(b)); renderTL(); renderStage(); if (k === 'layout') renderInsp(); }));
   el.querySelectorAll('[data-ii]').forEach((e) => e.addEventListener('input', () => { b.itens[+e.dataset.ii][e.dataset.ik] = e.value; touch(); renderStage(); }));
   el.querySelectorAll('[data-irm]').forEach((e) => e.addEventListener('click', () => { b.itens.splice(+e.dataset.irm, 1); touch(); renderInsp(); renderStage(); }));
   const ai = document.getElementById('addItem'); if (ai) ai.onclick = () => { b.itens.push({icone: 'check', texto: '', gatilho: ''}); touch(); renderInsp(); renderStage(); };
@@ -727,6 +730,9 @@ function renderInsp() {
   for (const [id, k, lo, hi] of [['b_esc', 'escala', 40, 160], ['b_tpx', 'texto_px', 12, 240]]) { const inp = document.getElementById(id); if (!inp) continue;
     inp.addEventListener('input', () => { const v = inp.value; if (numOk(v)) b[k] = Math.min(hi, Math.max(lo, Math.round(+v))); else delete b[k]; touch(); renderStage(); });
     inp.addEventListener('change', () => touch('p', S.cur, (k === 'escala' ? 'Tamanho de ' : 'Texto de ') + label(b))); }
+  const bgOn = document.getElementById('b_bgon'), bgP = document.getElementById('b_bgpct');
+  if (bgOn) bgOn.onchange = () => { b.desfoque_fundo = bgOn.checked; if (bgOn.checked && !numOk(b.desfoque_pct)) b.desfoque_pct = +bgP.value || 40; bgP.disabled = !bgOn.checked; touch('p', S.cur, (bgOn.checked ? 'Ligar' : 'Desligar') + ' desfoque de fundo · ' + label(b)); renderStage(); };
+  if (bgP) bgP.addEventListener('input', () => { if (numOk(bgP.value)) b.desfoque_pct = Math.min(100, Math.max(5, Math.round(+bgP.value))); touch(); renderStage(); });
   const bp = document.getElementById('b_pos'); if (bp) bp.onchange = () => { if (bp.value === 'x') return; if (bp.value) b.pos_y = POS[b.tipo][bp.value]; else delete b.pos_y; touch('p', S.cur, 'Posição de ' + label(b)); renderStage(); };
   if (b.rascunho) { document.getElementById('rsOk').onclick = () => aprovarRascunho(b.id); document.getElementById('rsX').onclick = () => { p.blocos = p.blocos.filter((x) => x.id !== b.id); S.sel = null; touch('p', S.cur, 'Descartar rascunho'); renderAll(); }; }
   document.getElementById('b_dup').onclick = () => { const c = JSON.parse(JSON.stringify(b)); c.id = uid(); const d = b.fim - b.inicio; c.inicio = +(b.fim + 0.2).toFixed(1); c.fim = +(c.inicio + d).toFixed(1); p.blocos.push(c); S.sel = c.id; touch('p', S.cur, 'Duplicar ' + label(b)); renderAll(); };
@@ -759,6 +765,21 @@ function mediaSrc(b) {
 }
 /* altura na tela (porcentagem do topo onde o bloco começa). Sem pos_y, cada tipo usa a posição padrão DocOn. */
 const POS = {painel: {alto: 8, meio: 28, baixo: 49, padrao: 49}, gancho: {alto: 14, meio: 36, baixo: 56, padrao: 56}, nome: {alto: 9, meio: 40, baixo: 67.7, padrao: 67.7}, cta: {alto: 10, meio: 33, baixo: 48, padrao: 33}};
+/* desfoque do vídeo de fundo como camada: CTA (ligado por padrão em 50%, pode desligar), qualquer gancho/painel/nome
+   com a caixa marcada, e o efeito "Desfoque de fundo" na timeline. pct 100 = 12 px de desfoque e 70% mais escuro. */
+const BG_TIPOS = ['cta', 'painel', 'gancho', 'nome'];
+function bgPct(b) {
+  if (b.tipo === 'fx') return b.efeito === 'fundo_desfocado' ? (numOk(b.desfoque_pct) ? Math.min(100, +b.desfoque_pct) : 50) : 0;
+  if (!BG_TIPOS.includes(b.tipo)) return 0;
+  const on = b.tipo === 'cta' ? b.desfoque_fundo !== false : b.desfoque_fundo === true;
+  return on ? (numOk(b.desfoque_pct) ? Math.min(100, +b.desfoque_pct) : b.tipo === 'cta' ? 50 : 40) : 0;
+}
+function bgLayers(p, t) {
+  const out = [];
+  for (const b of p.blocos) { if (t < b.inicio || t > b.fim) continue; const pct = bgPct(b); if (!pct) continue;
+    const a = b.tipo === 'cta' ? eo((t - b.inicio) / 0.4) : Math.min(eo((t - b.inicio) / 0.4), eo((b.fim - t) / 0.3)); out.push({pct, a}); }
+  return out;
+}
 /* tamanho: escala = % do tamanho total do bloco (painel inteiro, com o conteúdo); texto_px = px do texto principal numa tela de 1080 de largura */
 const TXT_BASE = {painel: 45, cta: 80, gancho: 82, nome: 50};
 const numOk = (v) => v !== '' && v != null && Number.isFinite(+v) && +v > 0;
@@ -850,8 +871,7 @@ function fxState(p, t) {
     else if (b.efeito === 'pb') o.gray = Math.max(o.gray, fade * Math.min(1, I));
     else if (b.efeito === 'quente') { o.sep = Math.max(o.sep, 0.3 * fade * I); o.sat += 0.15 * fade; }
   }
-  const cta = p.blocos.find((b) => b.tipo === 'cta' && t >= b.inicio && t <= b.fim);
-  if (cta) { const a = eo((t - cta.inicio) / 0.4); o.blur += 6 * a; o.bright *= 1 - 0.35 * a; }
+  for (const L of bgLayers(p, t)) { const k = L.pct / 100; o.blur += 12 * k * L.a; o.bright *= 1 - 0.7 * k * L.a; }
   return o;
 }
 function applyLook(p, t) {
@@ -1364,7 +1384,7 @@ const TOOLS = () => [
   {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx. Campos extras conforme o tipo (fx: efeito, intensidade suave|média|forte; painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
     inputSchema: {type: 'object', properties: {tipo: {type: 'string'}, inicio: {type: 'number'}, fim: {type: 'number'}, gatilho: {type: 'string'}, campos: {type: 'object'}}, required: ['tipo', 'inicio', 'fim']},
     execute: (a) => applyChange((p) => { const b = defaultBlock(String(a.tipo), +a.inicio || 0); b.fim = Math.max(b.inicio + 0.5, +a.fim || b.inicio + 3); b.gatilho = String(a.gatilho || ''); Object.assign(b, cleanFields(a.campos)); p.blocos.push(b); S.sel = b.id; return {id: b.id}; }, 'criar')},
-  {name: 'editar_bloco', description: 'Altera campos de um bloco existente pelo id (inclui inicio, fim, gatilho, kicker, titulo, itens, frase, palavra_chave, icone, nome, subtitulo, botao, pos_y...). pos_y = altura na tela em % do topo onde o bloco começa (gancho, painel, nome, cta); escala = % do tamanho total do bloco (40-160, 100 = padrão); texto_px = px do texto principal numa tela de 1080 (padrão: painel 45, cta 80, gancho 82, nome 50); null volta ao padrão. Retorna o bloco atualizado.',
+  {name: 'editar_bloco', description: 'Altera campos de um bloco existente pelo id (inclui inicio, fim, gatilho, kicker, titulo, itens, frase, palavra_chave, icone, nome, subtitulo, botao, pos_y...). pos_y = altura na tela em % do topo onde o bloco começa (gancho, painel, nome, cta); escala = % do tamanho total do bloco (40-160, 100 = padrão); desfoque_fundo (true/false: desfoca o vídeo atrás do bloco; na CTA vem ligado) e desfoque_pct (5-100); texto_px = px do texto principal numa tela de 1080 (padrão: painel 45, cta 80, gancho 82, nome 50); null volta ao padrão. Retorna o bloco atualizado.',
     inputSchema: {type: 'object', properties: {id: {type: 'string'}, campos: {type: 'object'}}, required: ['id', 'campos']},
     execute: (a) => applyChange((p) => { const b = p.blocos.find((x) => x.id === String(a.id)); if (!b) throw new Error('bloco não encontrado: ' + a.id); Object.assign(b, cleanFields(a.campos)); if (b.fim <= b.inicio) b.fim = b.inicio + 0.5; S.sel = b.id; return b; }, 'editar')},
   {name: 'apagar_bloco', description: 'Apaga um bloco pelo id.', inputSchema: {type: 'object', properties: {id: {type: 'string'}}, required: ['id']},
@@ -2836,7 +2856,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.10.31-k';
+const STUDIO_VERSAO = '2026.10.31-l';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

@@ -197,6 +197,12 @@ O "Diretor" dentro do Studio é o Claude rodando na própria página, na conta d
 - **"Não voltou sozinho" (31/10):** o projeto nunca tinha recebido a cópia do bruto (`bruto` vazio, nenhum arquivo enviado pela página), e a falha era silenciosa. Duas consequências:
   - Direção mostra o estado do vínculo do bruto: guardado neste computador e cópia no projeto, com o motivo da falha e um botão para tentar de novo.
   - Cada tentativa grava `diagnostico/<usuário>` no banco. Leia esse documento antes de supor a causa.
+- **Desfoque da CTA era fixo:** não dava para tirar. Agora o desfoque do vídeo de fundo é uma camada.
+  - **CTA:** `desfoque_fundo` vem ligado em 50%; `false` desliga.
+  - **Gancho, painel e nome:** desfocam o fundo só com a caixa marcada (padrão 40%).
+  - **Camada solta:** o efeito `fundo_desfocado` na timeline.
+  - **Intensidade:** `desfoque_pct` de 5 a 100. 100% = 12 px de desfoque e 70% mais escuro; 50% = o antigo desfoque da CTA.
+  - **Skill:** `ed.bg_blur(t0, t1, k)` e `end_card(blur=k)`, com `blur=0` para desligar.
 - **Tamanho manual:** cada gancho, painel, assinatura (nome) e CTA tem dois campos de tamanho:
   - `escala`: % do bloco inteiro, retângulo e conteúdo juntos; de 40 a 160, padrão 100.
   - `texto_px`: px do texto principal numa tela de 1080 de largura. Padrões: painel 45, CTA 80, gancho 82, nome 50.
