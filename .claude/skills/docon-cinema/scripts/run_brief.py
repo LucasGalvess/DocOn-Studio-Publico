@@ -126,12 +126,24 @@ def posy(b, d):  # pos_y do Studio = % do topo onde o bloco começa (vazio = pos
     v = (b or {}).get('pos_y')
     try: return d if v in (None, '') else float(v) / 100 * 1920
     except (TypeError, ValueError): return d
+# tamanho vindo do Studio: escala (% do tamanho total do bloco) e texto_px (px do texto principal na tela de 1080)
+TXT_BASE = {'painel': 45, 'cta': 80, 'gancho': 82, 'nome': 50}
+def escala(b):
+    try: v = float((b or {}).get('escala') or 0)
+    except (TypeError, ValueError): v = 0
+    return min(1.6, max(0.4, v / 100)) if v > 0 else 1.0
+def txt(b):
+    try: v = float((b or {}).get('texto_px') or 0)
+    except (TypeError, ValueError): v = 0
+    base = TXT_BASE.get((b or {}).get('tipo'), 0)
+    return min(3.0, max(0.3, v / base)) if v > 0 and base else 1.0
+HK_S = escala(hk) * txt(hk)
 HOOK_C = posy(hk, 0.56 * 1920) + 195           # centro do gancho (padrão 1270)
 def ys_for(pg):
-    hs = [150 if kw and kw in [norm(x) for x in l.split()] else 112 for l in pg]; y = HOOK_C - sum(hs) / 2; out = []
+    hs = [(150 if kw and kw in [norm(x) for x in l.split()] else 112) * HK_S for l in pg]; y = HOOK_C - sum(hs) / 2; out = []
     for h in hs: out.append(y + h / 2); y += h
     return tuple(int(v) for v in out)
-ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=860)
+ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=min(1000, int(860 * HK_S)), size=int(92 * HK_S), kw_size=int(150 * HK_S))
 plan.append(f'gancho {ed.hook_end:.2f}s · {nwords} palavras · {len(pages)} página(s)')
 
 # ---- CTA (precisa vir antes da legenda)
@@ -141,7 +153,7 @@ if cta:
     t0 = min(t0, ed.TOTAL - 2.5)                     # o cartão final sempre aparece inteiro e vai até o último quadro
     ed.end_card(t0 - 0.05, (cta.get('kicker') or PJ.get('tema') or '').upper()[:34] or 'DOCON', (cta.get('titulo') or 'Me conta nos comentários').split('\n')[:2],
                 cta.get('subtitulo') or '', PJ['profissional'].get('nome') or '', cta.get('botao') or 'Agende sua avaliação',
-                foot=cta.get('rodape') or None, icon=cta.get('icone') or icon_hook, y=int(posy(cta, 640)))
+                foot=cta.get('rodape') or None, icon=cta.get('icone') or icon_hook, y=int(posy(cta, 640)), s=escala(cta) * txt(cta))
     plan.append(f'cta {t0:.2f}s ({src})')
 
 # ---- blocos
@@ -159,7 +171,7 @@ for b in blocks:
     if ed.ec0 is not None: t1 = min(t1, ed.ec0 - 0.1)
     if tp == 'destaque': kws += [k.strip() for k in (b.get('palavras') or '').split(',') if k.strip()]; continue
     if tp == 'nome':
-        ed.lower_third(t0 - 0.05, t1, b.get('nome') or PJ['profissional'].get('nome', ''), b.get('subtitulo') or PJ['profissional'].get('subtitulo', ''), y=int(posy(b, 1290)))
+        ed.lower_third(t0 - 0.05, t1, b.get('nome') or PJ['profissional'].get('nome', ''), b.get('subtitulo') or PJ['profissional'].get('subtitulo', ''), y=int(posy(b, 1290)), s=escala(b) * txt(b))
         topics.append(t0); plan.append(f'nome {t0:.2f}-{t1:.2f} ({src}) {b.get("nome")}'); continue
     if tp == 'som':
         w = bank_wav(b.get('banco_id'))
@@ -179,7 +191,12 @@ for b in blocks:
         h = 46 + 52 + 22 + (0 if lay == 'destaque' or not tit else 64 * len(tit.split('\n'))) + (112 if lay == 'destaque' else 0) + \
             (150 if lay == 'linha_do_tempo' else 230 if lay == 'opcoes' else 92 * n) + 30
         h = min(max(h, 220), 540); y = int(min(max(1200 - h / 2, 930), 1470 - h)) if b.get('pos_y') in (None, '') else int(min(max(posy(b, 0), 60), 1880 - h))
-        p = ed.panel(t0 - 0.1, t1, y=y, h=h); topics.append(t0)
+        es, tx = escala(b), txt(b)
+        if es != 1 or tx != 1:     # painel menor/maior (retângulo inteiro) e texto maior/menor por dentro
+            h = int(h * es * tx)
+            if b.get('pos_y') in (None, ''): y = int(min(max(1200 - h / 2, 930), 1470 - h))
+            y = int(min(max(y, 40), 1880 - h))
+        p = ed.panel(t0 - 0.1, t1, y=y, h=h, x=int(70 + 940 * (1 - es) / 2), w=int(940 * es), r=int(34 * es), s=es * tx); topics.append(t0)
         it_t = [find(i.get('gatilho'), b['inicio'] - 1, t0 - 0.3) for i in items]
         it_t = [x if x is not None and x < t1 - 0.3 else t0 + 0.35 + 0.45 * k for k, x in enumerate(it_t)]
         if lay == 'destaque':
@@ -213,7 +230,10 @@ ed.camera(topics=sorted(topics))
 leg = PJ.get('legenda', {}).get('estilo', ST.get('legenda', {}).get('estilo', 'docon'))
 if leg != 'nenhuma':
     kwords = sorted({w for k in kws for w in k.split()})
-    ed.captions(style='subtle' if leg == 'subtle' else 'docon', y=1600 if leg == 'subtle' else 1585, maxc=30 if leg == 'subtle' else 26, keywords=kwords)
+    try: cap_s = min(2.5, max(0.4, float((PJ.get('legenda') or {}).get('fonte_px') or 0) / (44 if leg == 'subtle' else 54))) or 1.0
+    except (TypeError, ValueError): cap_s = 1.0
+    if not (PJ.get('legenda') or {}).get('fonte_px'): cap_s = 1.0
+    ed.captions(style='subtle' if leg == 'subtle' else 'docon', y=1600 if leg == 'subtle' else 1585, maxc=30 if leg == 'subtle' else 26, keywords=kwords, s=cap_s)
 warn = ed.check(); plan += ['AVISO ' + w for w in warn]
 open(os.path.join(A.work, 'plano.txt'), 'w').write(f'duração final {ed.TOTAL:.2f}s · segmentos {[(round(a, 2), round(b, 2)) for a, b in ed.SEGS]}\n' + '\n'.join(plan) + '\n')
 print(open(os.path.join(A.work, 'plano.txt')).read())

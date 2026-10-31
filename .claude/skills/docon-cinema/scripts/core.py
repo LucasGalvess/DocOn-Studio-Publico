@@ -205,8 +205,8 @@ class Edit:
         return np.clip(f * self.vignette(), 0, 1)
 
     # ================================================================== elementos
-    def panel(self, t0, t1, y=950, h=420, x=70, w=940, r=34):
-        p = Panel(self, t0, t1, x, y, w, h, r); self.panels.append(p); return p
+    def panel(self, t0, t1, y=950, h=420, x=70, w=940, r=34, s=1.0):
+        p = Panel(self, t0, t1, x, y, w, h, r, s); self.panels.append(p); return p
     def kicker_title(self, p, kicker, title, tsize=58, ksize=26):
         k = pill(kicker, MONT(800, ksize)); p.add(k, 56, 46, p.t0)
         y = 46 + k.height + 22
@@ -222,13 +222,13 @@ class Edit:
             p.add(ls, x + icon.width + 30, top, t + 0.05); p.add(ss, x + icon.width + 30, top + ls.height - 4, t + 0.12)
         else:
             p.add(ls, x + icon.width + 30, ry + (icon.height - ls.height) // 2, t + 0.05)
-    def lower_third(self, t0, t1, name, sub, y=1300, x=70):
+    def lower_third(self, t0, t1, name, sub, y=1300, x=70, s=1.0):
         n_ = text_sprite(name, INTER('Bold', 50), P['key'], pad=0); s_ = text_sprite(sub, INTER('Medium', 34), P['text'], pad=0)
-        lt = Panel(self, t0, t1, x, y, max(n_.width, s_.width) + 110, 170, 34)
+        lt = Panel(self, t0, t1, x, y, int((max(n_.width, s_.width) + 110) * s), int(170 * s), int(34 * s), s)
         lt.add(Image.new('RGBA', (6, 104), tuple(P['accent']) + (255,)), 40, 33, t0 + 0.05)
         lt.add(n_, 66, 32, t0 + 0.1); lt.add(s_, 66, 104, t0 + 0.22); self.panels.append(lt); return lt
-    def end_card(self, t0, kicker, title_lines, subtitle, name, button, foot=None, icon='sparkle', h=760, y=640):
-        self.ec0 = t0; ec = Panel(self, t0, self.TOTAL + 1, 90, y, 900, h, 34)
+    def end_card(self, t0, kicker, title_lines, subtitle, name, button, foot=None, icon='sparkle', h=760, y=640, s=1.0):
+        self.ec0 = t0; ec = Panel(self, t0, self.TOTAL + 1, int(90 + 900 * (1 - s) / 2), y, int(900 * s), int(h * s), int(34 * s), s)
         def center(spr, yy, t, anim='rise'): ec.add(spr, (900 - spr.width) // 2, yy, t, anim=anim)
         center(pill(kicker, MONT(800, 28)), 70, t0)
         yy = 160
@@ -297,7 +297,8 @@ class Edit:
     # ---------------- legenda
     NOEND = {'de', 'do', 'da', 'dos', 'das', 'a', 'as', 'o', 'os', 'e', 'no', 'na', 'nos', 'nas', 'que', 'um', 'uma', 'em', 'com', 'para', 'pra', 'pro',
              'se', 'sua', 'suas', 'seu', 'seus', 'é', 'até', 'mais', 'essa', 'esse', 'cada', 'ao', 'aos', 'por', 'pelo', 'pela', 'me', 'te', 'nossa', 'nosso'}
-    def captions(self, keywords=(), style='docon', y=1585, maxc=26, start=None, end=None):
+    def captions(self, keywords=(), style='docon', y=1585, maxc=26, start=None, end=None, s=1.0):
+        maxc = max(10, round(maxc / s))          # letra maior = menos caracteres por linha
         """style 'docon': Inter Bold 54, pop 16%, palavra-chave 60px com sublinhado.
            style 'subtle': Inter SemiBold 44, sem pop, chave na cor de destaque, sem sublinhado."""
         self.cap_style = style; KEY = {norm(k) for k in keywords}
@@ -318,8 +319,8 @@ class Edit:
             if merged and len(ln) == 1 and len(' '.join(self.WORDS[j]['w'] for j in merged[-1] + ln)) <= maxc + 4 and self.WORDS[merged[-1][-1]]['w'][-1] not in '.?!':
                 merged[-1] = merged[-1] + ln
             else: merged.append(ln)
-        if style == 'subtle': FN, FK, space, shadow = INTER('SemiBold', 44), INTER('Bold', 46), 13, 0.92
-        else: FN, FK, space, shadow = INTER('Bold', 54), INTER('Bold', 60), 18, 0.8
+        if style == 'subtle': FN, FK, space, shadow = INTER('SemiBold', round(44 * s)), INTER('Bold', round(46 * s)), round(13 * s), 0.92
+        else: FN, FK, space, shadow = INTER('Bold', round(54 * s)), INTER('Bold', round(60 * s)), round(18 * s), 0.8
         self.cap_lines = []
         for ln in merged:
             sprs = []
@@ -429,15 +430,20 @@ class Edit:
 
 class Panel:
     """Vidro fosco: desfoque real do quadro + tinta (P['glass'] a P['glass_alpha']) + borda fina + sombra suave."""
-    def __init__(self, ed, t0, t1, x, y, w, h, r=34):
+    def __init__(self, ed, t0, t1, x, y, w, h, r=34, s=1.0):
         self.t0, self.t1, self.x, self.y, self.w, self.h = t0, t1, x, y, w, h
+        self.s = s          # escala do conteúdo (tamanho do painel e do texto vindos do Studio)
         self.mask = rounded_mask(w, h, r)[..., None]
         sh = Image.new('L', (w + 120, h + 120), 0); ImageDraw.Draw(sh).rounded_rectangle([60, 74, 60 + w, 74 + h], radius=r, fill=255)
         self.shadow = (np.asarray(sh.filter(ImageFilter.GaussianBlur(26))).astype(np.float32) / 255 * 0.32)[..., None]
         self.border = to_np(border_sprite(w, h, r)); self.items = []; self.sfx = ed.sfx; ed.sfx.append((t0, 'whoosh'))
         self.tint = np.array(P['glass'], np.float32) / 255; self.ta = P['glass_alpha']
     def add(self, spr, rx, ry, t, tick=False, anim='rise'):
-        t = max(t, self.t0 + 0.05); self.items.append((spr if isinstance(spr, np.ndarray) else to_np(spr), rx, ry, t, anim))
+        t = max(t, self.t0 + 0.05); a = spr if isinstance(spr, np.ndarray) else to_np(spr)
+        if abs(self.s - 1) > 1e-3:
+            a = cv2.resize(a, (max(1, round(a.shape[1] * self.s)), max(1, round(a.shape[0] * self.s))), interpolation=cv2.INTER_AREA if self.s < 1 else cv2.INTER_CUBIC)
+            rx, ry = round(rx * self.s), round(ry * self.s)
+        self.items.append((a, rx, ry, t, anim))
         if tick: self.sfx.append((t, 'tick'))
     def draw(self, fr, t):
         if t < self.t0 or t > self.t1: return

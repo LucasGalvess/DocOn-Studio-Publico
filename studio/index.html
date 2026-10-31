@@ -74,34 +74,34 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .ovl{position:absolute;inset:0;pointer-events:none;container-type:inline-size}
 /* elementos do vídeo, em unidades do quadro (1080 de largura = 100cqw) */
 .g-panel{position:absolute;left:6.5cqw;width:87cqw;border-radius:3.1cqw;padding:4.3cqw 5.2cqw;background:color-mix(in srgb,var(--v-glass) 62%,transparent);backdrop-filter:blur(2.6cqw);-webkit-backdrop-filter:blur(2.6cqw);border:.25cqw solid color-mix(in srgb,var(--v-border) 65%,transparent);box-shadow:0 2.4cqw 5cqw rgba(0,0,0,.32);color:var(--v-text);display:grid;gap:1.8cqw;font-family:var(--f-text,"Figtree"),sans-serif}
-.g-kick{justify-self:start;background:var(--v-pill);color:var(--v-pillfg);font:800 2.4cqw/1 var(--f-title,"Bricolage Grotesque"),sans-serif;letter-spacing:.3cqw;text-transform:uppercase;padding:1cqw 2cqw;border-radius:99px}
-.g-title{font:700 5.2cqw/1.15 var(--f-text,"Figtree"),sans-serif;margin:0}
-.g-big{font:800 8.4cqw/1 var(--f-title,"Bricolage Grotesque"),sans-serif;background:linear-gradient(180deg,var(--v-grad1),var(--v-grad2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.g-item{display:flex;align-items:center;gap:2.6cqw;font:700 4.2cqw/1.2 var(--f-text,"Figtree"),sans-serif}
-.g-item svg{width:6.6cqw;height:6.6cqw;flex:none;color:var(--v-icon)}
+.g-kick{justify-self:start;background:var(--v-pill);color:var(--v-pillfg);font:800 calc(2.4cqw*var(--ts,1))/1 var(--f-title,"Bricolage Grotesque"),sans-serif;letter-spacing:calc(.3cqw*var(--ts,1));text-transform:uppercase;padding:calc(1cqw*var(--ts,1)) calc(2cqw*var(--ts,1));border-radius:99px}
+.g-title{font:700 calc(5.2cqw*var(--ts,1))/1.15 var(--f-text,"Figtree"),sans-serif;margin:0}
+.g-big{font:800 calc(8.4cqw*var(--ts,1))/1 var(--f-title,"Bricolage Grotesque"),sans-serif;background:linear-gradient(180deg,var(--v-grad1),var(--v-grad2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.g-item{display:flex;align-items:center;gap:calc(2.6cqw*var(--ts,1));font:700 calc(4.2cqw*var(--ts,1))/1.2 var(--f-text,"Figtree"),sans-serif}
+.g-item svg{width:calc(6.6cqw*var(--ts,1));height:calc(6.6cqw*var(--ts,1));flex:none;color:var(--v-icon)}
 .g-tl{display:flex;justify-content:space-between;position:relative;padding-top:1.5cqw}
 .g-tl:before{content:"";position:absolute;left:8%;right:8%;top:2.6cqw;height:.3cqw;background:color-mix(in srgb,var(--v-border) 50%,transparent)}
-.g-tl div{display:grid;justify-items:center;gap:1.4cqw;font:700 3.6cqw var(--f-text,"Figtree"),sans-serif;flex:1;position:relative}
-.g-tl i{width:2.4cqw;height:2.4cqw;border-radius:50%;background:var(--v-icon);box-shadow:0 0 0 .8cqw var(--v-glass)}
+.g-tl div{display:grid;justify-items:center;gap:calc(1.4cqw*var(--ts,1));font:700 calc(3.6cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;flex:1;position:relative}
+.g-tl i{width:calc(2.4cqw*var(--ts,1));height:calc(2.4cqw*var(--ts,1));border-radius:50%;background:var(--v-icon);box-shadow:0 0 0 calc(.8cqw*var(--ts,1)) var(--v-glass)}
 .g-opts{display:flex;justify-content:space-around;align-items:center;gap:2cqw}
-.g-opts div{display:grid;justify-items:center;gap:1cqw;font:700 3.6cqw var(--f-text,"Figtree"),sans-serif}
-.g-opts svg{width:12cqw;height:12cqw;color:var(--v-icon)}
-.g-opts em{font:500 3.1cqw var(--f-text,"Figtree"),sans-serif;color:var(--v-key);font-style:normal}
-.g-hook{position:absolute;left:0;right:0;top:56%;display:grid;justify-items:center;gap:1cqw;text-align:center;font:800 7.6cqw/1.05 var(--f-title,"Bricolage Grotesque"),sans-serif;color:#fff;text-shadow:0 .6cqw 2.4cqw rgba(0,0,0,.55);text-transform:uppercase;padding-inline:4cqw}
-.g-hook .kw{font-size:13cqw;background:linear-gradient(180deg,var(--v-grad1),var(--v-grad2));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 .6cqw 1.6cqw rgba(0,0,0,.45))}
+.g-opts div{display:grid;justify-items:center;gap:calc(1cqw*var(--ts,1));font:700 calc(3.6cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif}
+.g-opts svg{width:calc(12cqw*var(--ts,1));height:calc(12cqw*var(--ts,1));color:var(--v-icon)}
+.g-opts em{font:500 calc(3.1cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:var(--v-key);font-style:normal}
+.g-hook{position:absolute;left:0;right:0;top:56%;display:grid;justify-items:center;gap:calc(1cqw*var(--ts,1));text-align:center;font:800 calc(7.6cqw*var(--ts,1))/1.05 var(--f-title,"Bricolage Grotesque"),sans-serif;color:#fff;text-shadow:0 calc(.6cqw*var(--ts,1)) calc(2.4cqw*var(--ts,1)) rgba(0,0,0,.55);text-transform:uppercase;padding-inline:calc(4cqw*var(--ts,1))}
+.g-hook .kw{font-size:calc(13cqw*var(--ts,1));background:linear-gradient(180deg,var(--v-grad1),var(--v-grad2));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 calc(.6cqw*var(--ts,1)) calc(1.6cqw*var(--ts,1)) rgba(0,0,0,.45))}
 .g-lt{position:absolute;left:6.5cqw;top:67.7%;border-radius:3.1cqw;padding:2.8cqw 5cqw 2.8cqw 6cqw;background:color-mix(in srgb,var(--v-glass) 62%,transparent);backdrop-filter:blur(2.6cqw);border:.25cqw solid color-mix(in srgb,var(--v-border) 65%,transparent);border-left:.6cqw solid var(--v-icon)}
-.g-lt b{display:block;font:700 4.6cqw var(--f-text,"Figtree"),sans-serif;color:var(--v-key)}
-.g-lt span{font:500 3.1cqw var(--f-text,"Figtree"),sans-serif;color:var(--v-text)}
-.g-cap{position:absolute;left:0;right:0;top:82.5%;text-align:center;font:700 5cqw var(--f-text,"Figtree"),sans-serif;color:#fff;text-shadow:0 .3cqw 1.4cqw rgba(0,0,0,.8);padding-inline:6cqw}
-.g-cap.sutil{font-weight:600;font-size:4.1cqw}
+.g-lt b{display:block;font:700 calc(4.6cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:var(--v-key)}
+.g-lt span{font:500 calc(3.1cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:var(--v-text)}
+.g-cap{position:absolute;left:0;right:0;top:82.5%;text-align:center;font:700 calc(5cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:#fff;text-shadow:0 calc(.3cqw*var(--ts,1)) calc(1.4cqw*var(--ts,1)) rgba(0,0,0,.8);padding-inline:calc(6cqw*var(--ts,1))}
+.g-cap.sutil{font-weight:600;font-size:calc(4.1cqw*var(--ts,1))}
 .g-cap u{color:var(--v-key);text-decoration-color:var(--v-icon);text-underline-offset:1cqw;text-decoration-thickness:.4cqw}
 .g-cap.sutil u{color:#fff}
 .g-broll{position:absolute;inset:0;display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(199,156,226,.16) 0 2cqw,rgba(199,156,226,.06) 2cqw 4cqw);color:#f1e6fa;font:700 4cqw var(--f-text,"Figtree"),sans-serif;text-align:center;padding:8cqw}
 .g-broll.band{top:50%;-webkit-mask:linear-gradient(transparent,#000 18%);mask:linear-gradient(transparent,#000 18%)}
 .g-cta{position:absolute;left:8.3cqw;right:8.3cqw;top:33%;text-align:center;justify-items:center}
-.g-cta .g-title{font:800 7.4cqw/1.08 var(--f-title,"Bricolage Grotesque"),sans-serif}
-.g-cta .nm{font:700 5cqw var(--f-text,"Figtree"),sans-serif;background:linear-gradient(180deg,var(--v-grad1),var(--v-grad2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.g-cta .bt{background:var(--v-btn);color:var(--v-btnfg);font:700 3.9cqw var(--f-text,"Figtree"),sans-serif;border-radius:99px;padding:3cqw 7cqw}
+.g-cta .g-title{font:800 calc(7.4cqw*var(--ts,1))/1.08 var(--f-title,"Bricolage Grotesque"),sans-serif}
+.g-cta .nm{font:700 calc(5cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;background:linear-gradient(180deg,var(--v-grad1),var(--v-grad2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.g-cta .bt{background:var(--v-btn);color:var(--v-btnfg);font:700 calc(3.9cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;border-radius:99px;padding:calc(3cqw*var(--ts,1)) calc(7cqw*var(--ts,1))}
 .g-cut{position:absolute;inset:0;display:grid;place-items:center;background:repeating-linear-gradient(45deg,rgba(229,136,115,.25) 0 1.6cqw,transparent 1.6cqw 3.2cqw);font:800 6cqw var(--f-title,"Bricolage Grotesque"),sans-serif;color:#fff;text-shadow:0 .4cqw 1.4cqw rgba(0,0,0,.6)}
 .stagefoot{display:flex;gap:8px;align-items:center;justify-content:center;flex-wrap:wrap;padding:0 16px 10px}
 /* inspector */
@@ -587,6 +587,7 @@ function renderProj() {
     <div class="f"><label for="p_mus">Trilha</label><select id="p_mus"><option value="0" ${!p.musica.ativa ? 'selected' : ''}>Sem trilha</option><option value="1" ${p.musica.ativa ? 'selected' : ''}>Com trilha</option></select></div></div>
     <div class="row2"><div class="f"><label for="p_clima">Clima da trilha</label><select id="p_clima">${[['warm', 'Acolhedora'], ['calm', 'Calma']].map(([v, n]) => `<option value="${v}" ${v === p.musica.clima ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     <div class="f"><label for="p_vol">Volume</label><select id="p_vol">${['discreta', 'média', 'presente'].map((v) => `<option ${v === p.musica.volume ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
+    <div class="f"><label for="p_capx">Tamanho do texto da legenda (px)</label><input id="p_capx" type="number" min="20" max="140" step="1" placeholder="${p.legenda.estilo === 'subtle' ? 44 : 54} (padrão)" value="${numOk(p.legenda.fonte_px) ? +p.legenda.fonte_px : ''}"></div>
     <div class="f"><label for="p_kw">Palavras-chave da legenda (vírgula)</label><textarea id="p_kw" rows="2" placeholder="osteoartrite, qualidade de vida, 1x ao mês">${esc(p.legenda.palavras_chave)}</textarea></div>
     <div class="f"><label for="p_tr">Trilha do banco</label><select id="p_tr"><option value="">(gerada pelo editor)</option>${Object.entries(S.bank).filter(([, v]) => v.tipo === 'trilha').map(([id, v]) => `<option value="${id}" ${id === p.musica.banco_id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
     ${(p.versoes || []).length ? `<p class="h">Versões renderizadas</p><div class="vers">${p.versoes.slice().reverse().map((v) => `<div class="card"><b>${esc(v.rotulo || 'Versão')}</b><span class="hint">${when(v.data)}${v.obs ? ' · ' + esc(v.obs) : ''}</span>${v.asset_id ? `<video controls playsinline preload="metadata" src="/_blob/${esc(v.asset_id)}"></video>` : ''}${v.previa_id ? `<img alt="Prévia" src="/_blob/${esc(v.previa_id)}" style="border-radius:8px">` : ''}${v.asset_id ? `<div class="acts"><button class="btn sm pri" type="button" data-vex="${esc(v.asset_id)}">Exportar</button><button class="btn sm" type="button" data-vap="${esc(v.asset_id)}">Enviar para aprovação</button></div>` : ''}</div>`).join('')}</div>` : ''}
@@ -596,7 +597,7 @@ function renderProj() {
   bind('p_titulo', (v) => p.titulo = v); bind('p_status', (v) => { p.status = v; renderTop(); }); bind('p_tema', (v) => p.tema = v);
   bind('p_estilo', (v) => { p.estilo_id = v; renderStyles(); }); bind('p_formato', (v) => p.formato = v); bind('p_alvo', (v) => p.duracao_alvo = v);
   bind('p_nome', (v) => p.profissional.nome = v); bind('p_sub', (v) => p.profissional.subtitulo = v); bind('p_esp', (v) => p.profissional.especialidade = v); bind('p_ig', (v) => p.profissional.instagram = v);
-  bind('p_leg', (v) => p.legenda.estilo = v); bind('p_kw', (v) => p.legenda.palavras_chave = v);
+  bind('p_leg', (v) => p.legenda.estilo = v); bind('p_kw', (v) => p.legenda.palavras_chave = v); bind('p_capx', (v) => { if (numOk(v)) p.legenda.fonte_px = Math.round(+v); else delete p.legenda.fonte_px; });
   bind('p_mus', (v) => p.musica.ativa = v === '1'); bind('p_clima', (v) => p.musica.clima = v); bind('p_vol', (v) => p.musica.volume = v);
 
   bind('p_tr', (v) => { p.musica.banco_id = v; if (v) { p.musica.ativa = true; p.musica.arquivo = S.bank[v]?.nome || ''; } });
@@ -713,6 +714,9 @@ function renderInsp() {
     ${b.tipo !== 'corte' ? fld('b_gat', 'Gatilho (palavras faladas onde entra)', b.gatilho, 'text', 'data-k="gatilho" placeholder="ex.: o Thor é um"') : ''}
     ${body}
     ${POS[b.tipo] ? `<div class="f"><label for="b_pos">Posição na tela</label><select id="b_pos">${[['', 'Padrão DocOn'], ['alto', 'Alto (rosto embaixo)'], ['meio', 'Meio'], ['baixo', 'Baixo (rosto em cima)']].map(([k, n]) => `<option value="${k}" ${(k === '' ? b.pos_y == null || b.pos_y === '' : +b.pos_y === POS[b.tipo][k]) ? 'selected' : ''}>${n}</option>`).join('')}${b.pos_y != null && b.pos_y !== '' && !['alto', 'meio', 'baixo'].some((k) => +b.pos_y === POS[b.tipo][k]) ? `<option selected value="x">Personalizada (${+b.pos_y}% do topo)</option>` : ''}</select></div>` : ''}
+    ${TXT_BASE[b.tipo] ? `<div class="row2"><div class="f"><label for="b_esc">${b.tipo === 'gancho' ? 'Tamanho do gancho' : b.tipo === 'nome' ? 'Tamanho da assinatura' : 'Tamanho do painel'} (%)</label><input id="b_esc" type="number" min="40" max="160" step="5" placeholder="100" value="${numOk(b.escala) ? +b.escala : ''}"></div>
+      <div class="f"><label for="b_tpx">Texto (px)</label><input id="b_tpx" type="number" min="12" max="240" step="1" placeholder="${TXT_BASE[b.tipo]} (padrão)" value="${numOk(b.texto_px) ? +b.texto_px : ''}"></div></div>
+      <p class="hint">Vazio = padrão DocOn. A % muda o ${b.tipo === 'gancho' ? 'gancho' : 'retângulo'} inteiro; os px mudam o texto ${b.tipo === 'painel' ? '(itens; título e kicker acompanham)' : 'principal'}, medidos numa tela de 1080 de largura.</p>` : ''}
     <div class="f"><label for="b_obs">Observações para o editor</label><textarea id="b_obs" rows="3" data-k="obs">${esc(b.obs)}</textarea></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm" type="button" id="b_go">Ir para o início</button><button class="btn sm" type="button" id="b_dup">Duplicar</button><button class="btn sm ghost" type="button" id="b_del" style="color:var(--bad)">Excluir bloco</button></div></div>`;
   el.querySelectorAll('[data-k]').forEach((e) => e.addEventListener(e.dataset.bool ? 'change' : 'input', () => { const k = e.dataset.k; b[k] = e.dataset.bool ? e.checked : e.dataset.num ? Math.max(0, +e.value || 0) : e.value; if (k === 'ate_o_fim' && b.ate_o_fim) b.fim = +projDur(p).toFixed(2); if (k === 'fim') b.ate_o_fim = false; if (k === 'banco_id' && S.bank[e.value]) { if (b.tipo === 'som') b.nome = S.bank[e.value].nome; else b.arquivo = S.bank[e.value].nome; } if (k === 'fim' && b.fim <= b.inicio) b.fim = +(b.inicio + 0.5).toFixed(1); touch('p', S.cur, 'Editar ' + label(b)); renderTL(); renderStage(); if (k === 'layout') renderInsp(); }));
@@ -720,6 +724,9 @@ function renderInsp() {
   el.querySelectorAll('[data-irm]').forEach((e) => e.addEventListener('click', () => { b.itens.splice(+e.dataset.irm, 1); touch(); renderInsp(); renderStage(); }));
   const ai = document.getElementById('addItem'); if (ai) ai.onclick = () => { b.itens.push({icone: 'check', texto: '', gatilho: ''}); touch(); renderInsp(); renderStage(); };
   document.getElementById('b_go').onclick = () => seek(b.inicio);
+  for (const [id, k, lo, hi] of [['b_esc', 'escala', 40, 160], ['b_tpx', 'texto_px', 12, 240]]) { const inp = document.getElementById(id); if (!inp) continue;
+    inp.addEventListener('input', () => { const v = inp.value; if (numOk(v)) b[k] = Math.min(hi, Math.max(lo, Math.round(+v))); else delete b[k]; touch(); renderStage(); });
+    inp.addEventListener('change', () => touch('p', S.cur, (k === 'escala' ? 'Tamanho de ' : 'Texto de ') + label(b))); }
   const bp = document.getElementById('b_pos'); if (bp) bp.onchange = () => { if (bp.value === 'x') return; if (bp.value) b.pos_y = POS[b.tipo][bp.value]; else delete b.pos_y; touch('p', S.cur, 'Posição de ' + label(b)); renderStage(); };
   if (b.rascunho) { document.getElementById('rsOk').onclick = () => aprovarRascunho(b.id); document.getElementById('rsX').onclick = () => { p.blocos = p.blocos.filter((x) => x.id !== b.id); S.sel = null; touch('p', S.cur, 'Descartar rascunho'); renderAll(); }; }
   document.getElementById('b_dup').onclick = () => { const c = JSON.parse(JSON.stringify(b)); c.id = uid(); const d = b.fim - b.inicio; c.inicio = +(b.fim + 0.2).toFixed(1); c.fim = +(c.inicio + d).toFixed(1); p.blocos.push(c); S.sel = c.id; touch('p', S.cur, 'Duplicar ' + label(b)); renderAll(); };
@@ -752,6 +759,12 @@ function mediaSrc(b) {
 }
 /* altura na tela (porcentagem do topo onde o bloco começa). Sem pos_y, cada tipo usa a posição padrão DocOn. */
 const POS = {painel: {alto: 8, meio: 28, baixo: 49, padrao: 49}, gancho: {alto: 14, meio: 36, baixo: 56, padrao: 56}, nome: {alto: 9, meio: 40, baixo: 67.7, padrao: 67.7}, cta: {alto: 10, meio: 33, baixo: 48, padrao: 33}};
+/* tamanho: escala = % do tamanho total do bloco (painel inteiro, com o conteúdo); texto_px = px do texto principal numa tela de 1080 de largura */
+const TXT_BASE = {painel: 45, cta: 80, gancho: 82, nome: 50};
+const numOk = (v) => v !== '' && v != null && Number.isFinite(+v) && +v > 0;
+function esOf(b) { return numOk(b.escala) ? Math.min(1.6, Math.max(0.4, +b.escala / 100)) : 1; }
+function tsOf(b) { return numOk(b.texto_px) && TXT_BASE[b.tipo] ? Math.min(3, Math.max(0.3, +b.texto_px / TXT_BASE[b.tipo])) : 1; }
+function capTs(p) { const v = p.legenda?.fonte_px; return numOk(v) ? Math.min(2.5, Math.max(0.4, +v / (p.legenda?.estilo === 'subtle' ? 44 : 54))) : 1; }
 function topPct(b) { const d = POS[b.tipo]?.padrao ?? 49; const v = b.pos_y; return v === '' || v == null || !Number.isFinite(+v) ? d : Math.min(88, Math.max(3, +v)); }
 function blockHTML(b, p, t) {
   const its = (b.itens || []).filter((i) => i.texto || i.icone);
@@ -764,7 +777,7 @@ function blockHTML(b, p, t) {
       const sc = isk ? 0.4 + 0.6 * bk(x / 1.2) : 0.72 + 0.28 * bk(x);
       return `<span class="${isk ? 'kw' : ''}" style="display:inline-block;opacity:${f2(cl(x * 1.6))};transform:scale(${f2(sc)});filter:blur(${f2((1 - cl(x * 1.4)) * 1.2)}cqw)">${esc(w)}</span>`;
     });
-    return `<div class="g-hook" data-bid="${b.id}" data-ed="frase" style="top:${topPct(b)}%;opacity:${f2(e.z)};transform:translateY(${f2(-(1 - e.z) * 4)}cqw)"><div>${ws.reduce((a, s, i) => a + s + (i % 3 === 2 ? '<br>' : ' '), '')}</div></div>`;
+    return `<div class="g-hook" data-bid="${b.id}" data-ed="frase" style="--ts:${f2(tsOf(b) * esOf(b))};top:${topPct(b)}%;opacity:${f2(e.z)};transform:translateY(${f2(-(1 - e.z) * 4)}cqw)"><div>${ws.reduce((a, s, i) => a + s + (i % 3 === 2 ? '<br>' : ' '), '')}</div></div>`;
   }
   if (b.tipo === 'painel') {
     const it = (i, j, html) => { const x = t == null ? 1 : (t - b.inicio - 0.35 - 0.45 * j) / 0.35; return `<div class="${i}" style="opacity:${f2(cl(x))};transform:translateX(${f2(-(1 - eo(x)) * 4)}cqw)">${html}</div>`; };
@@ -773,9 +786,9 @@ function blockHTML(b, p, t) {
     else if (b.layout === 'linha_do_tempo') inner += `${b.titulo ? `<p class="g-title">${esc(b.titulo)}</p>` : ''}<div class="g-tl">${its.map((i, j) => { const x = t == null ? 1 : (t - b.inicio - 0.35 - 0.45 * j) / 0.3; return `<div style="opacity:${f2(cl(x))};transform:scale(${f2(0.7 + 0.3 * bk(x))})"><i></i>${esc(i.texto)}</div>`; }).join('')}</div>`;
     else if (b.layout === 'opcoes') inner += `${b.titulo ? `<p class="g-title">${esc(b.titulo)}</p>` : ''}<div class="g-opts">${its.map((i, j) => { const x = t == null ? 1 : (t - b.inicio - 0.35 - 0.45 * j) / 0.3; return `${j ? '<em>ou</em>' : ''}<div style="opacity:${f2(cl(x))};transform:scale(${f2(0.6 + 0.4 * bk(x))})">${icon(i.icone)}${esc(i.texto)}</div>`; }).join('')}</div>`;
     else inner += `${b.titulo ? `<p class="g-title" data-ed="titulo">${esc(b.titulo)}</p>` : ''}${its.map((i, j) => it('g-item', j, `${icon(i.icone)}<span data-ed="itens.${j}.texto">${esc(i.texto)}</span>`)).join('')}`;
-    return `<div class="g-panel" data-bid="${b.id}" style="top:${topPct(b)}%;opacity:${f2(e.k)};transform:translateY(${f2((1 - e.a) * 5 - (1 - e.z) * 3)}cqw) scale(${f2(0.94 + 0.06 * e.a)});filter:blur(${f2((1 - e.a) * 1.2)}cqw)">${inner}</div>`;
+    return `<div class="g-panel" data-bid="${b.id}" style="--ts:${f2(tsOf(b))};transform-origin:50% 0;scale:${f2(esOf(b))};top:${topPct(b)}%;opacity:${f2(e.k)};transform:translateY(${f2((1 - e.a) * 5 - (1 - e.z) * 3)}cqw) scale(${f2(0.94 + 0.06 * e.a)});filter:blur(${f2((1 - e.a) * 1.2)}cqw)">${inner}</div>`;
   }
-  if (b.tipo === 'nome') return `<div class="g-lt" data-bid="${b.id}" style="top:${topPct(b)}%;opacity:${f2(e.z)};clip-path:inset(0 ${f2((1 - e.a) * 100)}% 0 0 round 3.1cqw);transform:translateX(${f2(-(1 - e.a) * 4)}cqw)"><b data-ed="nome">${esc(b.nome || p.profissional.nome || 'Nome')}</b><span data-ed="subtitulo">${esc(b.subtitulo || p.profissional.subtitulo || 'Subtítulo')}</span></div>`;
+  if (b.tipo === 'nome') return `<div class="g-lt" data-bid="${b.id}" style="--ts:${f2(tsOf(b))};transform-origin:0 0;scale:${f2(esOf(b))};top:${topPct(b)}%;opacity:${f2(e.z)};clip-path:inset(0 ${f2((1 - e.a) * 100)}% 0 0 round 3.1cqw);transform:translateX(${f2(-(1 - e.a) * 4)}cqw)"><b data-ed="nome">${esc(b.nome || p.profissional.nome || 'Nome')}</b><span data-ed="subtitulo">${esc(b.subtitulo || p.profissional.subtitulo || 'Subtítulo')}</span></div>`;
   if (b.tipo === 'broll') {
     const m = mediaSrc(b); const e2 = envOf(b, t, 0.2, 0.2); const kb = t == null ? 1.04 : 1 + 0.08 * cl(e2.lt / Math.max(0.5, b.fim - b.inicio));
     if (m) { const el = m.tipo === 'imagem' ? `<img alt="" src="${esc(m.url)}" style="width:100%;height:100%;object-fit:cover;transform:scale(${f2(kb)})">` : `<video muted playsinline data-bt="${f2(Math.max(0, t == null ? 0.5 : t - b.inicio))}" src="${esc(m.url)}" style="width:100%;height:100%;object-fit:cover"></video>`; return `<div class="g-broll ${b.modo === 'faixa' ? 'band' : ''}" style="padding:0;background:#000;opacity:${f2(e2.k)}">${el}</div>`; }
@@ -783,7 +796,7 @@ function blockHTML(b, p, t) {
   }
   if (b.tipo === 'som') return `<div style="position:absolute;right:4cqw;top:12%;background:rgba(0,0,0,.55);color:#e9efc4;font:700 3cqw Figtree,sans-serif;padding:1.4cqw 3cqw;border-radius:99px;opacity:${t == null || e.lt < 0.8 ? 1 : 0.35}">♪ ${esc(b.nome || 'efeito')}</div>`;
   if (b.tipo === 'corte') return S.final ? '' : `<div class="g-cut">CORTAR · ${esc(b.motivo)}</div>`;
-  if (b.tipo === 'cta') { const e2 = envOf(b, t, 0.5, 0.01); const pulse = t == null ? 1 : 1 + 0.03 * Math.sin((t - b.inicio) * 5); return `<div class="g-panel g-cta" data-bid="${b.id}" style="top:${topPct(b)}%;opacity:${f2(e2.a)};transform:translateY(${f2((1 - e2.a) * 6)}cqw) scale(${f2(0.95 + 0.05 * e2.a)})">${b.kicker ? `<span class="g-kick" data-ed="kicker" style="justify-self:center">${esc(b.kicker)}</span>` : ''}<p class="g-title" data-ed="titulo">${esc(b.titulo || 'Título do CTA').replace(/\n/g, '<br>')}</p>${b.subtitulo ? `<span data-ed="subtitulo" style="font-size:3.4cqw;color:var(--v-border)">${esc(b.subtitulo)}</span>` : ''}<span class="nm">${esc(p.profissional.nome || 'Nome')}</span><span class="bt" data-ed="botao" style="transform:scale(${f2(pulse)})">${esc(b.botao || 'Botão')}</span>${b.rodape ? `<span style="font-size:3cqw;color:var(--v-border)">${esc(b.rodape)}</span>` : ''}</div>`; }
+  if (b.tipo === 'cta') { const e2 = envOf(b, t, 0.5, 0.01); const pulse = t == null ? 1 : 1 + 0.03 * Math.sin((t - b.inicio) * 5); return `<div class="g-panel g-cta" data-bid="${b.id}" style="--ts:${f2(tsOf(b))};transform-origin:50% 0;scale:${f2(esOf(b))};top:${topPct(b)}%;opacity:${f2(e2.a)};transform:translateY(${f2((1 - e2.a) * 6)}cqw) scale(${f2(0.95 + 0.05 * e2.a)})">${b.kicker ? `<span class="g-kick" data-ed="kicker" style="justify-self:center">${esc(b.kicker)}</span>` : ''}<p class="g-title" data-ed="titulo">${esc(b.titulo || 'Título do CTA').replace(/\n/g, '<br>')}</p>${b.subtitulo ? `<span data-ed="subtitulo" style="font-size:3.4cqw;color:var(--v-border)">${esc(b.subtitulo)}</span>` : ''}<span class="nm">${esc(p.profissional.nome || 'Nome')}</span><span class="bt" data-ed="botao" style="transform:scale(${f2(pulse)})">${esc(b.botao || 'Botão')}</span>${b.rodape ? `<span style="font-size:3cqw;color:var(--v-border)">${esc(b.rodape)}</span>` : ''}</div>`; }
   return '';
 }
 /* legenda: palavras com tempo (transcricao.palavras [{w,s,e}] em s do bruto) ou texto de exemplo */
@@ -808,10 +821,10 @@ function captionHTML(p, show, t) {
   if (lines) {
     const ln = lines.find((l) => t >= l[0].s - 0.05 && t <= l[l.length - 1].e + 0.15); if (!ln) return '';
     const x = (t - ln[0].s + 0.05) / 0.18;
-    return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}" style="opacity:${f2(cl(x))};transform:translateY(${f2((1 - eo(x)) * 1.2)}cqw)">${ln.map((w) => { const on = t >= w.s && t <= w.e + 0.05; const k = kws.has(norm(w.w)); const s = style === 'subtle' ? '' : `transform:scale(${on ? 1.08 : 1});${on ? 'color:var(--v-key)' : ''}`; return `<span class="cw" style="${s}">${k ? `<u>${esc(w.w)}</u>` : esc(w.w)}</span>`; }).join(' ')}</div>`;
+    return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}" style="--ts:${f2(capTs(p))};opacity:${f2(cl(x))};transform:translateY(${f2((1 - eo(x)) * 1.2)}cqw)">${ln.map((w) => { const on = t >= w.s && t <= w.e + 0.05; const k = kws.has(norm(w.w)); const s = style === 'subtle' ? '' : `transform:scale(${on ? 1.08 : 1});${on ? 'color:var(--v-key)' : ''}`; return `<span class="cw" style="${s}">${k ? `<u>${esc(w.w)}</u>` : esc(w.w)}</span>`; }).join(' ')}</div>`;
   }
   const sample = show.find((b) => b.tipo === 'destaque')?.palavras ? `exemplo com ${show.find((b) => b.tipo === 'destaque').palavras.split(',')[0].trim()}` : 'legenda de exemplo';
-  return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}">${sample.split(' ').map((w) => kws.has(w.toLowerCase()) ? `<u>${esc(w)}</u>` : esc(w)).join(' ')}</div>`;
+  return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}" style="--ts:${f2(capTs(p))}">${sample.split(' ').map((w) => kws.has(w.toLowerCase()) ? `<u>${esc(w)}</u>` : esc(w)).join(' ')}</div>`;
 }
 const GRAIN = (() => { try { const c = document.createElement('canvas'); c.width = c.height = 160; const x = c.getContext('2d'); const d = x.createImageData(160, 160); for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 46; } x.putImageData(d, 0, 0); return c.toDataURL(); } catch (e) { return ''; } })();
 function rnd(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
@@ -1342,7 +1355,7 @@ function memText() {
 const RULES = () => `Você é o Diretor de Edição da DocOn Marketing Médico, dentro do DocOn Studio (uma mesa de briefing de reels verticais 1080x1920 para profissionais de saúde). Fale em português do Brasil, de forma calorosa, direta e curta, como um diretor de arte ao lado da equipe.
 Seu trabalho aqui: montar e ajustar o briefing (timeline de blocos) que o editor Claude vai renderizar depois. Você NÃO renderiza vídeo. Use as ferramentas para mudar a timeline; depois de mudar, diga em 1-2 frases o que fez.
 Padrão DocOn Cinema: gancho tipográfico com palavra-chave gigante; um painel de vidro por ideia (kicker curto em maiúsculas, título ≤ 28 caracteres, itens ≤ 32 caracteres com ícone); lower third na apresentação; cartão final com CTA; legenda (docon ou sutil); respiro de 2-5 s entre painéis; nunca cobrir rosto; nunca inventar dado clínico, credencial, @ ou nome de clínica que não foi dito.
-VISÃO: quando vierem QUADROS DA PRÉVIA, olhe-os antes de decidir. Nunca deixe painel, nome, gancho ou CTA cobrindo o rosto (olhos e boca) ou o assunto principal: ache o rosto no lado esquerdo (vídeo limpo) e confira no direito (com grafismos). Para mover na vertical use o campo pos_y (porcentagem do topo da tela onde o bloco começa; use as marcas amarelas: rosto no alto → pos_y 50-60; rosto no meio → 8-14 ou deixe o painel baixo; rosto embaixo → 8-14). Diga o que viu em poucas palavras ("o painel cobria o queixo, subi para 12%").
+VISÃO: quando vierem QUADROS DA PRÉVIA, olhe-os antes de decidir. Nunca deixe painel, nome, gancho ou CTA cobrindo o rosto (olhos e boca) ou o assunto principal: ache o rosto no lado esquerdo (vídeo limpo) e confira no direito (com grafismos). Para mover na vertical use o campo pos_y (porcentagem do topo da tela onde o bloco começa; use as marcas amarelas: rosto no alto → pos_y 50-60; rosto no meio → 8-14 ou deixe o painel baixo; rosto embaixo → 8-14). Para diminuir ou aumentar, use escala (% do painel inteiro) e texto_px (px do texto). Diga o que viu em poucas palavras ("o painel cobria o queixo, subi para 12%").
 Tempos são segundos do vídeo bruto. Quando o projeto trouxer "legenda_tempos" ([início, fim, frase], vindo do SRT/VTT importado ou da transcrição), USE esses tempos para posicionar cada bloco exatamente na fala: não peça o SRT de novo e não diga que precisa de render, porque a prévia já mostra as animações e a legenda ao vivo. Sem legenda_tempos, peça para importar o SRT em Direção › Fala do vídeo. Sempre que possível preencha "gatilho" com 2-5 palavras EXATAS da fala (o render sincroniza pelo áudio). Ícones válidos: ${ICONS.join(', ')}. Layouts de painel: lista, linha_do_tempo, destaque, opcoes. Efeitos visuais (tipo fx, campo efeito): ${FX.map((f) => f.k + ' = ' + f.n).join('; ')}. Use efeitos com moderação (no máximo um a cada 6-8 s) e sempre a serviço da fala. Quando o projeto tiver "anexos" (arquivos que a equipe mandou pela Direção): documentos trazem o texto (roteiro, pauta, artigo, briefing) e servem de base para gancho, painéis e CTA, sem inventar além deles; imagens e vídeos podem vir junto desta mensagem como imagens (a legenda diz qual é qual): descreva o que vê só quando ajudar e coloque no vídeo com usar_anexo, no trecho da fala que combina com eles, respeitando a nota da equipe. Para B-roll, imagem ou som que não existam no banco nem nos anexos, use buscar_midia (fontes online) ou gerar_midia (IA): os resultados aparecem para a equipe aprovar; não coloque mídia sem aprovação.${(cur()?.referencias || []).length ? ' Referências visuais da equipe (inspiração, não usar a imagem): ' + cur().referencias.map((r) => (r.titulo || r.url)).join(' | ') : ''} O CTA vai até o fim do vídeo (ate_o_fim: true); o projeto termina onde o vídeo bruto termina.
 ${memText()}`;
 function applyChange(fn, label) { const p = cur(); const h = hOf(S.cur); if (h) settle(h, S.cur); const r = fn(p); if (S.dirMudou && S.sel) S.dirMudou.add(S.sel); touch('p', S.cur, 'Diretor: ' + label); if (h) settle(h, S.cur); renderTL(); renderStage(); if (S.rightTab === 'insp') renderInsp();
@@ -1351,12 +1364,12 @@ const TOOLS = () => [
   {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx. Campos extras conforme o tipo (fx: efeito, intensidade suave|média|forte; painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
     inputSchema: {type: 'object', properties: {tipo: {type: 'string'}, inicio: {type: 'number'}, fim: {type: 'number'}, gatilho: {type: 'string'}, campos: {type: 'object'}}, required: ['tipo', 'inicio', 'fim']},
     execute: (a) => applyChange((p) => { const b = defaultBlock(String(a.tipo), +a.inicio || 0); b.fim = Math.max(b.inicio + 0.5, +a.fim || b.inicio + 3); b.gatilho = String(a.gatilho || ''); Object.assign(b, cleanFields(a.campos)); p.blocos.push(b); S.sel = b.id; return {id: b.id}; }, 'criar')},
-  {name: 'editar_bloco', description: 'Altera campos de um bloco existente pelo id (inclui inicio, fim, gatilho, kicker, titulo, itens, frase, palavra_chave, icone, nome, subtitulo, botao, pos_y...). pos_y = altura na tela em % do topo onde o bloco começa (gancho, painel, nome, cta); null volta ao padrão. Retorna o bloco atualizado.',
+  {name: 'editar_bloco', description: 'Altera campos de um bloco existente pelo id (inclui inicio, fim, gatilho, kicker, titulo, itens, frase, palavra_chave, icone, nome, subtitulo, botao, pos_y...). pos_y = altura na tela em % do topo onde o bloco começa (gancho, painel, nome, cta); escala = % do tamanho total do bloco (40-160, 100 = padrão); texto_px = px do texto principal numa tela de 1080 (padrão: painel 45, cta 80, gancho 82, nome 50); null volta ao padrão. Retorna o bloco atualizado.',
     inputSchema: {type: 'object', properties: {id: {type: 'string'}, campos: {type: 'object'}}, required: ['id', 'campos']},
     execute: (a) => applyChange((p) => { const b = p.blocos.find((x) => x.id === String(a.id)); if (!b) throw new Error('bloco não encontrado: ' + a.id); Object.assign(b, cleanFields(a.campos)); if (b.fim <= b.inicio) b.fim = b.inicio + 0.5; S.sel = b.id; return b; }, 'editar')},
   {name: 'apagar_bloco', description: 'Apaga um bloco pelo id.', inputSchema: {type: 'object', properties: {id: {type: 'string'}}, required: ['id']},
     execute: (a) => applyChange((p) => { const n = p.blocos.length; p.blocos = p.blocos.filter((x) => x.id !== String(a.id)); if (p.blocos.length === n) throw new Error('bloco não encontrado'); return 'apagado'; }, 'apagar')},
-  {name: 'editar_projeto', description: 'Altera dados do projeto: profissional{nome,subtitulo,especialidade,instagram}, legenda{estilo,palavras_chave}, musica{ativa,clima,volume}, direcionamentos, tema.',
+  {name: 'editar_projeto', description: 'Altera dados do projeto: profissional{nome,subtitulo,especialidade,instagram}, legenda{estilo,palavras_chave,fonte_px (px do texto da legenda numa tela de 1080; padrão 54, sutil 44)}, musica{ativa,clima,volume}, direcionamentos, tema.',
     inputSchema: {type: 'object', properties: {campos: {type: 'object'}}, required: ['campos']},
     execute: (a) => applyChange((p) => { const c = a.campos || {}; for (const k of ['profissional', 'legenda', 'musica']) if (c[k] && typeof c[k] === 'object') Object.assign(p[k], c[k]); for (const k of ['direcionamentos', 'tema', 'titulo']) if (typeof c[k] === 'string') p[k] = c[k]; renderProj(); return 'ok'; }, 'projeto')},
   {name: 'buscar_midia', description: 'Busca B-roll, imagem ou som nas fontes online ligadas (Magnific, Pexels, Pixabay, Freesound, Openverse; escolha a fonte que a equipe pedir) e mostra os resultados na Biblioteca para a equipe ver no vídeo e aprovar. Use termos em inglês. tipo: video|imagem|som.',
@@ -1371,7 +1384,7 @@ const TOOLS = () => [
   {name: 'ir_para', description: 'Move o cursor da prévia para um tempo (s do bruto) para mostrar algo à equipe.', inputSchema: {type: 'object', properties: {tempo: {type: 'number'}}, required: ['tempo']},
     execute: (a) => { seek(+a.tempo || 0); return 'ok'; }},
 ];
-function cleanFields(c) { const o = {}; if (!c || typeof c !== 'object') return o; for (const [k, v] of Object.entries(c)) { if (k === 'id' || k === 'tipo') continue; if (k === 'itens' && Array.isArray(v)) o.itens = v.map((i) => ({icone: ICONS.includes(i.icone) ? i.icone : 'check', texto: String(i.texto || ''), gatilho: String(i.gatilho || '')})); else if (k === 'inicio' || k === 'fim') o[k] = Math.max(0, +v || 0); else if (k === 'pos_y') o[k] = v === null || v === '' ? null : Math.min(88, Math.max(3, +v || 0)); else o[k] = typeof v === 'string' ? v : v; } return o; }
+function cleanFields(c) { const o = {}; if (!c || typeof c !== 'object') return o; for (const [k, v] of Object.entries(c)) { if (k === 'id' || k === 'tipo') continue; if (k === 'itens' && Array.isArray(v)) o.itens = v.map((i) => ({icone: ICONS.includes(i.icone) ? i.icone : 'check', texto: String(i.texto || ''), gatilho: String(i.gatilho || '')})); else if (k === 'inicio' || k === 'fim') o[k] = Math.max(0, +v || 0); else if (k === 'pos_y') o[k] = v === null || v === '' ? null : Math.min(88, Math.max(3, +v || 0)); else if (k === 'escala') o[k] = v === null || v === '' ? null : Math.min(160, Math.max(40, +v || 100)); else if (k === 'texto_px') o[k] = v === null || v === '' ? null : Math.min(240, Math.max(12, +v || 0)); else o[k] = typeof v === 'string' ? v : v; } return o; }
 let chatCtl = null, chatCtx = '';
 function speak(t) { if (!document.getElementById('ttsOn')?.checked) return; sayLine(t, null, true); }
 function renderChat() {
@@ -2062,8 +2075,8 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
   // vidro: desfoca o que está atrás do retângulo e pinta o vidro na cor do estilo
   const glass = (x, y, w, h, r, a) => { if (a <= 0.01) return; c.save(); c.globalAlpha = a; rr(c, x, y, w, h, r); c.clip(); c.filter = `blur(${(2.6 * u).toFixed(0)}px)`; c.drawImage(c.canvas, 0, 0); c.filter = 'none'; c.fillStyle = hexA(pl.glass, 0.62); c.fillRect(x, y, w, h); c.restore();
     c.save(); c.globalAlpha = a; rr(c, x, y, w, h, r); c.lineWidth = Math.max(1, 0.25 * u); c.strokeStyle = hexA(pl.border, 0.65); c.stroke(); c.restore(); };
-  const pill = (txt, x, y, align = 'left', a = 1) => { c.font = `800 ${2.4 * u}px ${FT}`; const tw = c.measureText(txt.toUpperCase()).width + 0.3 * u * txt.length; const w = tw + 4 * u, h = 4.4 * u; const x0 = align === 'center' ? x - w / 2 : x;
-    c.globalAlpha = a; c.fillStyle = pl.pill_bg; rr(c, x0, y, w, h, h / 2); c.fill(); c.fillStyle = pl.pill_fg; c.textAlign = 'left'; c.textBaseline = 'middle'; let cx = x0 + 2 * u; for (const ch of txt.toUpperCase()) { c.fillText(ch, cx, y + h / 2 + 0.1 * u); cx += c.measureText(ch).width + 0.3 * u; } c.textBaseline = 'alphabetic'; c.globalAlpha = 1; return h; };
+  const pill = (txt, x, y, align = 'left', a = 1, k = 1) => { const u2 = u * k; c.font = `800 ${2.4 * u2}px ${FT}`; const tw = c.measureText(txt.toUpperCase()).width + 0.3 * u2 * txt.length; const w = tw + 4 * u2, h = 4.4 * u2; const x0 = align === 'center' ? x - w / 2 : x;
+    c.globalAlpha = a; c.fillStyle = pl.pill_bg; rr(c, x0, y, w, h, h / 2); c.fill(); c.fillStyle = pl.pill_fg; c.textAlign = 'left'; c.textBaseline = 'middle'; let cx = x0 + 2 * u2; for (const ch of txt.toUpperCase()) { c.fillText(ch, cx, y + h / 2 + 0.1 * u2); cx += c.measureText(ch).width + 0.3 * u2; } c.textBaseline = 'alphabetic'; c.globalAlpha = 1; return h; };
   const act = p.blocos.filter((b) => b.tipo !== 'fx' && b.tipo !== 'corte' && b.tipo !== 'som' && t >= b.inicio && t <= b.fim)
     .sort((a, b) => TRACKS.findIndex((x) => x.k === a.tipo) - TRACKS.findIndex((x) => x.k === b.tipo));
   for (const b of act) {
@@ -2083,9 +2096,9 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
       const span = Math.min(0.26, Math.max(0.1, ((b.fim - b.inicio) * 0.5) / words.length)); const lines = []; for (let i = 0; i < words.length; i += 3) lines.push(words.slice(i, i + 3).map((w, j) => ({w, i: i + j})));
       let y = topPct(b) / 100 * H; c.save(); c.globalAlpha = e.z; c.translate(0, -(1 - e.z) * 4 * u); c.textBaseline = 'alphabetic';
       for (const ln of lines) {
-        const isK = (w) => kw && w.toLowerCase().replace(/[.,?!:]/g, '') === kw; const sz = (w) => isK(w) ? 13 * u : 7.6 * u;
+        const isK = (w) => kw && w.toLowerCase().replace(/[.,?!:]/g, '') === kw; const gk = tsOf(b) * esOf(b); const sz = (w) => (isK(w) ? 13 : 7.6) * u * gk;
         const parts = ln.map((x) => { c.font = `800 ${sz(x.w)}px ${FT}`; return {...x, s: sz(x.w), wd: c.measureText(x.w.toUpperCase()).width}; });
-        const lh = Math.max(...parts.map((x) => x.s)) * 1.05; const tot = parts.reduce((n, x) => n + x.wd, 0) + (parts.length - 1) * 2 * u; let x = (W - tot) / 2; y += lh;
+        const lh = Math.max(...parts.map((x) => x.s)) * 1.05; const tot = parts.reduce((n, x) => n + x.wd, 0) + (parts.length - 1) * 2 * u * gk; let x = (W - tot) / 2; y += lh;
         for (const pt of parts) { const xx = (t - b.inicio - pt.i * span) / 0.3; const sc = isK(pt.w) ? 0.4 + 0.6 * bk(xx / 1.2) : 0.72 + 0.28 * bk(xx); c.save(); c.globalAlpha = e.z * cl(xx * 1.6); c.translate(x + pt.wd / 2, y - pt.s * 0.35); c.scale(sc, sc);
           c.font = `800 ${pt.s}px ${FT}`; c.shadowColor = 'rgba(0,0,0,.55)'; c.shadowBlur = 2.4 * u; c.shadowOffsetY = 0.6 * u; if (isK(pt.w)) gradText(c, pt.w.toUpperCase(), 0, pt.s * 0.35, pt.s, pl, 'center'); else { c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(pt.w.toUpperCase(), 0, pt.s * 0.35); } c.restore(); x += pt.wd + 2 * u; }
         y += 1 * u;
@@ -2093,42 +2106,43 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
       c.restore(); continue;
     }
     if (b.tipo === 'nome') {
-      c.font = `700 ${4.6 * u}px ${FX_}`; const nm = b.nome || p.profissional.nome || ''; const sb = b.subtitulo || p.profissional.subtitulo || ''; const w1 = c.measureText(nm).width; c.font = `500 ${3.1 * u}px ${FX_}`; const w2 = c.measureText(sb).width;
-      const x = 6.5 * u, y = topPct(b) / 100 * H, w = Math.max(w1, w2) + 11 * u, h = 4.6 * u + 3.1 * u + 6.4 * u; const rev = e.a;
-      c.save(); c.translate(-(1 - e.a) * 4 * u, 0); c.beginPath(); c.rect(x, y - u, w * rev, h + 2 * u); c.clip(); glass(x, y, w, h, 3.1 * u, e.z);
-      c.globalAlpha = e.z; c.fillStyle = pl.icon; c.fillRect(x, y + 1.2 * u, 0.6 * u, h - 2.4 * u); c.textAlign = 'left'; c.fillStyle = pl.key; c.font = `700 ${4.6 * u}px ${FX_}`; c.fillText(nm, x + 6 * u, y + 2.8 * u + 4 * u); c.fillStyle = pl.text; c.font = `500 ${3.1 * u}px ${FX_}`; c.fillText(sb, x + 6 * u, y + 2.8 * u + 4.6 * u + 3.4 * u); c.restore(); continue;
+      const U = u * tsOf(b) * esOf(b);
+      c.font = `700 ${4.6 * U}px ${FX_}`; const nm = b.nome || p.profissional.nome || ''; const sb = b.subtitulo || p.profissional.subtitulo || ''; const w1 = c.measureText(nm).width; c.font = `500 ${3.1 * U}px ${FX_}`; const w2 = c.measureText(sb).width;
+      const x = 6.5 * u, y = topPct(b) / 100 * H, w = Math.max(w1, w2) + 11 * U, h = 4.6 * U + 3.1 * U + 6.4 * U; const rev = e.a;
+      c.save(); c.translate(-(1 - e.a) * 4 * u, 0); c.beginPath(); c.rect(x, y - u, w * rev, h + 2 * U); c.clip(); glass(x, y, w, h, 3.1 * U, e.z);
+      c.globalAlpha = e.z; c.fillStyle = pl.icon; c.fillRect(x, y + 1.2 * U, 0.6 * U, h - 2.4 * U); c.textAlign = 'left'; c.fillStyle = pl.key; c.font = `700 ${4.6 * U}px ${FX_}`; c.fillText(nm, x + 6 * U, y + 2.8 * U + 4 * U); c.fillStyle = pl.text; c.font = `500 ${3.1 * U}px ${FX_}`; c.fillText(sb, x + 6 * U, y + 2.8 * U + 4.6 * U + 3.4 * U); c.restore(); continue;
     }
     if (b.tipo === 'painel' || b.tipo === 'cta') {
-      const cta = b.tipo === 'cta'; const e2 = cta ? envOf(b, t, 0.5, 0.01) : e; const x = (cta ? 8.3 : 6.5) * u, w = W - 2 * x, padX = 5.2 * u, padY = 4.3 * u, gap = 1.8 * u, iw = w - 2 * padX; const its = (b.itens || []).filter((i) => i.texto);
+      const cta = b.tipo === 'cta'; const e2 = cta ? envOf(b, t, 0.5, 0.01) : e; const x = (cta ? 8.3 : 6.5) * u, w = W - 2 * x, padX = 5.2 * u, padY = 4.3 * u, U = u * tsOf(b), gap = 1.8 * U, iw = w - 2 * padX; const its = (b.itens || []).filter((i) => i.texto);
       const rows = [];   // {h, draw(y, a)}
-      const itemA = (j) => { const xx = (t - b.inicio - 0.35 - 0.45 * j) / 0.35; return {a: cl(xx), dx: -(1 - eo(xx)) * 4 * u}; };
-      if (b.kicker) rows.push({h: 4.4 * u, draw: (y) => pill(b.kicker, cta ? x + w / 2 : x + padX, y, cta ? 'center' : 'left', c.globalAlpha)});
+      const itemA = (j) => { const xx = (t - b.inicio - 0.35 - 0.45 * j) / 0.35; return {a: cl(xx), dx: -(1 - eo(xx)) * 4 * U}; };
+      if (b.kicker) rows.push({h: 4.4 * U, draw: (y) => pill(b.kicker, cta ? x + w / 2 : x + padX, y, cta ? 'center' : 'left', c.globalAlpha, U / u)});
       if (cta) {
-        c.font = `800 ${7.4 * u}px ${FT}`; const tl = (b.titulo || '').split('\n').flatMap((l) => wrapLines(c, l, iw)); rows.push({h: tl.length * 8 * u, draw: (y) => { c.font = `800 ${7.4 * u}px ${FT}`; c.fillStyle = pl.text; c.textAlign = 'center'; tl.forEach((l, i) => c.fillText(l, x + w / 2, y + 6.6 * u + i * 8 * u)); }});
-        if (b.subtitulo) rows.push({h: 4.4 * u, draw: (y) => { c.font = `400 ${3.4 * u}px ${FX_}`; c.fillStyle = pl.border; c.textAlign = 'center'; c.fillText(b.subtitulo, x + w / 2, y + 3.4 * u); }});
-        rows.push({h: 6 * u, draw: (y) => { c.font = `700 ${5 * u}px ${FX_}`; gradText(c, p.profissional.nome || '', x + w / 2, y + 4.8 * u, 5 * u, pl, 'center'); }});
-        if (b.botao) rows.push({h: 3.9 * u + 6 * u, draw: (y) => { const pulse = 1 + 0.03 * Math.sin((t - b.inicio) * 5); c.font = `700 ${3.9 * u}px ${FX_}`; const bw = c.measureText(b.botao).width + 14 * u, bh = 3.9 * u + 6 * u; c.save(); c.translate(x + w / 2, y + bh / 2); c.scale(pulse, pulse); c.fillStyle = pl.button; rr(c, -bw / 2, -bh / 2, bw, bh, bh / 2); c.fill(); c.fillStyle = pl.button_fg; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.botao, 0, 0.2 * u); c.restore(); c.textBaseline = 'alphabetic'; }});
-        if (b.rodape) rows.push({h: 4 * u, draw: (y) => { c.font = `400 ${3 * u}px ${FX_}`; c.fillStyle = pl.border; c.textAlign = 'center'; c.fillText(b.rodape, x + w / 2, y + 3 * u); }});
+        c.font = `800 ${7.4 * U}px ${FT}`; const tl = (b.titulo || '').split('\n').flatMap((l) => wrapLines(c, l, iw)); rows.push({h: tl.length * 8 * U, draw: (y) => { c.font = `800 ${7.4 * U}px ${FT}`; c.fillStyle = pl.text; c.textAlign = 'center'; tl.forEach((l, i) => c.fillText(l, x + w / 2, y + 6.6 * U + i * 8 * U)); }});
+        if (b.subtitulo) rows.push({h: 4.4 * U, draw: (y) => { c.font = `400 ${3.4 * U}px ${FX_}`; c.fillStyle = pl.border; c.textAlign = 'center'; c.fillText(b.subtitulo, x + w / 2, y + 3.4 * U); }});
+        rows.push({h: 6 * U, draw: (y) => { c.font = `700 ${5 * U}px ${FX_}`; gradText(c, p.profissional.nome || '', x + w / 2, y + 4.8 * U, 5 * U, pl, 'center'); }});
+        if (b.botao) rows.push({h: 3.9 * U + 6 * U, draw: (y) => { const pulse = 1 + 0.03 * Math.sin((t - b.inicio) * 5); c.font = `700 ${3.9 * U}px ${FX_}`; const bw = c.measureText(b.botao).width + 14 * U, bh = 3.9 * U + 6 * U; c.save(); c.translate(x + w / 2, y + bh / 2); c.scale(pulse, pulse); c.fillStyle = pl.button; rr(c, -bw / 2, -bh / 2, bw, bh, bh / 2); c.fill(); c.fillStyle = pl.button_fg; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(b.botao, 0, 0.2 * U); c.restore(); c.textBaseline = 'alphabetic'; }});
+        if (b.rodape) rows.push({h: 4 * U, draw: (y) => { c.font = `400 ${3 * U}px ${FX_}`; c.fillStyle = pl.border; c.textAlign = 'center'; c.fillText(b.rodape, x + w / 2, y + 3 * U); }});
       } else if (b.layout === 'destaque') {
-        rows.push({h: 9 * u, draw: (y) => { const xx = (t - b.inicio - 0.05) / 0.4; const sc = 0.6 + 0.4 * bk(xx); c.save(); c.translate(x + padX, y + 8 * u); c.scale(sc, sc); c.font = `800 ${8.4 * u}px ${FT}`; gradText(c, b.titulo || '', 0, 0, 8.4 * u, pl); c.restore(); }});
-        its.forEach((it, j) => rows.push({h: 6.6 * u, draw: (y) => { const A = itemA(j); c.save(); c.globalAlpha *= A.a; c.translate(A.dx, 0); c.drawImage(iconImg(it.icone, pl.icon), x + padX, y, 6.6 * u, 6.6 * u); c.font = `700 ${4.2 * u}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(it.texto, x + padX + 9.2 * u, y + 4.7 * u); c.restore(); }}));
+        rows.push({h: 9 * U, draw: (y) => { const xx = (t - b.inicio - 0.05) / 0.4; const sc = 0.6 + 0.4 * bk(xx); c.save(); c.translate(x + padX, y + 8 * U); c.scale(sc, sc); c.font = `800 ${8.4 * U}px ${FT}`; gradText(c, b.titulo || '', 0, 0, 8.4 * U, pl); c.restore(); }});
+        its.forEach((it, j) => rows.push({h: 6.6 * U, draw: (y) => { const A = itemA(j); c.save(); c.globalAlpha *= A.a; c.translate(A.dx, 0); c.drawImage(iconImg(it.icone, pl.icon), x + padX, y, 6.6 * U, 6.6 * U); c.font = `700 ${4.2 * U}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(it.texto, x + padX + 9.2 * U, y + 4.7 * U); c.restore(); }}));
       } else if (b.layout === 'linha_do_tempo') {
-        if (b.titulo) rows.push({h: 6 * u, draw: (y) => { c.font = `700 ${5.2 * u}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(b.titulo, x + padX, y + 4.8 * u); }});
-        rows.push({h: 10 * u, draw: (y) => { const n = its.length; const xs = its.map((_, j) => x + padX + iw * ((j + 0.5) / n)); c.strokeStyle = hexA(pl.border, 0.5); c.lineWidth = 0.3 * u; c.beginPath(); c.moveTo(x + padX + iw * 0.08, y + 2.6 * u); c.lineTo(x + padX + iw * 0.92, y + 2.6 * u); c.stroke();
-          its.forEach((it, j) => { const xx = (t - b.inicio - 0.35 - 0.45 * j) / 0.3; c.save(); c.globalAlpha *= cl(xx); c.fillStyle = pl.glass; c.beginPath(); c.arc(xs[j], y + 2.6 * u, 2 * u, 0, 7); c.fill(); c.fillStyle = pl.icon; c.beginPath(); c.arc(xs[j], y + 2.6 * u, 1.2 * u, 0, 7); c.fill(); c.font = `700 ${3.6 * u}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'center'; c.fillText(it.texto, xs[j], y + 8.6 * u); c.restore(); }); }});
+        if (b.titulo) rows.push({h: 6 * U, draw: (y) => { c.font = `700 ${5.2 * U}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(b.titulo, x + padX, y + 4.8 * U); }});
+        rows.push({h: 10 * U, draw: (y) => { const n = its.length; const xs = its.map((_, j) => x + padX + iw * ((j + 0.5) / n)); c.strokeStyle = hexA(pl.border, 0.5); c.lineWidth = 0.3 * U; c.beginPath(); c.moveTo(x + padX + iw * 0.08, y + 2.6 * U); c.lineTo(x + padX + iw * 0.92, y + 2.6 * U); c.stroke();
+          its.forEach((it, j) => { const xx = (t - b.inicio - 0.35 - 0.45 * j) / 0.3; c.save(); c.globalAlpha *= cl(xx); c.fillStyle = pl.glass; c.beginPath(); c.arc(xs[j], y + 2.6 * U, 2 * U, 0, 7); c.fill(); c.fillStyle = pl.icon; c.beginPath(); c.arc(xs[j], y + 2.6 * U, 1.2 * U, 0, 7); c.fill(); c.font = `700 ${3.6 * U}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'center'; c.fillText(it.texto, xs[j], y + 8.6 * U); c.restore(); }); }});
       } else if (b.layout === 'opcoes') {
-        if (b.titulo) rows.push({h: 6 * u, draw: (y) => { c.font = `700 ${5.2 * u}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(b.titulo, x + padX, y + 4.8 * u); }});
-        rows.push({h: 18 * u, draw: (y) => { const n = its.length; its.forEach((it, j) => { const cx = x + padX + iw * ((j + 0.5) / n); const xx = (t - b.inicio - 0.35 - 0.45 * j) / 0.3; c.save(); c.globalAlpha *= cl(xx); c.translate(cx, y + 6 * u); const sc = 0.6 + 0.4 * bk(xx); c.scale(sc, sc); c.drawImage(iconImg(it.icone, pl.icon), -6 * u, -6 * u, 12 * u, 12 * u); c.font = `700 ${3.6 * u}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'center'; c.fillText(it.texto, 0, 10.5 * u); c.restore();
-          if (j < n - 1) { c.font = `500 ${3.1 * u}px ${FX_}`; c.fillStyle = pl.key; c.textAlign = 'center'; c.fillText('ou', x + padX + iw * ((j + 1) / n), y + 7 * u); } }); }});
+        if (b.titulo) rows.push({h: 6 * U, draw: (y) => { c.font = `700 ${5.2 * U}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(b.titulo, x + padX, y + 4.8 * U); }});
+        rows.push({h: 18 * U, draw: (y) => { const n = its.length; its.forEach((it, j) => { const cx = x + padX + iw * ((j + 0.5) / n); const xx = (t - b.inicio - 0.35 - 0.45 * j) / 0.3; c.save(); c.globalAlpha *= cl(xx); c.translate(cx, y + 6 * U); const sc = 0.6 + 0.4 * bk(xx); c.scale(sc, sc); c.drawImage(iconImg(it.icone, pl.icon), -6 * U, -6 * U, 12 * U, 12 * U); c.font = `700 ${3.6 * U}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'center'; c.fillText(it.texto, 0, 10.5 * U); c.restore();
+          if (j < n - 1) { c.font = `500 ${3.1 * U}px ${FX_}`; c.fillStyle = pl.key; c.textAlign = 'center'; c.fillText('ou', x + padX + iw * ((j + 1) / n), y + 7 * U); } }); }});
       } else {
-        if (b.titulo) rows.push({h: 6 * u, draw: (y) => { c.font = `700 ${5.2 * u}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(b.titulo, x + padX, y + 4.8 * u); }});
-        its.forEach((it, j) => rows.push({h: 6.6 * u, draw: (y) => { const A = itemA(j); c.save(); c.globalAlpha *= A.a; c.translate(A.dx, 0); c.drawImage(iconImg(it.icone, pl.icon), x + padX, y, 6.6 * u, 6.6 * u); c.font = `700 ${4.2 * u}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(it.texto, x + padX + 9.2 * u, y + 4.7 * u); c.restore(); }}));
+        if (b.titulo) rows.push({h: 6 * U, draw: (y) => { c.font = `700 ${5.2 * U}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(b.titulo, x + padX, y + 4.8 * U); }});
+        its.forEach((it, j) => rows.push({h: 6.6 * U, draw: (y) => { const A = itemA(j); c.save(); c.globalAlpha *= A.a; c.translate(A.dx, 0); c.drawImage(iconImg(it.icone, pl.icon), x + padX, y, 6.6 * U, 6.6 * U); c.font = `700 ${4.2 * U}px ${FX_}`; c.fillStyle = pl.text; c.textAlign = 'left'; c.fillText(it.texto, x + padX + 9.2 * U, y + 4.7 * U); c.restore(); }}));
       }
       const h = padY * 2 + rows.reduce((n, r) => n + r.h, 0) + gap * Math.max(0, rows.length - 1);
-      const sc = 0.94 + 0.06 * e2.a, dy = cta ? (1 - e2.a) * 6 * u : (1 - e2.a) * 5 * u - (1 - e2.z) * 3 * u; const top = topPct(b) / 100 * H;
-      const gx = x + w / 2 - (w * sc) / 2, gy = top + dy + (h - h * sc) / 2; const alpha = cta ? e2.a : e2.k;
+      const es = esOf(b); const sc = (0.94 + 0.06 * e2.a) * es, dy = cta ? (1 - e2.a) * 6 * u : (1 - e2.a) * 5 * u - (1 - e2.z) * 3 * u; const top = topPct(b) / 100 * H;
+      const gx = x + w / 2 - (w * sc) / 2, gy = top + dy + (h * es - h * sc) / 2; const alpha = cta ? e2.a : e2.k;   // escala: o painel inteiro encolhe/cresce a partir do topo, centrado
       glass(gx, gy, w * sc, h * sc, 3.1 * u * sc, alpha);
-      c.save(); c.globalAlpha = alpha; c.translate(x + w / 2, top + dy + h / 2); c.scale(sc, sc); c.translate(-(x + w / 2), -(top + h / 2));
+      c.save(); c.globalAlpha = alpha; c.translate(x + w / 2, top + dy + h * es / 2); c.scale(sc, sc); c.translate(-(x + w / 2), -(top + h / 2));
       let y = top + padY; for (const r of rows) { r.draw(y); y += r.h + gap; } c.restore(); continue;
     }
   }
@@ -2136,7 +2150,7 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
   if (p.legenda.estilo !== 'nenhuma' && !act.some((b) => b.tipo === 'gancho' || b.tipo === 'cta')) {
     const lines = capLines(p); const ln = lines && lines.find((l) => t >= l[0].s - 0.05 && t <= l[l.length - 1].e + 0.15);
     if (ln) {
-      const sub = p.legenda.estilo === 'subtle'; const sz = (sub ? 4.1 : 5) * u; c.font = `${sub ? 600 : 700} ${sz}px ${FX_}`; const xA = cl((t - ln[0].s + 0.05) / 0.18);
+      const sub = p.legenda.estilo === 'subtle'; const sz = (sub ? 4.1 : 5) * u * capTs(p); c.font = `${sub ? 600 : 700} ${sz}px ${FX_}`; const xA = cl((t - ln[0].s + 0.05) / 0.18);
       const kws = new Set([...(p.legenda.palavras_chave || '').split(','), ...act.filter((b) => b.tipo === 'destaque').flatMap((b) => (b.palavras || '').split(','))].flatMap((s) => s.trim().toLowerCase().split(/\s+/)).filter(Boolean));
       const nrm = (w) => w.toLowerCase().replace(/[.,?!:;…"“”]/g, ''); const sp = c.measureText(' ').width; const ws = ln.map((w) => ({...w, wd: c.measureText(w.w).width}));
       const tot = ws.reduce((n, w) => n + w.wd, 0) + sp * (ws.length - 1); let x = (W - tot) / 2; const y = 0.825 * H + sz + (1 - eo(xA)) * 1.2 * u;
@@ -2822,7 +2836,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.10.31-j';
+const STUDIO_VERSAO = '2026.10.31-k';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

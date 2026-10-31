@@ -197,6 +197,11 @@ O "Diretor" dentro do Studio é o Claude rodando na própria página, na conta d
 - **"Não voltou sozinho" (31/10):** o projeto nunca tinha recebido a cópia do bruto (`bruto` vazio, nenhum arquivo enviado pela página), e a falha era silenciosa. Duas consequências:
   - Direção mostra o estado do vínculo do bruto: guardado neste computador e cópia no projeto, com o motivo da falha e um botão para tentar de novo.
   - Cada tentativa grava `diagnostico/<usuário>` no banco. Leia esse documento antes de supor a causa.
+- **Tamanho manual:** cada gancho, painel, assinatura (nome) e CTA tem dois campos de tamanho:
+  - `escala`: % do bloco inteiro, retângulo e conteúdo juntos; de 40 a 160, padrão 100.
+  - `texto_px`: px do texto principal numa tela de 1080 de largura. Padrões: painel 45, CTA 80, gancho 82, nome 50.
+  - A legenda usa `projeto.legenda.fonte_px` (padrão 54, ou 44 na sutil).
+  - Valem na prévia (CSS `--ts` e `scale`), na exportação do navegador e no `run_brief.py` (`Panel(s=…)`, `lower_third`/`end_card`/`captions(s=…)`).
 - **O diretor não enxergava a prévia:** os painéis acabavam em cima do rosto.
   - **Antes de responder,** ele recebe quadros da prévia (`quadrosDiretor`): à esquerda o vídeo limpo, à direita o mesmo instante com os grafismos, com uma régua de % da altura.
   - **Depois de mudar,** uma conferência visual com quadros novos dos blocos alterados pode corrigir de novo. A prévia vai para o bloco alterado.
