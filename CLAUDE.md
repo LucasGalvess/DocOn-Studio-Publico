@@ -17,6 +17,7 @@
   2. Crie um ponto salvo de cada projeto: `ArtifactData` `set` em `projetos/<id>/historico/pt-<epoch>` = `{label: "Antes da atualização do Studio (<versão>)", data, snap: <JSON dos campos do projeto>, blocos_n, origem: "claude-code"}`.
   3. Nunca apague nem sobrescreva `projetos/*`. Migração de formato é sempre aditiva (campos novos opcionais).
   4. A página recupera sozinha o que estava sendo editado: backup local, ponto ao abrir a versão nova, posição e desfazer.
+  5. Mantenha as regras do banco do Studio (raiz só para Editores; `previas` legível por quem tem o código). Sem elas, clientes leriam todos os projetos.
 - Cópia pública: `LucasGalvess/DocOn-Studio-Publico` (sem licença, direitos reservados). Ela é gerada só por `tools/publicar.py`, que tira os dados de clientes e o link do Studio e se recusa a publicar se sobrar algum. Nunca envie arquivos deste repositório ao público por outro caminho.
   - A Action `.github/workflows/publico.yml` atualiza o público a cada push no main (segredo `DOCON_PUBLICO_TOKEN`).
   - Sem a Action, depois de cada push rode `python3 tools/publicar.py <clone do público> --push`.

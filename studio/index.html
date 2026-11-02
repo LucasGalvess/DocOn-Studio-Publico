@@ -283,6 +283,14 @@ pre.json{background:var(--bg);border:1px solid var(--line);border-radius:8px;pad
 .tabs button[data-new="1"]::after,#aprBtn[data-new="1"]::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:6px;vertical-align:middle}
 #sessPane{overflow:auto;min-height:0}
 .vers{display:grid;gap:8px}.vers video{width:100%;max-height:300px;border-radius:10px;background:#000}
+.notifs{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));right:12px;z-index:60;display:grid;gap:8px;width:min(360px,calc(100vw - 24px));pointer-events:none}
+.notif{pointer-events:auto;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:start;padding:12px 12px 12px 14px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:0 12px 32px rgba(0,0,0,.35);cursor:pointer;animation:ntIn .35s cubic-bezier(.2,.9,.3,1.2)}
+.notif .ic{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:16px;background:var(--raised)}
+.notif.ok .ic{background:color-mix(in srgb,var(--ok) 25%,transparent)}.notif.alt .ic{background:color-mix(in srgb,var(--warn) 25%,transparent)}
+.notif b{display:block;font-size:13.5px}.notif p{margin:2px 0 0;font-size:12.5px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.notif .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px}
+@keyframes ntIn{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:none}}
+#bellN:not(:empty){display:inline-block;margin-left:4px;min-width:18px;padding:0 5px;border-radius:99px;background:var(--bad);color:#fff;font:700 11px/18px var(--mono)}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);font-weight:600;padding:9px 14px;border-radius:9px;z-index:30}
 /* divisórias arrastáveis entre as áreas de trabalho */
 .split{position:absolute;top:0;bottom:0;width:10px;margin-left:-5px;cursor:col-resize;z-index:8;touch-action:none}
@@ -310,6 +318,7 @@ body.resizing.h{cursor:row-resize}
     <span class="save" id="saveState" role="status">Conectando…</span>
     <button class="sessc" id="sessChip" type="button" data-on="0"><i></i><span>Sem sessão</span></button>
     <span class="me" id="meChip" title="Conta do claude.ai em uso"><img id="meAv" alt="" src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 26 26%27%3E%3Ccircle cx=%2713%27 cy=%2713%27 r=%2713%27 fill=%27%23423833%27/%3E%3C/svg%3E"><span id="meName">Entrando…</span></span>
+    <button class="btn sm" id="bellBtn" type="button" title="Notificações: aprovações e alterações dos clientes" aria-label="Notificações">🔔<span id="bellN"></span></button>
     <span class="more"><button class="btn sm" id="moreBtn" type="button" aria-expanded="false" aria-haspopup="true">Mais ▾</button>
       <div class="menu" id="moreMenu" hidden role="menu">
         <button class="btn sm ghost" id="aprBtn" type="button" role="menuitem">Aprovações</button>
@@ -1850,7 +1859,7 @@ function toggleFull() {
 
 /* ======================= exportação de vídeo (MP4, MOV, WAV, MP3) ======================= */
 const STUDIO_URL = window.DOCON_SITE ? location.origin : 'https://claude.ai/artifact/SEU-STUDIO';
-const aprovLink = (tk) => window.DOCON_SITE ? `${location.origin}/aprovar/${tk}` : (S.aprov[tk]?.link_preview || '');
+const aprovLink = (tk) => window.DOCON_SITE ? `${location.origin}/aprovar/${tk}` : (S.aprov[tk]?.codigo ? STUDIO_URL : (S.aprov[tk]?.link_preview || ''));
 const verLink = (tk) => window.DOCON_SITE ? `${location.origin}/ver/${tk}` : (S.aprov[tk]?.link_ver || '');
 /* no claude.ai a página do cliente é publicada pela sessão do Claude Code (uma página só com aquele vídeo) */
 /* pedido à sessão do Claude Code (por comentário). Devolve true/false e guarda o motivo em S.askErr para a página mostrar. */
@@ -1926,7 +1935,37 @@ async function sendForApproval(p, v, token) {
   const doc = {...(prev || {}), projeto: S.cur, projeto_titulo: p.titulo, profissional: p.profissional?.nome || '', asset_id: v.asset_id, rotulo: v.rotulo || 'Versão', versao_data: v.data || Date.now(),
     status: 'aguardando', editor: prev?.editor || ME.id, atualizado: Date.now(), eventos: [...(prev?.eventos || []), {t: Date.now(), tipo: prev ? 'reenviado' : 'enviado', autor: ME.id, texto: v.rotulo || ''}]};
   delete doc.pedido; delete doc.processando_por;
-  await dbSet('aprovacoes/' + tk, doc); S.aprov[tk] = doc; return tk;
+  if (!doc.codigo) doc.codigo = novoCodigo();
+  await dbSet('aprovacoes/' + tk, doc); S.aprov[tk] = doc; await espelhoCliente(tk, doc); return tk;
+}
+/* ======================= aprovação pelo próprio Studio (link + código, sem depender da sessão) =======================
+   O cliente abre o link do Studio e digita o código: vê só o vídeo daquela aprovação (previas/<código>/v/aprov, a única
+   parte do banco que quem não é Editor consegue ler). Projetos, bancos e memória ficam só para Editores (regras do banco). */
+const COD_ABC = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+function novoCodigo() { const a = new Uint32Array(10); crypto.getRandomValues(a); const c = [...a].map((x) => COD_ABC[x % COD_ABC.length]).join(''); return c.slice(0, 5) + '-' + c.slice(5); }
+const codNorm = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^(.{5})(.{5})$/, '$1-$2');
+async function espelhoCliente(tk, a) {
+  if (!db || !a?.codigo) return;
+  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
+  try { await dbSet(`previas/${a.codigo}/v/aprov`, m); } catch (e) {}
+}
+function aprovMensagem(tk) { const a = S.aprov[tk] || {}; return `Olá! O vídeo "${a.projeto_titulo || ''}" está pronto para a sua aprovação.\n1. Abra: ${STUDIO_URL}\n2. Digite o código: ${a.codigo}\nVocê pode assistir, aprovar ou pedir alteração por lá.`; }
+/* decisão do cliente (gravada no espelho) chega às aprovações; só quem é Editor sincroniza */
+const espelhoUnsub = {};
+function vigiarEspelho(tk) {
+  const a = S.aprov[tk]; if (!a?.codigo || espelhoUnsub[a.codigo]) return;
+  espelhoUnsub[a.codigo] = db.doc(`previas/${a.codigo}/v/aprov`).onSnapshot((d) => {
+    if (!d.exists) return; const m = d.data(); const cur0 = S.aprov[tk]; if (!cur0) return;
+    if (!['aprovado', 'alteracao'].includes(m.status) || m.status === cur0.status || (m.atualizado || 0) <= (cur0.atualizado || 0)) return;
+    const ev = {t: m.atualizado || Date.now(), tipo: m.status === 'aprovado' ? 'aprovado' : 'alteração pedida', autor: m.autor || 'cliente', ...(m.pedido ? {texto: String(m.pedido).slice(0, 300)} : {})};
+    db.doc('aprovacoes/' + tk).update({status: m.status, ...(m.status === 'alteracao' ? {pedido: String(m.pedido || '').slice(0, 2000)} : {}), atualizado: Date.now(), eventos: [...(cur0.eventos || []), ev]}).catch(() => {});
+  }, () => {});
+}
+async function marcarDecisao(tk, status, pedido) {
+  const a = S.aprov[tk]; if (!a) return;
+  const ev = {t: Date.now(), tipo: status === 'aprovado' ? 'aprovado' : 'alteração pedida', autor: ME.id, texto: (pedido ? String(pedido).slice(0, 300) : '') || 'marcado no Studio pela equipe'};
+  const up = {status, atualizado: Date.now(), eventos: [...(a.eventos || []), ev], ...(status === 'alteracao' ? {pedido: String(pedido || '').slice(0, 2000)} : {})};
+  await db.doc('aprovacoes/' + tk).update(up); Object.assign(a, up); await espelhoCliente(tk, a);
 }
 function prevPendente(tk) {
   const a = S.aprov[tk] || {}; const pp = a.pedido_previa; const cmd = `Publique a página de pré-visualização da aprovação aprovacoes/${tk}`;
@@ -1938,17 +1977,76 @@ function prevPendente(tk) {
 function openShare(tk) {
   const a = S.aprov[tk] || {}; const l1 = aprovLink(tk), l2 = verLink(tk);
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="sT"><h3 id="sT">Links de pré-visualização</h3>
-    <p class="hint">Uma página só com o vídeo, no visual do Studio. O cliente assiste e decide pelos botões <b>Aprovar</b> (o vídeo é baixado na hora) e <b>Pedir alteração</b> (a IA aplica e você confere o antes e depois antes de reenviar).</p>
-    ${l1 ? `<p class="h">Link de aprovação (com os botões)</p><pre class="json" id="lnk1">${esc(l1)}</pre><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" type="button" data-cp="lnk1">Copiar</button><a class="btn" href="${esc(l1)}" target="_blank" rel="noopener">Abrir ↗</a></div>`
+    ${!window.DOCON_SITE && a.codigo ? `<p class="hint">O cliente abre o link do Studio, digita o código e vê <b>só este vídeo</b>, com <b>Aprovar</b> e <b>Pedir alteração</b> (sem download). A resposta chega aqui sozinha; se a conta dele não puder registrar, ele manda a resposta pronta por WhatsApp e você marca em Aprovações.</p>` : `<p class="hint">Uma página só com o vídeo, no visual do Studio. O cliente assiste e decide pelos botões <b>Aprovar</b> (o vídeo é baixado na hora) e <b>Pedir alteração</b> (a IA aplica e você confere o antes e depois antes de reenviar).</p>`}
+    ${!window.DOCON_SITE && a.codigo ? `<p class="h">Mande para o cliente</p><pre class="json" id="lnkMsg" style="white-space:pre-wrap">${esc(aprovMensagem(tk))}</pre>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" type="button" data-cp="lnkMsg">Copiar mensagem</button><a class="btn" href="https://wa.me/?text=${encodeURIComponent(aprovMensagem(tk))}" target="_blank" rel="noopener">Enviar pelo WhatsApp ↗</a></div>
+      <p class="hint">Link: <b>${esc(STUDIO_URL)}</b> · Código: <b style="font:700 15px var(--mono);letter-spacing:.06em">${esc(a.codigo)}</b>. O cliente vê só este vídeo. Ele precisa entrar com uma conta do claude.ai; a página precisa estar compartilhada por link (menu Compartilhar).</p>
+      ${a.link_preview ? `<p class="hint">Página antiga desta aprovação: <a href="${esc(a.link_preview)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(a.link_preview)}</a></p>` : ''}`
+    : l1 ? `<p class="h">Link de aprovação (com os botões)</p><pre class="json" id="lnk1">${esc(l1)}</pre><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" type="button" data-cp="lnk1">Copiar</button><a class="btn" href="${esc(l1)}" target="_blank" rel="noopener">Abrir ↗</a></div>`
       : prevPendente(tk)}
     ${l2 ? `<p class="h">Link só para assistir (sem botões)</p><pre class="json" id="lnk2">${esc(l2)}</pre><div style="display:flex;gap:8px"><button class="btn" type="button" data-cp="lnk2">Copiar</button></div>` : ''}
-    ${window.DOCON_SITE ? '' : `<p class="hint">No claude.ai, o cliente precisa ter acesso à página (menu Compartilhar da página de pré-visualização, com permissão para interagir). No site próprio da DocOn o link abre sem login.</p>`}
+    ${window.DOCON_SITE || a.codigo ? '' : `<p class="hint">No claude.ai, o cliente precisa ter acesso à página (menu Compartilhar da página de pré-visualização, com permissão para interagir). No site próprio da DocOn o link abre sem login.</p>`}
     <div style="display:flex;justify-content:flex-end"><button class="btn ghost" type="button" id="sClose">Fechar</button></div></div></div>`;
   document.querySelectorAll('[data-cp]').forEach((b) => b.onclick = async () => { const el = document.getElementById(b.dataset.cp); try { await navigator.clipboard.writeText(el.textContent.trim()); toast('Link copiado'); } catch (e) { const r = document.createRange(); r.selectNodeContents(el); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Use Ctrl+C'); } });
   document.getElementById('sClose').onclick = () => { S.shareOpen = null; clearTimeout(S.shareT); document.getElementById('modalRoot').innerHTML = ''; };
   const rt = document.getElementById('pvRetry'); if (rt) rt.onclick = () => { rt.disabled = true; pedirPrevia(tk, !S.aprov[tk]?.link_preview); };
   const cp = document.getElementById('pvCopy'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(`Publique a página de pré-visualização da aprovação aprovacoes/${tk}`); toast('Pedido copiado: cole na conversa do Claude Code'); } catch (e) { toast('Não consegui copiar'); } };
   S.shareOpen = tk; clearTimeout(S.shareT); if (!aprovLink(tk)) S.shareT = setTimeout(() => { if (S.shareOpen === tk && !aprovLink(tk)) openShare(tk); }, 125000);
+}
+/* ======================= notificações (canto superior direito, como no celular) =======================
+   Cada aprovação ou pedido de alteração do cliente vira uma notificação guardada no banco (notificacoes/), que aparece
+   no canto da tela de quem está com o Studio aberto e fica no sino 🔔 para consultar depois. Clicar abre os detalhes. */
+S.notifs = {};
+async function registrarNotif(tk, a, tipo) {
+  if (!db) return; const ev = [...(a.eventos || [])].reverse().find((e) => tipo === 'ok' ? e.tipo === 'aprovado' : e.tipo === 'alteração pedida');
+  const t = ev?.t || a.atualizado || Date.now(); const id = `nt-${tk}-${tipo}-${t}`; if (S.notifs[id]) return;
+  const n = {tipo, tk, projeto: a.projeto || '', titulo: tipo === 'ok' ? 'Vídeo aprovado pelo cliente' : 'Cliente pediu alteração', texto: tipo === 'ok' ? `${a.projeto_titulo} · ${a.rotulo}: exportação liberada.` : (a.pedido || ev?.texto || ''), projeto_titulo: a.projeto_titulo || '', rotulo: a.rotulo || '', t, lida: {}};
+  try { const d = await db.doc('notificacoes/' + id).get(); if (d.exists) { if (!S.notifs[id]) S.notifs[id] = JSON.parse(JSON.stringify(d.data())); return; } } catch (e) {}   // outra aba já registrou
+  if (S.notifs[id]) return; S.notifs[id] = n; mostrarNotif(id, n); dbSet('notificacoes/' + id, n).catch(() => {});
+}
+function mostrarNotif(id, n) {
+  let box = document.getElementById('notifs'); if (!box) { box = document.createElement('div'); box.id = 'notifs'; box.className = 'notifs'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
+  if (box.querySelector(`[data-nt="${id}"]`)) return;
+  const el = document.createElement('div'); el.className = 'notif ' + n.tipo; el.dataset.nt = id;
+  el.innerHTML = `<span class="ic">${n.tipo === 'ok' ? '✅' : '✏️'}</span><div><b>${esc(n.titulo)}</b><p>${esc(n.tipo === 'ok' ? n.texto : `${n.projeto_titulo}: “${n.texto}”`)}</p><p style="color:var(--faint);font-size:11px">${when(n.t)} · clique para ver</p></div><button class="x" type="button" aria-label="Fechar notificação">✕</button>`;
+  el.onclick = (e) => { if (e.target.closest('.x')) { el.remove(); return; } el.remove(); abrirNotif(id); };
+  box.prepend(el); while (box.children.length > 4) box.lastChild.remove();
+  if (n.tipo === 'ok') setTimeout(() => el.remove(), 15000);
+  try { if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState === 'hidden') new Notification(n.titulo, {body: n.texto}); } catch (e) {}
+  renderBell();
+}
+function marcarLida(id) { const n = S.notifs[id]; if (!n || !ME.id || n.lida?.[ME.id]) return; n.lida = {...(n.lida || {}), [ME.id]: Date.now()}; db?.doc('notificacoes/' + id).update({lida: n.lida}).catch(() => {}); renderBell(); }
+function abrirNotif(id) {
+  const n = S.notifs[id]; if (!n) return; marcarLida(id);
+  if (n.projeto && S.projects[n.projeto] && S.cur !== n.projeto) { S.cur = n.projeto; S.sel = null; renderAll(); }
+  if (n.tipo === 'ok' && S.aprov[n.tk]) return openApproved(n.tk);
+  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="nT"><h3 id="nT">${esc(n.titulo)}</h3>
+    <p class="hint">${esc(n.projeto_titulo)} · ${esc(n.rotulo)} · ${when(n.t)}</p>
+    <div class="card" style="border-color:var(--warn)"><b>O cliente pediu:</b><p style="white-space:pre-wrap;color:var(--fg)">${esc(n.texto)}</p></div>
+    <p class="hint">O projeto voltou para “alteração pedida”. Ajuste na prévia ou peça ao diretor e depois clique em <b>Reenviar para aprovação</b>: o cliente vê a nova versão com o mesmo código.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn" type="button" id="nHist">Ver todas as alterações</button>${S.aprov[n.tk] ? '<button class="btn" type="button" id="nReq">Abrir o pedido</button>' : ''}<button class="btn pri" type="button" id="nX">Ok</button></div></div></div>`;
+  document.getElementById('nX').onclick = () => document.getElementById('modalRoot').innerHTML = '';
+  document.getElementById('nHist').onclick = () => abrirSino(n.projeto);
+  const rq = document.getElementById('nReq'); if (rq) rq.onclick = () => openChangeRequest(n.tk);
+}
+function renderBell() { const el = document.getElementById('bellN'); if (!el) return; const k = Object.values(S.notifs).filter((n) => !(n.lida || {})[ME.id || 'x']).length; el.textContent = k ? String(k) : ''; }
+function abrirSino(soProjeto) {
+  const lst = Object.entries(S.notifs).filter(([, n]) => !soProjeto || n.projeto === soProjeto).sort((a, b) => b[1].t - a[1].t);
+  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="bT" style="width:min(620px,100%)"><h3 id="bT">${soProjeto ? 'Alterações e aprovações deste projeto' : 'Notificações'}</h3>
+    ${soProjeto ? '<button class="btn sm ghost" type="button" id="bAll" style="justify-self:start">Ver de todos os projetos</button>' : ''}
+    <div style="display:grid;gap:8px;max-height:60vh;overflow:auto">${lst.length ? lst.map(([id, n]) => `<button class="card" type="button" data-bn="${id}" style="text-align:left;cursor:pointer;${(n.lida || {})[ME.id || 'x'] ? 'opacity:.75' : ''}"><b>${n.tipo === 'ok' ? '✅' : '✏️'} ${esc(n.titulo)}</b><p>${esc(n.projeto_titulo)} · ${esc(n.rotulo)} · ${when(n.t)}</p>${n.tipo === 'alt' ? `<p style="color:var(--fg);white-space:pre-wrap">“${esc(n.texto)}”</p>` : ''}</button>`).join('') : '<p class="hint">Nenhuma notificação ainda.</p>'}</div>
+    <div style="display:flex;justify-content:flex-end"><button class="btn ghost" type="button" id="bX">Fechar</button></div></div></div>`;
+  document.getElementById('bX').onclick = () => document.getElementById('modalRoot').innerHTML = '';
+  const ba = document.getElementById('bAll'); if (ba) ba.onclick = () => abrirSino();
+  document.querySelectorAll('[data-bn]').forEach((b) => b.onclick = () => abrirNotif(b.dataset.bn));
+}
+function vigiarNotifs() {
+  if (!db) return; let primeira = true;
+  db.collection('notificacoes').onSnapshot((sn) => {
+    for (const ch of sn.docChanges()) { if (ch.type === 'removed') { delete S.notifs[ch.doc.id]; continue; } const novo = !S.notifs[ch.doc.id]; S.notifs[ch.doc.id] = JSON.parse(JSON.stringify(ch.doc.data()));
+      const n = S.notifs[ch.doc.id]; if (novo && (!primeira || !(n.lida || {})[ME.id || 'x']) && Date.now() - (n.t || 0) < 7 * 864e5) mostrarNotif(ch.doc.id, n); }
+    primeira = false; renderBell();
+  }, () => {});
 }
 function notifyEditor(title, body) {
   toast(title); try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, {body}); } catch (e) {}
@@ -1982,16 +2080,19 @@ function openApprovals(focus) {
       <div class="acts" style="display:flex;gap:6px;flex-wrap:wrap">
         ${a.status === 'revisar' ? `<button class="btn sm pri" type="button" data-apr="${tk}" ${depois ? '' : 'disabled title="Falta renderizar a nova versão"'}>Está certo: reenviar para aprovação</button><button class="btn sm" type="button" data-apu="${tk}">Desfazer a alteração</button>` : ''}
         ${a.status === 'aprovado' ? `<button class="btn sm pri" type="button" data-apx="${tk}">Exportar (MP4, MOV, WAV, MP3)</button>` : ''}
+        ${a.status === 'aguardando' ? `<button class="btn sm" type="button" data-amok="${tk}" title="Use quando o cliente responder por WhatsApp ou e-mail">Cliente aprovou</button><button class="btn sm" type="button" data-amalt="${tk}">Cliente pediu alteração</button>` : ''}
         <button class="btn sm ghost" type="button" data-aps="${tk}">Link</button></div>
       <p class="hint">${(a.eventos || []).slice(-4).map((e) => `${when(e.t)} · ${e.tipo}${e.texto ? ': ' + esc(String(e.texto).slice(0, 80)) : ''}`).join('<br>')}</p></div>`;
   };
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="aT" style="width:min(820px,100%)"><h3 id="aT">Aprovações</h3>
     <p class="hint">Envie uma versão para aprovação pelo card dela em Projeto › Versões renderizadas. Quando o cliente pede alteração, a IA aplica na timeline e você confere o antes e depois aqui, antes de reenviar.</p>
-    ${list.length ? list.map(card).join('') : '<p class="hint">Nenhuma aprovação ainda.</p>'}<div style="display:flex;justify-content:flex-end;gap:8px">${window.DOCON_SITE ? '' : '<button class="btn" type="button" id="aSync">Verificar respostas dos clientes</button>'}<button class="btn ghost" type="button" id="aClose">Fechar</button></div></div></div>`;
+    ${list.length ? list.map(card).join('') : '<p class="hint">Nenhuma aprovação ainda.</p>'}<div style="display:flex;justify-content:flex-end;gap:8px"><button class="btn ghost" type="button" id="aClose">Fechar</button></div></div></div>`;
   const close = () => document.getElementById('modalRoot').innerHTML = '';
   document.getElementById('aClose').onclick = close;
   const sy = document.getElementById('aSync'); if (sy) sy.onclick = () => askSession('Verifique as decisões nas páginas de pré-visualização (decisoes/<token> de cada aprovacoes/*.link_preview) e atualize status e pedido no Studio.', 'Pedido enviado à sessão');
   document.querySelectorAll('[data-aps]').forEach((x) => x.onclick = () => openShare(x.dataset.aps));
+  document.querySelectorAll('[data-amok]').forEach((x) => x.onclick = async () => { x.disabled = true; try { await marcarDecisao(x.dataset.amok, 'aprovado'); toast('Marcado como aprovado'); } catch (e) { x.disabled = false; toast('Não consegui marcar'); } });
+  document.querySelectorAll('[data-amalt]').forEach((x) => x.onclick = async () => { const t = prompt('O que o cliente pediu para alterar?'); if (!t) return; try { await marcarDecisao(x.dataset.amalt, 'alteracao', t); toast('Alteração registrada'); } catch (e) { toast('Não consegui registrar'); } });
   document.querySelectorAll('[data-apv]').forEach((x) => x.onclick = () => { const a = S.aprov[x.dataset.apv]; if (S.projects[a.projeto]) { S.cur = a.projeto; renderAll(); } close(); setFinal(true); seek(0); play(); });
   document.querySelectorAll('[data-apx]').forEach((x) => x.onclick = () => { const a = S.aprov[x.dataset.apx]; openExportVideo({asset_id: a.asset_id, rotulo: a.rotulo}, S.projects[a.projeto] || {titulo: a.projeto_titulo}); });
   document.querySelectorAll('[data-apu]').forEach((x) => x.onclick = async () => { const tk = x.dataset.apu; const a = S.aprov[tk]; if (S.projects[a.projeto]) { S.cur = a.projeto; renderAll(); } close(); await openHistory(); toast('Restaure o ponto “Antes da alteração pedida”'); });
@@ -2000,7 +2101,7 @@ function openApprovals(focus) {
     const v = a.depois_asset ? (vs.find((y) => y.asset_id === a.depois_asset) || {asset_id: a.depois_asset, rotulo: a.rotulo + ' (alterada)', data: Date.now()}) : vs.filter((y) => (y.data || 0) > (a.versao_data || 0)).pop();
     if (!v) return; const ant = {asset_id: a.asset_id, rotulo: a.rotulo};
     await sendForApproval(p, v, tk); await db.doc('aprovacoes/' + tk).update({antes: ant, depois_asset: null}).catch(() => {});
-    if (!window.DOCON_SITE) pedirPrevia(tk, !S.aprov[tk]?.link_preview);
+
     toast('Reenviado: o mesmo link mostra a nova versão'); openApprovals(tk);
   });
 }
@@ -2010,6 +2111,8 @@ function watchApprovals() {
     for (const ch of s.docChanges()) {
       const id = ch.doc.id; if (ch.type === 'removed') { delete S.aprov[id]; continue; }
       const a = JSON.parse(JSON.stringify(ch.doc.data())); const old = S.aprov[id]; S.aprov[id] = a;
+      if (!a.codigo && a.status === 'aguardando' && !window.DOCON_SITE) { a.codigo = novoCodigo(); db.doc('aprovacoes/' + id).update({codigo: a.codigo}).then(() => espelhoCliente(id, a)).catch(() => {}); }
+      if (a.codigo && !window.DOCON_SITE) vigiarEspelho(id);
       if (S.shareOpen === id && a.link_preview && a.link_preview !== old?.link_preview) openShare(id);
       const mine = !a.editor || a.editor === ME.id;
       if (old && old.status !== a.status) onApprovalChange(id, a, old);
@@ -2021,7 +2124,8 @@ function watchApprovals() {
 }
 /* página do cliente: só o vídeo, Aprovar e Pedir alteração */
 function approvalToken() { if (window.DOCON_APROVAR) return String(window.DOCON_APROVAR); const m = (location.hash || '').match(/aprovar[=/]([A-Za-z0-9_-]+)/); return m ? m[1] : null; }
-function renderClientApproval(tk) {
+function renderClientApproval(tk, path) {
+  path = path || ('aprovacoes/' + tk); const viaCodigo = path.startsWith('previas/');
   document.getElementById('app').hidden = true;
   const root = document.createElement('main'); root.id = 'aprov'; root.style.cssText = 'max-width:440px;margin:0 auto;padding:24px 16px 40px;display:grid;gap:16px'; document.body.appendChild(root);
   let a = null;
@@ -2031,7 +2135,8 @@ function renderClientApproval(tk) {
     root.innerHTML = `<div class="brand"><i></i>DocOn Studio <small>APROVAÇÃO</small></div>
       <div><p class="h">${esc(a.profissional || '')}</p><h3 style="margin:4px 0 0;font:800 22px var(--display)">${esc(a.projeto_titulo)} · ${esc(a.rotulo)}</h3></div>
       <video controls playsinline preload="metadata" src="/_blob/${esc(a.asset_id)}" style="width:100%;aspect-ratio:9/16;border-radius:18px;background:#000;object-fit:cover"></video>
-      ${done ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! O download começa logo abaixo. A equipe também recebeu os arquivos finais.</p><div class="acts">${FORMATOS.map(([k, n]) => `<button class="btn sm ${k === 'mp4' ? 'pri' : ''}" type="button" data-cx="${k}">${n.split(' ')[0]}</button>`).join('')}</div></div>`
+      ${done && viaCodigo ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! A equipe da DocOn já recebeu a sua aprovação.</p></div>`
+        : done ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! O download começa logo abaixo. A equipe também recebeu os arquivos finais.</p><div class="acts">${FORMATOS.map(([k, n]) => `<button class="btn sm ${k === 'mp4' ? 'pri' : ''}" type="button" data-cx="${k}">${n.split(' ')[0]}</button>`).join('')}</div></div>`
         : waiting ? `<div class="card"><b>Alteração recebida</b><p>“${esc(a.pedido || '')}”</p><p>A equipe está ajustando e confere tudo antes de enviar a nova versão para você aprovar neste mesmo link.</p></div>`
         : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn" type="button" id="cAlt" style="padding:14px">Pedir alteração</button><button class="btn pri" type="button" id="cOk" style="padding:14px">Aprovar</button></div>`}
       <p class="hint" id="cSt" role="status">${esc(msg || '')}</p>`;
@@ -2040,9 +2145,9 @@ function renderClientApproval(tk) {
     root.querySelectorAll('[data-cx]').forEach((b) => b.onclick = () => exportAs('/_blob/' + a.asset_id, base, b.dataset.cx, st).catch((e) => st(e && e.code === 'declined' ? 'Download cancelado.' : 'Não foi possível baixar aqui.')));
     const ok = document.getElementById('cOk'); if (ok) ok.onclick = async () => {
       ok.disabled = true;
-      try { await db.doc('aprovacoes/' + tk).update({status: 'aprovado', atualizado: Date.now(), eventos: [...(a.eventos || []), {t: Date.now(), tipo: 'aprovado', autor: ME.id}]}); }
-      catch (e) { ok.disabled = false; st('Não consegui registrar a aprovação: seu acesso é só de visualização. Peça à equipe acesso para interagir.'); return; }
-      a.status = 'aprovado'; draw('Aprovado!'); exportAs('/_blob/' + a.asset_id, base, 'mp4', st).catch(() => st('Use os botões acima para baixar.'));
+      try { await db.doc(path).update(viaCodigo ? {status: 'aprovado', atualizado: Date.now(), autor: ME.id || 'cliente'} : {status: 'aprovado', atualizado: Date.now(), eventos: [...(a.eventos || []), {t: Date.now(), tipo: 'aprovado', autor: ME.id}]}); }
+      catch (e) { ok.disabled = false; respostaPorMensagem(a, 'aprovado'); return; }
+      a.status = 'aprovado'; draw('Aprovado!'); if (!viaCodigo) exportAs('/_blob/' + a.asset_id, base, 'mp4', st).catch(() => st('Use os botões acima para baixar.'));
     };
     const alt = document.getElementById('cAlt'); if (alt) alt.onclick = () => {
       document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="pT"><h3 id="pT">O que você gostaria de alterar?</h3>
@@ -2051,16 +2156,48 @@ function renderClientApproval(tk) {
       document.getElementById('pX').onclick = () => document.getElementById('modalRoot').innerHTML = '';
       document.getElementById('pOk').onclick = async () => {
         const txt = document.getElementById('pTxt').value.trim(); if (!txt) return;
-        try { await db.doc('aprovacoes/' + tk).update({status: 'alteracao', pedido: txt.slice(0, 2000), atualizado: Date.now(), eventos: [...(a.eventos || []), {t: Date.now(), tipo: 'alteração pedida', texto: txt.slice(0, 300), autor: ME.id}]}); document.getElementById('modalRoot').innerHTML = ''; }
-        catch (e) { document.getElementById('pSt').textContent = 'Não consegui enviar: seu acesso é só de visualização. Peça à equipe acesso para interagir.'; }
+        try { await db.doc(path).update(viaCodigo ? {status: 'alteracao', pedido: txt.slice(0, 2000), atualizado: Date.now(), autor: ME.id || 'cliente'} : {status: 'alteracao', pedido: txt.slice(0, 2000), atualizado: Date.now(), eventos: [...(a.eventos || []), {t: Date.now(), tipo: 'alteração pedida', texto: txt.slice(0, 300), autor: ME.id}]}); document.getElementById('modalRoot').innerHTML = ''; }
+        catch (e) { document.getElementById('modalRoot').innerHTML = ''; respostaPorMensagem(a, 'alteracao', txt); }
       };
     };
   };
   draw();
   (async () => {
     if (!db) { draw('Abra este link no navegador com a sua conta (o banco não carregou nesta visualização).'); return; }
-    db.doc('aprovacoes/' + tk).onSnapshot((d) => { if (!d.exists) { a = null; draw('Link de aprovação não encontrado ou removido.'); return; } a = JSON.parse(JSON.stringify(d.data())); draw(); }, () => draw('Sem acesso a esta aprovação.'));
+    db.doc(path).onSnapshot((d) => { if (!d.exists) { a = null; draw('Link de aprovação não encontrado ou removido.'); return; } a = JSON.parse(JSON.stringify(d.data())); draw(); }, () => draw('Sem acesso a esta aprovação.'));
   })();
+}
+
+/* quem abre pelo link público (fora da organização) só pode ler: a resposta vai pronta por WhatsApp ou e-mail, e a equipe marca no Studio */
+function respostaPorMensagem(a, status, pedido) {
+  const cod = a.codigo || S.cliCodigo || '';
+  const msg = status === 'aprovado' ? `Aprovo o vídeo "${a.projeto_titulo}" (${a.rotulo})${cod ? ' · código ' + cod : ''}.` : `Peço alteração no vídeo "${a.projeto_titulo}" (${a.rotulo})${cod ? ' · código ' + cod : ''}:\n${pedido || ''}`;
+  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="rmT"><h3 id="rmT">${status === 'aprovado' ? 'Envie a sua aprovação' : 'Envie o seu pedido'}</h3>
+    <p class="hint">Sua conta pode assistir, mas não registrar a resposta aqui. Mande esta mensagem para a equipe da DocOn: ela marca no Studio na hora.</p>
+    <pre class="json" id="rmMsg" style="white-space:pre-wrap">${esc(msg)}</pre>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn" type="button" id="rmX">Fechar</button><button class="btn" type="button" id="rmCp">Copiar</button><a class="btn" href="mailto:?subject=${encodeURIComponent('Aprovação do vídeo · ' + (a.projeto_titulo || ''))}&body=${encodeURIComponent(msg)}" target="_blank" rel="noopener">E-mail ↗</a><a class="btn pri" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp ↗</a></div></div></div>`;
+  document.getElementById('rmX').onclick = () => document.getElementById('modalRoot').innerHTML = '';
+  document.getElementById('rmCp').onclick = async () => { try { await navigator.clipboard.writeText(msg); toast('Mensagem copiada'); } catch (e) { toast('Selecione e copie o texto'); } };
+}
+/* tela de entrada do cliente: digitar o código que a equipe mandou */
+function renderClientGate() {
+  document.getElementById('app').hidden = true;
+  const root = document.createElement('main'); root.id = 'gate'; root.style.cssText = 'max-width:440px;margin:0 auto;padding:40px 16px;display:grid;gap:16px'; document.body.appendChild(root);
+  let salvo = ''; try { salvo = localStorage.getItem('docon-cli-cod') || ''; } catch (e) {}
+  root.innerHTML = `<div class="brand"><i></i>DocOn Studio <small>APROVAÇÃO</small></div>
+    <h3 style="margin:0;font:800 22px var(--display)">Seu vídeo está pronto para aprovação</h3>
+    <p class="hint">Digite o código que a equipe da DocOn mandou para você.</p>
+    <div class="f"><label for="gCod">Código</label><input id="gCod" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" value="${esc(salvo)}" style="font:700 20px var(--mono);letter-spacing:.1em;text-transform:uppercase"></div>
+    <button class="btn pri" type="button" id="gGo" style="padding:14px">Ver o vídeo</button><p class="hint" id="gSt" role="status"></p>`;
+  const go = async () => {
+    const c = codNorm(document.getElementById('gCod').value); const st = document.getElementById('gSt'); if (c.length !== 11) { st.textContent = 'O código tem 10 letras e números (ex.: K7Q2M-X9PRT).'; return; }
+    st.textContent = 'Procurando…';
+    let d = null; try { d = await db.doc(`previas/${c}/v/aprov`).get(); } catch (e) {}
+    if (!d || !d.exists) { st.textContent = 'Código não encontrado. Confira com a equipe da DocOn.'; return; }
+    try { localStorage.setItem('docon-cli-cod', c); } catch (e) {}
+    S.cliCodigo = c; root.remove(); renderClientApproval(d.data().token || c, `previas/${c}/v/aprov`);
+  };
+  document.getElementById('gGo').onclick = go; document.getElementById('gCod').addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
 }
 
 /* ======================= exportar vídeo (como no Premiere/CapCut): render quadro a quadro no navegador ======================= */
@@ -2628,7 +2765,6 @@ async function sendToApproval() {
     touch('p', pid, 'Gerar vídeo para aprovação');
     const tk = await sendForApproval(pp, v, tk0 || undefined); setStatus(pid, 'em aprovação');
     openShare(tk);
-    if (!window.DOCON_SITE) pedirPrevia(tk, !S.aprov[tk]?.link_preview);
   } catch (e) { st(String(e && e.message) === 'webcodecs' ? 'Este navegador não gera vídeo. Use o Chrome ou o Edge.' : 'Não foi possível gerar o vídeo: ' + String(e && e.message || e).slice(0, 120)); }
 }
 /* pedido de alteração do cliente: aviso com o que foi pedido; você ajusta (à mão ou com o diretor) e reenvia */
@@ -2655,8 +2791,8 @@ function openApproved(tk) {
 }
 function onApprovalChange(id, a, old) {
   const mine = !a.editor || a.editor === ME.id || !ME.id;
-  if (a.status === 'alteracao') { setStatus(a.projeto, 'alteração pedida', 'Cliente pediu alteração'); if (mine) { notifyEditor('Cliente pediu alteração', a.pedido || ''); openChangeRequest(id); } }
-  else if (a.status === 'aprovado') { setStatus(a.projeto, 'aprovado', 'Aprovado pelo cliente'); if (mine) { notifyEditor('Vídeo aprovado: exportação liberada', a.projeto_titulo); openApproved(id); } }
+  if (a.status === 'alteracao') { setStatus(a.projeto, 'alteração pedida', 'Cliente pediu alteração'); registrarNotif(id, a, 'alt'); }
+  else if (a.status === 'aprovado') { setStatus(a.projeto, 'aprovado', 'Aprovado pelo cliente'); registrarNotif(id, a, 'ok'); }
   else if (a.status === 'aguardando') setStatus(a.projeto, 'em aprovação');
 }
 
@@ -2873,7 +3009,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-a';
+const STUDIO_VERSAO = '2026.11.02-c';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
@@ -3259,6 +3395,7 @@ renderAll(); setSave('Conectando…');
   else document.getElementById('meName').textContent = 'Sem login';
   try { db = await window.claude?.use?.('db'); } catch (e) { db = null; }
   if (APTK) { renderClientApproval(APTK); return; }
+  if (db && userApi && !window.DOCON_SITE) { let editor = true; try { editor = await userApi.canEdit(); } catch (e) { editor = true; } if (editor === false) { renderClientGate(); return; } }
   if (!db) {
     localOnly = true; const l = lsLoad(); S.projects = l.projects || {}; S.templates = l.templates || {};
     S.cur = Object.keys(S.projects)[0] || null; setSave('Sem banco compartilhado: salvando só neste navegador'); renderAll(); undoRestore(); uiRestore(); if (!S.cur) openWizard(true); return;
@@ -3287,7 +3424,7 @@ renderAll(); setSave('Conectando…');
   db.collection('estilos').onSnapshot((s) => apply('estilos', s), err);
   db.collection('banco').onSnapshot((s) => { for (const ch of s.docChanges()) { if (ch.type === 'removed') delete S.bank[ch.doc.id]; else S.bank[ch.doc.id] = JSON.parse(JSON.stringify(ch.doc.data())); } renderBank(); if (S.rightTab === 'insp') renderInsp(); }, () => {});
   db.doc('sessoes/ativa').onSnapshot((d) => { S.sess = d.exists ? JSON.parse(JSON.stringify(d.data())) : null; renderSessChip(); watchCanal(); if (S.rightTab === 'sess') renderSess(true); if (S.sess && !window.__sessOpened && location.hash !== '#sem-sessao') { window.__sessOpened = true; showTab('sess'); } }, () => {});
-  watchApprovals();
+  watchApprovals(); vigiarNotifs(); document.getElementById('bellBtn').onclick = () => abrirSino();
   db.collection('buscas').onSnapshot((sn) => { for (const ch of sn.docChanges()) { if (ch.type === 'removed') delete S.buscas[ch.doc.id]; else S.buscas[ch.doc.id] = JSON.parse(JSON.stringify(ch.doc.data())); } if (S.bankFilter === 'online' || S.bankFilter === 'ia') renderBank(); }, () => {});
   db.doc('config/voz').onSnapshot((d) => { S.vozCfg = d.exists ? JSON.parse(JSON.stringify(d.data())) : {}; }, () => {});
   db.collection('narracoes').onSnapshot((sn) => { for (const ch of sn.docChanges()) { if (ch.type === 'removed') delete S.narr[ch.doc.id]; else { const o = S.narr[ch.doc.id]; S.narr[ch.doc.id] = JSON.parse(JSON.stringify(ch.doc.data())); if (o?.status === 'pedido' && S.narr[ch.doc.id].status === 'pronto') toast('Voz da DocOn pronta para os efeitos explicados'); } } }, () => {});

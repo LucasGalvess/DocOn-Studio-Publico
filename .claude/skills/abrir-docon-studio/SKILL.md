@@ -22,7 +22,17 @@ Banco da página (ArtifactData, mesmo url):
 5. **Não abrir no painel do chat.** NÃO use `Artifact` `open`: o Studio deve rodar em aba própria do navegador, separada do Claude, para ter mais desempenho e mais espaço de teste.
 6. **Entregar o link.** Na resposta, a primeira linha é o link clicável em destaque: `**[Abrir o DocOn Studio em nova aba ↗](https://claude.ai/artifact/SEU-STUDIO)**`. Diga que a página já está conectada a esta conversa e que, na aba, o botão "Tela cheia" deixa tudo em tela inteira. Se a página aparecer dentro do painel por algum motivo, o botão "Abrir em nova aba ↗" do Studio leva para fora.
 
-## Pré-visualizações pendentes (sempre)
+## Aprovação por código (padrão desde 02/11)
+A pré-visualização não depende mais desta sessão. Ao enviar para aprovação, o próprio Studio:
+- **gera o código:** grava `aprovacoes/<tk>.codigo` (XXXXX-XXXXX) e o espelho `previas/<código>/v/aprov` (`{token, projeto_titulo, profissional, rotulo, asset_id, status, pedido, atualizado}`);
+- **atende o cliente:** ele abre o link do Studio, digita o código e vê só o vídeo. A decisão volta pelo espelho; o Studio do editor sincroniza, muda o status do projeto e cria `notificacoes/<id>`;
+- **cobre quem não pode gravar:** cliente de fora da organização manda a resposta pronta por WhatsApp ou e-mail, e a equipe marca em Aprovações ("Cliente aprovou" / "Cliente pediu alteração").
+
+**Regras do banco (mantenha em toda republicação):** raiz `read/write: admin`, `previas` `read: view, write: interact`, `data/users/{self}` `interact`.
+
+As páginas separadas por aprovação (abaixo) ficaram só para quem pedir explicitamente.
+
+## Pré-visualizações pendentes (só páginas antigas)
 Ao receber o comando, ao ser acordado por qualquer comentário do Studio e no fim de cada pedido, leia `aprovacoes` (`ArtifactData` `list`). Para cada uma com `status: "aguardando"` e `asset_id`:
 - **sem `link_preview`:** publique a página de pré-visualização (passos em "Página de pré-visualização" abaixo).
 - **com `preview_asset` diferente de `asset_id`:** atualize a mesma página com o vídeo novo.
