@@ -291,6 +291,20 @@ pre.json{background:var(--bg);border:1px solid var(--line);border-radius:8px;pad
 .notif .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px}
 @keyframes ntIn{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:none}}
 #bellN:not(:empty){display:inline-block;margin-left:4px;min-width:18px;padding:0 5px;border-radius:99px;background:var(--bad);color:#fff;font:700 11px/18px var(--mono)}
+.igm{background:#000;color:#f5f5f5;border-radius:16px;padding:12px 0 6px;font:13px/1.35 -apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+.igm-top{display:flex;justify-content:space-between;padding:0 14px 10px}.igm-top b{font-size:16px}
+.igm-head{display:grid;grid-template-columns:72px 1fr;gap:16px;align-items:center;padding:0 14px}
+.igm-av{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font:700 28px sans-serif;background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7);padding:3px;overflow:hidden}
+.igm-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;border:3px solid #000}
+.igm-st{display:flex;justify-content:space-around;text-align:center}.igm-st span{display:grid;font-size:12px;color:#ccc}.igm-st b{color:#fff;font-size:15px}
+.igm-bio{display:grid;padding:8px 14px 10px}.igm-bio span{color:#ccc}
+.igm-tabs{display:flex;justify-content:space-around;border-top:1px solid #262626}.igm-tabs span{flex:1;text-align:center;padding:8px 0;color:#777}.igm-tabs .on{color:#fff;border-top:1px solid #fff;margin-top:-1px}
+.igm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+.igm-t{position:relative;aspect-ratio:3/4;background:#121212;overflow:hidden}.igm-t img{width:100%;height:100%;object-fit:cover;display:block}
+.igm-t.vazio{background:repeating-linear-gradient(135deg,#141414 0 8px,#181818 8px 16px)}
+.igm-t i{position:absolute;left:4px;top:4px;z-index:1;background:#ee2a7b;color:#fff;font:700 9px sans-serif;padding:2px 5px;border-radius:4px;font-style:normal}
+.igm-t em{position:absolute;right:5px;top:3px;z-index:1;color:#fff;font-style:normal;text-shadow:0 1px 3px #000}
+.igm-link{display:block;text-align:center;padding:10px;color:#4cb5f9;text-decoration:none;font-weight:600}
 .nd-bg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35)}
 .nd{position:fixed;top:0;right:0;bottom:0;z-index:71;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:-16px 0 40px rgba(0,0,0,.35);display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding:14px 14px max(14px,env(safe-area-inset-bottom,0px));animation:ndIn .25s ease-out}
 .nd header{display:flex;align-items:center;justify-content:space-between;gap:8px}.nd h3{margin:0;font:700 17px var(--display)}
@@ -610,6 +624,7 @@ function renderProj() {
     <div class="f"><label for="p_kw">Palavras-chave da legenda (vírgula)</label><textarea id="p_kw" rows="2" placeholder="osteoartrite, qualidade de vida, 1x ao mês">${esc(p.legenda.palavras_chave)}</textarea></div>
     <div class="f"><label for="p_tr">Trilha do banco</label><select id="p_tr"><option value="">(gerada pelo editor)</option>${Object.entries(S.bank).filter(([, v]) => v.tipo === 'trilha').map(([id, v]) => `<option value="${id}" ${id === p.musica.banco_id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
     ${capaHTML(p)}
+    ${feedHTML(p)}
     ${(p.versoes || []).length ? `<p class="h">Versões renderizadas</p><div class="vers">${p.versoes.slice().reverse().map((v) => `<div class="card"><b>${esc(v.rotulo || 'Versão')}</b><span class="hint">${when(v.data)}${v.obs ? ' · ' + esc(v.obs) : ''}</span>${v.asset_id ? `<video controls playsinline preload="metadata" src="/_blob/${esc(v.asset_id)}"></video>` : ''}${v.previa_id ? `<img alt="Prévia" src="/_blob/${esc(v.previa_id)}" style="border-radius:8px">` : ''}${v.asset_id ? `<div class="acts"><button class="btn sm pri" type="button" data-vex="${esc(v.asset_id)}">Exportar</button><button class="btn sm" type="button" data-vap="${esc(v.asset_id)}">Enviar para aprovação</button></div>` : ''}</div>`).join('')}</div>` : ''}
     <p class="hint">Duração do projeto: <b>${fmt(projDur(p))}</b>, ${S.videoDur || p.dur_origem === 'arquivo' ? 'igual ao vídeo bruto' : 'até o último bloco (abra o vídeo bruto para seguir o tamanho real)'}. Não há tempo fixo: o projeto termina onde o vídeo termina.</p>
     <div><button class="btn" type="button" id="delProj" style="color:var(--bad)">Excluir projeto e liberar espaço</button></div>`;
@@ -628,7 +643,7 @@ function renderProj() {
   el.querySelectorAll('[data-vap]').forEach((b) => b.onclick = async () => { const v = p.versoes.find((x) => x.asset_id === b.dataset.vap); try { const tk = await sendForApproval(p, v); openShare(tk); } catch (e) { toast('Não foi possível criar o link (sem permissão de escrita)'); } });
   document.getElementById('addFile').onclick = () => { p.arquivos.push({nome: '', papel: 'broll', obs: ''}); touch(); renderProj(); };
   document.getElementById('delProj').onclick = () => openDeleteProject(S.cur);
-  wireCapa(p);
+  wireCapa(p); wireFeed(p);
 }
 /* ======================= capa do Reels =======================
    Uma imagem 9:16 por projeto (p.capa = {asset_id, nome, origem, t?}): enviada do computador ou tirada do quadro atual da
@@ -728,10 +743,57 @@ function abrirEditorCapa(pid, ctx, spec, ts, salvar) {
   document.getElementById('ceOk').onclick = async () => { await desenhar(); const blob = await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.92)); document.getElementById('modalRoot').innerHTML = ''; salvar(blob, {nome: 'capa IA', origem: 'ia', t: spec.t, spec: {kicker: spec.kicker, titulo: spec.titulo, palavra_chave: spec.palavra_chave, posicao: spec.posicao}, w: 1080, h: 1920}); };
   desenhar();
 }
+/* ======================= prévia no Instagram (perfil com a capa nova no feed) =======================
+   A página não acessa o Instagram (bloqueado sem login e fora da página). Com o @ e, se quiserem, fotos dos últimos posts
+   (p.feed = [asset_id…], mais novo primeiro), o Studio monta uma imitação do perfil com a capa nova no primeiro lugar. */
+const igHandle = (v) => { v = String(v || '').trim(); const u = v.match(/instagram\.com\/([A-Za-z0-9._]{1,30})/i); const m = u || v.replace(/^@/, '').match(/^([A-Za-z0-9._]{1,30})$/); const h = m ? m[1].replace(/\.+$/, '') : ''; return /^(p|reel|reels|stories|explore)$/i.test(h) ? '' : h; };
+function pedirInstagram(pid) {
+  return new Promise((res) => { const p = S.projects[pid];
+    document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="igT"><h3 id="igT">Instagram do cliente</h3>
+      <p class="hint">Para mostrar na aprovação como o vídeo fica no feed dele. Opcional.</p>
+      <div class="f"><label for="igIn">@ ou link do perfil</label><input id="igIn" placeholder="@draexemplo ou instagram.com/draexemplo" value="${esc(p.profissional?.instagram || '')}"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button class="btn ghost" type="button" id="igX">Cancelar</button><button class="btn" type="button" id="igPula">Pular</button><button class="btn pri" type="button" id="igOk">Continuar</button></div></div></div>`;
+    const fim = (v) => { document.getElementById('modalRoot').innerHTML = ''; res(v); };
+    document.getElementById('igX').onclick = () => fim(null);
+    document.getElementById('igPula').onclick = () => { p.ig_pulado = true; touch(); fim(false); };
+    const ok = () => { const h = igHandle(document.getElementById('igIn').value); if (!h) { document.getElementById('igIn').focus(); return; } p.profissional.instagram = '@' + h; touch('p', pid, 'Instagram do cliente'); fim(true); };
+    document.getElementById('igOk').onclick = ok; document.getElementById('igIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') ok(); }); document.getElementById('igIn').focus(); });
+}
+function igMockHTML(d) {
+  const h = igHandle(d.handle) || 'perfil'; const ini = (d.nome || h).replace(/^(dra?\.?\s*)/i, '').trim().slice(0, 1).toUpperCase() || 'D';
+  const tiles = [d.capa ? {id: d.capa, novo: true} : null, ...(d.feed || []).slice(0, 8).map((id) => ({id}))].filter(Boolean);
+  while (tiles.length < 9) tiles.push({vazio: true});
+  return `<div class="igm"><div class="igm-top"><b>${esc(h)}</b><span>⋯</span></div>
+    <div class="igm-head"><div class="igm-av">${d.avatar ? `<img src="/_blob/${esc(d.avatar)}" alt="">` : esc(ini)}</div><div class="igm-st"><span><b>—</b>posts</span><span><b>—</b>seguidores</span><span><b>—</b>seguindo</span></div></div>
+    <div class="igm-bio"><b>${esc(d.nome || '')}</b>${d.sub ? `<span>${esc(d.sub)}</span>` : ''}</div>
+    <div class="igm-tabs"><span class="on">▦</span><span>▶</span><span>☺</span></div>
+    <div class="igm-grid">${tiles.slice(0, 9).map((t) => t.vazio ? '<div class="igm-t vazio"></div>' : `<div class="igm-t">${t.novo ? '<i>NOVO</i><em>▶</em>' : ''}<img src="/_blob/${esc(t.id)}" alt=""></div>`).join('')}</div>
+    ${igHandle(d.handle) ? `<a class="igm-link" href="https://www.instagram.com/${esc(h)}/" target="_blank" rel="noopener">Abrir o perfil real no Instagram ↗</a>` : ''}</div>`;
+}
+function feedHTML(p) {
+  const f = p.feed || [];
+  return `<p class="h">Prévia no Instagram</p><div class="card" style="display:grid;gap:8px">
+    <div class="f"><label for="igP">@ Instagram do cliente</label><input id="igP" placeholder="@draexemplo" value="${esc(p.profissional?.instagram || '')}"></div>
+    <span class="hint">Fotos dos últimos posts (opcional, até 8, do mais novo para o mais antigo): o Instagram não deixa a página buscar o perfil, então salve as imagens dos posts e envie aqui.</span>
+    ${f.length ? `<div style="display:flex;gap:4px;flex-wrap:wrap">${f.map((id, i) => `<span style="position:relative"><img src="/_blob/${esc(id)}" alt="" style="width:46px;aspect-ratio:3/4;object-fit:cover;border-radius:4px"><button type="button" data-fdel="${i}" aria-label="Tirar" style="position:absolute;top:-6px;right:-6px;border:0;border-radius:50%;width:18px;height:18px;background:var(--raised);color:var(--fg);cursor:pointer;font-size:10px">✕</button></span>`).join('')}</div>` : ''}
+    <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" id="feedUp" ${f.length >= 8 ? 'disabled' : ''}>Adicionar fotos do feed</button><input id="feedFile" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden><button class="btn sm" type="button" id="feedVer">Ver como fica no perfil</button></div>
+    <span class="hint" id="feedSt" role="status"></span></div>`;
+}
+function wireFeed(p) {
+  const pid = S.cur; const ig = document.getElementById('igP'); if (!ig) return;
+  ig.addEventListener('change', () => { const h = igHandle(ig.value); p.profissional.instagram = h ? '@' + h : ''; ig.value = p.profissional.instagram; touch('p', pid, 'Instagram do cliente'); atualizarCapaAprov(pid); });
+  const up = document.getElementById('feedUp'), fi = document.getElementById('feedFile'); const st = (t) => { const e = document.getElementById('feedSt'); if (e) e.textContent = t; };
+  up.onclick = () => fi.click(); fi.onchange = async () => { const fs = [...fi.files].slice(0, 8 - (p.feed || []).length); fi.value = ''; if (!fs.length || !assetsApi) return;
+    for (const [i, f] of fs.entries()) { st(`Enviando ${i + 1} de ${fs.length}…`); try { const blob = await toJpeg(URL.createObjectURL(f), 720); const r = await assetsApi.upload(blob, {type: 'image/jpeg'}); const pp = S.projects[pid]; pp.feed = [...(pp.feed || []), r.id].slice(0, 8); } catch (e) {} }
+    touch('p', pid, 'Fotos do feed'); renderProj(); atualizarCapaAprov(pid); };
+  document.querySelectorAll('[data-fdel]').forEach((b) => b.onclick = () => { p.feed.splice(+b.dataset.fdel, 1); touch('p', pid, 'Fotos do feed'); renderProj(); atualizarCapaAprov(pid); });
+  document.getElementById('feedVer').onclick = () => { document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="fvT" style="width:min(420px,100%)"><h3 id="fvT">Como fica no perfil</h3>${igMockHTML({handle: p.profissional?.instagram, nome: p.profissional?.nome, sub: p.profissional?.subtitulo || p.profissional?.especialidade, capa: p.capa?.asset_id, feed: p.feed})}${p.capa ? '' : '<p class="hint">Sem capa: crie uma em Capa do Reels.</p>'}<div style="display:flex;justify-content:flex-end"><button class="btn" type="button" id="fvX">Fechar</button></div></div></div>`; document.getElementById('fvX').onclick = () => document.getElementById('modalRoot').innerHTML = ''; };
+}
 /* aprovação aberta deste projeto recebe a capa nova na hora (o cliente vê no mesmo código) */
 async function atualizarCapaAprov(pid) {
   const tk = openAprovFor(pid); const a = tk && S.aprov[tk]; if (!a || a.status !== 'aguardando') return; const cap = S.projects[pid]?.capa?.asset_id || '';
-  a.capa_asset_id = cap; try { await db.doc('aprovacoes/' + tk).update({capa_asset_id: cap}); await espelhoCliente(tk, a); } catch (e) {}
+  const pp = S.projects[pid]; const ig = {capa_asset_id: cap, instagram: pp?.profissional?.instagram || '', subtitulo: pp?.profissional?.subtitulo || pp?.profissional?.especialidade || '', feed: pp?.feed || []};
+  Object.assign(a, ig); try { await db.doc('aprovacoes/' + tk).update(ig); await espelhoCliente(tk, a); } catch (e) {}
 }
 
 /* ======================= render: aba Estilos ======================= */
@@ -2058,7 +2120,7 @@ async function sendForApproval(p, v, token) {
   const doc = {...(prev || {}), projeto: S.cur, projeto_titulo: p.titulo, profissional: p.profissional?.nome || '', asset_id: v.asset_id, rotulo: v.rotulo || 'Versão', versao_data: v.data || Date.now(),
     status: 'aguardando', editor: prev?.editor || ME.id, atualizado: Date.now(), eventos: [...(prev?.eventos || []), {t: Date.now(), tipo: prev ? 'reenviado' : 'enviado', autor: ME.id, texto: v.rotulo || ''}]};
   delete doc.pedido; delete doc.processando_por;
-  doc.capa_asset_id = p.capa?.asset_id || '';
+  doc.capa_asset_id = p.capa?.asset_id || ''; doc.instagram = p.profissional?.instagram || ''; doc.subtitulo = p.profissional?.subtitulo || p.profissional?.especialidade || ''; doc.feed = p.feed || [];
   if (!doc.codigo) doc.codigo = novoCodigo();
   await dbSet('aprovacoes/' + tk, doc); S.aprov[tk] = doc; await espelhoCliente(tk, doc); return tk;
 }
@@ -2070,7 +2132,7 @@ function novoCodigo() { const a = new Uint32Array(10); crypto.getRandomValues(a)
 const codNorm = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^(.{5})(.{5})$/, '$1-$2');
 async function espelhoCliente(tk, a) {
   if (!db || !a?.codigo) return;
-  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
+  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', instagram: a.instagram || '', subtitulo: a.subtitulo || '', feed: a.feed || [], status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
   try { await dbSet(`previas/${a.codigo}/v/aprov`, m); } catch (e) {}
 }
 function aprovMensagem(tk) { const a = S.aprov[tk] || {}; return `Olá! O vídeo "${a.projeto_titulo || ''}" está pronto para a sua aprovação.\n1. Abra: ${STUDIO_URL}\n2. Digite o código: ${a.codigo}\nVocê pode assistir, aprovar ou pedir alteração por lá.`; }
@@ -2290,6 +2352,7 @@ function renderClientApproval(tk, path) {
         <figure style="margin:0;display:grid;gap:4px"><img src="/_blob/${esc(a.capa_asset_id)}" alt="Capa do Reels" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:12px;background:#000"><figcaption class="hint">No Reels (tela cheia)</figcaption></figure>
         <figure style="margin:0;display:grid;gap:4px"><img src="/_blob/${esc(a.capa_asset_id)}" alt="Capa no perfil" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;background:#000"><figcaption class="hint">No perfil (recorte 3:4)</figcaption></figure></div>
         <p class="hint" style="margin:0">Ao aprovar, você aprova o vídeo e a capa.</p></div>` : ''}
+      ${a.capa_asset_id && (a.instagram || (a.feed || []).length) ? `<div class="card" style="display:grid;gap:10px"><b>Como fica no seu perfil</b>${igMockHTML({handle: a.instagram, nome: a.profissional, sub: a.subtitulo, capa: a.capa_asset_id, feed: a.feed})}<p class="hint" style="margin:0">Simulação: a capa nova aparece primeiro no feed, no recorte do Instagram.</p></div>` : ''}
       ${done && viaCodigo ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! A equipe da DocOn já recebeu a sua aprovação.</p></div>`
         : done ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! O download começa logo abaixo. A equipe também recebeu os arquivos finais.</p><div class="acts">${FORMATOS.map(([k, n]) => `<button class="btn sm ${k === 'mp4' ? 'pri' : ''}" type="button" data-cx="${k}">${n.split(' ')[0]}</button>`).join('')}</div></div>`
         : waiting ? `<div class="card"><b>Alteração recebida</b><p>“${esc(a.pedido || '')}”</p><p>A equipe está ajustando e confere tudo antes de enviar a nova versão para você aprovar neste mesmo link.</p></div>`
@@ -2918,6 +2981,7 @@ async function sendToApproval() {
   if (!S.media.src || !S.videoDur || S.viewOnly) { toast('Abra o vídeo bruto do projeto para gerar o vídeo de aprovação'); return; }
   if (!assetsApi) { toast('Sem permissão para salvar o vídeo de aprovação'); return; }
   if (!('VideoEncoder' in window)) { toast('Use o Chrome ou o Edge para gerar o vídeo de aprovação'); return; }
+  if (!igHandle(p.profissional?.instagram) && !p.ig_pulado) { const ok = await pedirInstagram(pid); if (ok === null) return; }
   const tk0 = openAprovFor(pid); const n = (p.versoes || []).filter((v) => v.origem === 'studio').length + 1;
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="gT"><h3 id="gT">${tk0 ? 'Reenviar para aprovação' : 'Enviar para aprovação'}</h3>
     <p class="hint">Gerando o vídeo do workspace (o que aparece em “Como vai ficar”) em H.264, que abre em qualquer navegador. Depois o cliente recebe ${tk0 ? 'a nova versão no mesmo link' : 'o link de pré-visualização'}.</p>
@@ -3175,7 +3239,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-g';
+const STUDIO_VERSAO = '2026.11.02-h';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
