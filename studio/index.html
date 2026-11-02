@@ -2135,7 +2135,8 @@ async function espelhoCliente(tk, a) {
   const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', instagram: a.instagram || '', subtitulo: a.subtitulo || '', feed: a.feed || [], status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
   try { await dbSet(`previas/${a.codigo}/v/aprov`, m); } catch (e) {}
 }
-function aprovMensagem(tk) { const a = S.aprov[tk] || {}; return `Olá! O vídeo "${a.projeto_titulo || ''}" está pronto para a sua aprovação.\n1. Abra: ${STUDIO_URL}\n2. Digite o código: ${a.codigo}\nVocê pode assistir, aprovar ou pedir alteração por lá.`; }
+function aprovMensagem(tk) { const a = S.aprov[tk] || {};
+  return `Olá! O seu vídeo "${a.projeto_titulo || ''}" está pronto para aprovação 🎬\n\nComo ver (leva uns 2 minutos):\n1. Se ainda não tiver, crie a sua conta grátis em https://claude.ai (dá para entrar com o Google, em 1 clique).\n2. Com a conta aberta, toque neste link: ${STUDIO_URL}\n3. Digite o código: ${a.codigo}\n4. Assista ao vídeo${a.capa_asset_id ? ' e confira a capa e como ela fica no seu perfil' : ''}.\n5. Toque em "Aprovar" ou em "Pedir alteração".\n\nQualquer dúvida, é só responder esta mensagem 😊`; }
 /* decisão do cliente (gravada no espelho) chega às aprovações; só quem é Editor sincroniza */
 const espelhoUnsub = {};
 function vigiarEspelho(tk) {
@@ -2413,7 +2414,9 @@ function renderClientGate(semLogin) {
   let salvo = ''; try { salvo = localStorage.getItem('docon-cli-cod') || ''; } catch (e) {}
   root.innerHTML = `<div class="brand"><i></i>DocOn Studio <small>APROVAÇÃO</small></div>
     <h3 style="margin:0;font:800 22px var(--display)">Seu vídeo está pronto para aprovação</h3>
-    ${semLogin ? `<div class="card" style="border-color:var(--warn)"><b>Entre com a sua conta do claude.ai</b><p>Para ver o vídeo, faça login no claude.ai (é gratuito) e abra este link de novo. Depois digite o código que a DocOn mandou.</p><a class="btn pri" href="https://claude.ai/login" target="_blank" rel="noopener" style="justify-self:start">Entrar no claude.ai ↗</a></div>` : ''}
+    ${semLogin ? `<div class="card" style="border-color:var(--warn);display:grid;gap:8px"><b>Falta só entrar na sua conta (é grátis)</b>
+      <ol style="margin:0;padding-left:20px;display:grid;gap:6px;font-size:14px"><li>Toque em <b>Criar conta ou entrar</b> (dá para usar a sua conta do Google).</li><li>Depois de entrar, volte para a mensagem da DocOn e toque no link de novo.</li><li>Digite o código que veio na mensagem.</li></ol>
+      <a class="btn pri" href="https://claude.ai/login" target="_blank" rel="noopener" style="justify-self:start;padding:12px 18px">Criar conta ou entrar ↗</a></div>` : ''}
     <p class="hint">Digite o código que a equipe da DocOn mandou para você.</p>
     <div class="f"><label for="gCod">Código</label><input id="gCod" autocomplete="off" spellcheck="false" placeholder="XXXXX-XXXXX" value="${esc(salvo)}" style="font:700 20px var(--mono);letter-spacing:.1em;text-transform:uppercase"></div>
     <button class="btn pri" type="button" id="gGo" style="padding:14px">Ver o vídeo</button><p class="hint" id="gSt" role="status"></p>`;
@@ -3239,7 +3242,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-h';
+const STUDIO_VERSAO = '2026.11.02-i';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
