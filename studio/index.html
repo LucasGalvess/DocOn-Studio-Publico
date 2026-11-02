@@ -1853,10 +1853,23 @@ const STUDIO_URL = window.DOCON_SITE ? location.origin : 'https://claude.ai/arti
 const aprovLink = (tk) => window.DOCON_SITE ? `${location.origin}/aprovar/${tk}` : (S.aprov[tk]?.link_preview || '');
 const verLink = (tk) => window.DOCON_SITE ? `${location.origin}/ver/${tk}` : (S.aprov[tk]?.link_ver || '');
 /* no claude.ai a página do cliente é publicada pela sessão do Claude Code (uma página só com aquele vídeo) */
+/* pedido à sessão do Claude Code (por comentário). Devolve true/false e guarda o motivo em S.askErr para a página mostrar. */
+const ASK_MOTIVO = {consent_required: 'o claude.ai precisa da sua permissão para a página comentar por você (aparece um aviso; aceite e tente de novo)', claude_unavailable: 'nenhuma sessão do Claude Code está recebendo pedidos agora', no_session: 'nenhuma sessão do Claude Code está ligada ao Studio', forbidden: 'sua conta não pode mandar pedidos por esta página (precisa ser Editor)', rate_limited: 'muitos pedidos seguidos; espere um pouco', writers_only: 'só quem edita a página pode mandar pedidos à sessão', off: 'esta visualização não deixa falar com a sessão'};
 async function askSession(text, okMsg) {
-  if (!(S.sess && commentsApi)) { toast('Abra uma sessão ("Abrir DocOn Studio") para publicar o link'); return false; }
-  try { const anchor = await commentsApi.anchorFor(document.getElementById('sessPane')); await commentsApi.sendToClaude({anchor, text: `[DocOn Studio · conversa ${S.sess.conversa_id} · msg ap-${Date.now()} · projeto ${S.cur || '-'}]\n` + text}); if (okMsg) toast(okMsg); return true; }
-  catch (e) { toast('Não consegui falar com a sessão agora'); return false; }
+  S.askErr = null;
+  if (!(S.sess && commentsApi)) { S.askErr = !commentsApi ? ASK_MOTIVO.off : ASK_MOTIVO.no_session; toast('Pedido não enviado: ' + S.askErr); diagLog('pedido_sessao', {ok: false, motivo: S.askErr}); return false; }
+  try { const can = await commentsApi.canSendToClaude?.(); if (can && can !== 'available') throw {code: can}; } catch (e) { if (e && e.code) { S.askErr = ASK_MOTIVO[e.code] || e.code; toast('Pedido não enviado: ' + S.askErr); diagLog('pedido_sessao', {ok: false, motivo: e.code}); return false; } }
+  try { const anchor = await commentsApi.anchorFor(document.getElementById('sessPane')); await commentsApi.sendToClaude({anchor, text: `[DocOn Studio · conversa ${S.sess.conversa_id} · msg ap-${Date.now()} · projeto ${S.cur || '-'}]\n` + text}); if (okMsg) toast(okMsg); diagLog('pedido_sessao', {ok: true}); return true; }
+  catch (e) { S.askErr = ASK_MOTIVO[e && e.code] || ('erro ' + ((e && (e.code || e.message)) || '') ).trim(); toast('Pedido não enviado: ' + S.askErr); diagLog('pedido_sessao', {ok: false, motivo: String(e && (e.code || e.message) || e).slice(0, 120)}); return false; }
+}
+/* pedido de página de pré-visualização: fica registrado na própria aprovação (a sessão publica tudo o que estiver pendente ao abrir) */
+async function pedirPrevia(tk, novo) {
+  const a = S.aprov[tk]; if (!a) return;
+  const texto = novo ? `Publique a página de pré-visualização da aprovação aprovacoes/${tk} (studio/aprovacao.html, vídeo ${a.asset_id}) e grave link_preview nela.` : `Atualize a página de pré-visualização da aprovação aprovacoes/${tk} com o vídeo novo (${a.asset_id}) e zere a decisão do cliente.`;
+  const ok = await askSession(texto);
+  const pp = {t: Date.now(), asset_id: a.asset_id, enviado: ok, ...(ok ? {} : {erro: S.askErr || ''})};
+  a.pedido_previa = pp; try { await db.doc('aprovacoes/' + tk).update({pedido_previa: pp}); } catch (e) {}
+  if (S.shareOpen === tk) openShare(tk);
 }
 async function blobOf(url) { const r = await fetch(url); if (!r.ok) throw new Error('HTTP ' + r.status); return r.blob(); }
 async function toMov(blob) {          // mesmo vídeo H.264/AAC, em contêiner QuickTime (marca 'qt  ')
@@ -1915,18 +1928,27 @@ async function sendForApproval(p, v, token) {
   delete doc.pedido; delete doc.processando_por;
   await dbSet('aprovacoes/' + tk, doc); S.aprov[tk] = doc; return tk;
 }
+function prevPendente(tk) {
+  const a = S.aprov[tk] || {}; const pp = a.pedido_previa; const cmd = `Publique a página de pré-visualização da aprovação aprovacoes/${tk}`;
+  const fallback = `<p class="hint">Você também pode abrir a conversa do Claude Code${S.sess?.sessao_url ? ` (<a href="${esc(S.sess.sessao_url)}" target="_blank" rel="noopener" style="color:var(--accent)">abrir ↗</a>)` : ''} e colar: <b>${esc(cmd)}</b></p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm pri" type="button" id="pvRetry">Tentar de novo</button><button class="btn sm" type="button" id="pvCopy">Copiar o pedido</button></div>`;
+  if (pp && !pp.enviado) return `<div class="card" style="border-color:var(--warn)"><b>O pedido do link não chegou à sessão</b><p>${esc(pp.erro || 'motivo desconhecido')}.</p>${fallback}</div>`;
+  const atraso = pp?.t && Date.now() - pp.t > 120000;
+  return `<div class="card"><b>Publicando a página…</b><p>A sessão do Claude Code está criando a página de pré-visualização deste vídeo. O link aparece aqui sozinho, normalmente em 1 a 2 minutos.</p>${atraso ? `<p class="hint" style="color:var(--warn)">Está demorando mais que o normal.</p>${fallback}` : ''}</div>`;
+}
 function openShare(tk) {
   const a = S.aprov[tk] || {}; const l1 = aprovLink(tk), l2 = verLink(tk);
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="sT"><h3 id="sT">Links de pré-visualização</h3>
     <p class="hint">Uma página só com o vídeo, no visual do Studio. O cliente assiste e decide pelos botões <b>Aprovar</b> (o vídeo é baixado na hora) e <b>Pedir alteração</b> (a IA aplica e você confere o antes e depois antes de reenviar).</p>
     ${l1 ? `<p class="h">Link de aprovação (com os botões)</p><pre class="json" id="lnk1">${esc(l1)}</pre><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" type="button" data-cp="lnk1">Copiar</button><a class="btn" href="${esc(l1)}" target="_blank" rel="noopener">Abrir ↗</a></div>`
-      : `<div class="card"><b>Publicando a página…</b><p>A sessão do Claude Code está criando a página de pré-visualização deste vídeo. O link aparece aqui sozinho em instantes.</p></div>`}
+      : prevPendente(tk)}
     ${l2 ? `<p class="h">Link só para assistir (sem botões)</p><pre class="json" id="lnk2">${esc(l2)}</pre><div style="display:flex;gap:8px"><button class="btn" type="button" data-cp="lnk2">Copiar</button></div>` : ''}
     ${window.DOCON_SITE ? '' : `<p class="hint">No claude.ai, o cliente precisa ter acesso à página (menu Compartilhar da página de pré-visualização, com permissão para interagir). No site próprio da DocOn o link abre sem login.</p>`}
     <div style="display:flex;justify-content:flex-end"><button class="btn ghost" type="button" id="sClose">Fechar</button></div></div></div>`;
   document.querySelectorAll('[data-cp]').forEach((b) => b.onclick = async () => { const el = document.getElementById(b.dataset.cp); try { await navigator.clipboard.writeText(el.textContent.trim()); toast('Link copiado'); } catch (e) { const r = document.createRange(); r.selectNodeContents(el); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Use Ctrl+C'); } });
-  document.getElementById('sClose').onclick = () => { S.shareOpen = null; document.getElementById('modalRoot').innerHTML = ''; };
-  S.shareOpen = tk;
+  document.getElementById('sClose').onclick = () => { S.shareOpen = null; clearTimeout(S.shareT); document.getElementById('modalRoot').innerHTML = ''; };
+  const rt = document.getElementById('pvRetry'); if (rt) rt.onclick = () => { rt.disabled = true; pedirPrevia(tk, !S.aprov[tk]?.link_preview); };
+  const cp = document.getElementById('pvCopy'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(`Publique a página de pré-visualização da aprovação aprovacoes/${tk}`); toast('Pedido copiado: cole na conversa do Claude Code'); } catch (e) { toast('Não consegui copiar'); } };
+  S.shareOpen = tk; clearTimeout(S.shareT); if (!aprovLink(tk)) S.shareT = setTimeout(() => { if (S.shareOpen === tk && !aprovLink(tk)) openShare(tk); }, 125000);
 }
 function notifyEditor(title, body) {
   toast(title); try { if ('Notification' in window && Notification.permission === 'granted') new Notification(title, {body}); } catch (e) {}
@@ -1978,7 +2000,7 @@ function openApprovals(focus) {
     const v = a.depois_asset ? (vs.find((y) => y.asset_id === a.depois_asset) || {asset_id: a.depois_asset, rotulo: a.rotulo + ' (alterada)', data: Date.now()}) : vs.filter((y) => (y.data || 0) > (a.versao_data || 0)).pop();
     if (!v) return; const ant = {asset_id: a.asset_id, rotulo: a.rotulo};
     await sendForApproval(p, v, tk); await db.doc('aprovacoes/' + tk).update({antes: ant, depois_asset: null}).catch(() => {});
-    if (!window.DOCON_SITE) askSession(`Atualize a página de pré-visualização da aprovação aprovacoes/${tk} com o vídeo novo (${v.asset_id}) e zere a decisão do cliente.`);
+    if (!window.DOCON_SITE) pedirPrevia(tk, !S.aprov[tk]?.link_preview);
     toast('Reenviado: o mesmo link mostra a nova versão'); openApprovals(tk);
   });
 }
@@ -2605,8 +2627,8 @@ async function sendToApproval() {
     const pp = S.projects[pid]; const v = {rotulo: `Para aprovação ${n}`, data: Date.now(), asset_id: r.id, origem: 'studio', obs: `${fmt(total)} · 720×1280`}; pp.versoes = [...(pp.versoes || []), v];
     touch('p', pid, 'Gerar vídeo para aprovação');
     const tk = await sendForApproval(pp, v, tk0 || undefined); setStatus(pid, 'em aprovação');
-    if (!window.DOCON_SITE) askSession(tk0 ? `Atualize a página de pré-visualização da aprovação aprovacoes/${tk} com o vídeo novo (${v.asset_id}) e zere a decisão do cliente.` : `Publique a página de pré-visualização da aprovação aprovacoes/${tk} (studio/aprovacao.html, vídeo ${v.asset_id}) e grave link_preview nela.`);
     openShare(tk);
+    if (!window.DOCON_SITE) pedirPrevia(tk, !S.aprov[tk]?.link_preview);
   } catch (e) { st(String(e && e.message) === 'webcodecs' ? 'Este navegador não gera vídeo. Use o Chrome ou o Edge.' : 'Não foi possível gerar o vídeo: ' + String(e && e.message || e).slice(0, 120)); }
 }
 /* pedido de alteração do cliente: aviso com o que foi pedido; você ajusta (à mão ou com o diretor) e reenvia */
@@ -2851,7 +2873,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.10.31-m';
+const STUDIO_VERSAO = '2026.11.02-a';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
