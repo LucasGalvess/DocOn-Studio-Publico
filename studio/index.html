@@ -291,6 +291,15 @@ pre.json{background:var(--bg);border:1px solid var(--line);border-radius:8px;pad
 .notif .x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px}
 @keyframes ntIn{from{opacity:0;transform:translateY(-12px) scale(.96)}to{opacity:1;transform:none}}
 #bellN:not(:empty){display:inline-block;margin-left:4px;min-width:18px;padding:0 5px;border-radius:99px;background:var(--bad);color:#fff;font:700 11px/18px var(--mono)}
+.nd-bg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35)}
+.nd{position:fixed;top:0;right:0;bottom:0;z-index:71;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:-16px 0 40px rgba(0,0,0,.35);display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding:14px 14px max(14px,env(safe-area-inset-bottom,0px));animation:ndIn .25s ease-out}
+.nd header{display:flex;align-items:center;justify-content:space-between;gap:8px}.nd h3{margin:0;font:700 17px var(--display)}
+.nd-list{overflow:auto;display:grid;gap:8px;align-content:start}
+.nd-it{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--raised);color:var(--fg);cursor:default;font:inherit}
+.nd-it[data-bn]{cursor:pointer}.nd-it .ic{font-size:16px;line-height:1.3}.nd-it b{display:block;font-size:13.5px;font-weight:600}
+.nd-it .sub,.nd-it .txt,.nd-it .when{display:block;font-size:12.5px;color:var(--muted)}.nd-it .txt{color:var(--fg);white-space:pre-wrap;margin-top:2px}.nd-it .when{font-size:11px;color:var(--faint);margin-top:2px}
+.nd-it.alt{border-color:color-mix(in srgb,var(--warn) 55%,var(--line))}.nd-it.ok{border-color:color-mix(in srgb,var(--ok) 55%,var(--line))}
+@keyframes ndIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);font-weight:600;padding:9px 14px;border-radius:9px;z-index:30}
 /* divisórias arrastáveis entre as áreas de trabalho */
 .split{position:absolute;top:0;bottom:0;width:10px;margin-left:-5px;cursor:col-resize;z-index:8;touch-action:none}
@@ -1161,7 +1170,16 @@ function openExport() {
     catch (e) { st.textContent = e && e.code === 'declined' ? 'Download cancelado.' : e && e.code === 'rate_limited' ? 'Já existe uma confirmação aberta.' : 'Não foi possível baixar aqui. Use “Copiar JSON”.'; }
   };
 }
-function toast(t) { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 1600); }
+/* todo aviso da página vira notificação no canto superior direito (some em 5 s) e fica no painel do sino 🔔 */
+let ultimoAviso = {t: '', em: 0};
+function toast(t) {
+  t = String(t || ''); if (!t) return; if (ultimoAviso.t === t && Date.now() - ultimoAviso.em < 2500) return; ultimoAviso = {t, em: Date.now()};
+  const id = 'lc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const n = {tipo: 'info', titulo: t, texto: '', t: Date.now(), local: true};
+  S.notifsLocal = [n, ...(S.notifsLocal || [])].slice(0, 60); S.localNaoLidas = (S.localNaoLidas || 0) + 1;
+  try { localStorage.setItem('docon-avisos', JSON.stringify(S.notifsLocal.slice(0, 60))); } catch (e) {}
+  if (typeof mostrarNotif === 'function') mostrarNotif(id, n); else { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 5000); }
+}
 
 /* ======================= ações globais ======================= */
 function createProject() {
@@ -2008,10 +2026,12 @@ function mostrarNotif(id, n) {
   let box = document.getElementById('notifs'); if (!box) { box = document.createElement('div'); box.id = 'notifs'; box.className = 'notifs'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
   if (box.querySelector(`[data-nt="${id}"]`)) return;
   const el = document.createElement('div'); el.className = 'notif ' + n.tipo; el.dataset.nt = id;
-  el.innerHTML = `<span class="ic">${n.tipo === 'ok' ? '✅' : '✏️'}</span><div><b>${esc(n.titulo)}</b><p>${esc(n.tipo === 'ok' ? n.texto : `${n.projeto_titulo}: “${n.texto}”`)}</p><p style="color:var(--faint);font-size:11px">${when(n.t)} · clique para ver</p></div><button class="x" type="button" aria-label="Fechar notificação">✕</button>`;
-  el.onclick = (e) => { if (e.target.closest('.x')) { el.remove(); return; } el.remove(); abrirNotif(id); };
+  const info = n.tipo === 'info';
+  el.innerHTML = `<span class="ic">${info ? 'ℹ️' : n.tipo === 'ok' ? '✅' : '✏️'}</span><div><b>${esc(n.titulo)}</b>${info ? '' : `<p>${esc(n.tipo === 'ok' ? n.texto : `${n.projeto_titulo}: “${n.texto}”`)}</p>`}<p style="color:var(--faint);font-size:11px">${info ? 'agora' : when(n.t) + ' · clique para ver'}</p></div><button class="x" type="button" aria-label="Fechar notificação">✕</button>`;
+  el.onclick = (e) => { el.remove(); if (e.target.closest('.x')) return; if (info) abrirSino(); else abrirNotif(id); };
   box.prepend(el); while (box.children.length > 4) box.lastChild.remove();
-  if (n.tipo === 'ok') setTimeout(() => el.remove(), 15000);
+  let timer = setTimeout(() => el.remove(), 5000);                       // some em 5 s; com o mouse em cima, espera
+  el.onmouseenter = () => clearTimeout(timer); el.onmouseleave = () => { timer = setTimeout(() => el.remove(), 2500); };
   try { if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState === 'hidden') new Notification(n.titulo, {body: n.texto}); } catch (e) {}
   renderBell();
 }
@@ -2029,16 +2049,25 @@ function abrirNotif(id) {
   document.getElementById('nHist').onclick = () => abrirSino(n.projeto);
   const rq = document.getElementById('nReq'); if (rq) rq.onclick = () => openChangeRequest(n.tk);
 }
-function renderBell() { const el = document.getElementById('bellN'); if (!el) return; const k = Object.values(S.notifs).filter((n) => !(n.lida || {})[ME.id || 'x']).length; el.textContent = k ? String(k) : ''; }
+function renderBell() { const el = document.getElementById('bellN'); if (!el) return; const k = Object.values(S.notifs || {}).filter((n) => !(n.lida || {})[ME.id || 'x']).length + (S.localNaoLidas || 0); el.textContent = k ? String(Math.min(k, 99)) : ''; }
 function abrirSino(soProjeto) {
-  const lst = Object.entries(S.notifs).filter(([, n]) => !soProjeto || n.projeto === soProjeto).sort((a, b) => b[1].t - a[1].t);
-  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="bT" style="width:min(620px,100%)"><h3 id="bT">${soProjeto ? 'Alterações e aprovações deste projeto' : 'Notificações'}</h3>
-    ${soProjeto ? '<button class="btn sm ghost" type="button" id="bAll" style="justify-self:start">Ver de todos os projetos</button>' : ''}
-    <div style="display:grid;gap:8px;max-height:60vh;overflow:auto">${lst.length ? lst.map(([id, n]) => `<button class="card" type="button" data-bn="${id}" style="text-align:left;cursor:pointer;${(n.lida || {})[ME.id || 'x'] ? 'opacity:.75' : ''}"><b>${n.tipo === 'ok' ? '✅' : '✏️'} ${esc(n.titulo)}</b><p>${esc(n.projeto_titulo)} · ${esc(n.rotulo)} · ${when(n.t)}</p>${n.tipo === 'alt' ? `<p style="color:var(--fg);white-space:pre-wrap">“${esc(n.texto)}”</p>` : ''}</button>`).join('') : '<p class="hint">Nenhuma notificação ainda.</p>'}</div>
-    <div style="display:flex;justify-content:flex-end"><button class="btn ghost" type="button" id="bX">Fechar</button></div></div></div>`;
-  document.getElementById('bX').onclick = () => document.getElementById('modalRoot').innerHTML = '';
-  const ba = document.getElementById('bAll'); if (ba) ba.onclick = () => abrirSino();
-  document.querySelectorAll('[data-bn]').forEach((b) => b.onclick = () => abrirNotif(b.dataset.bn));
+  S.localNaoLidas = 0; for (const [id, n] of Object.entries(S.notifs || {})) if (!(n.lida || {})[ME.id || 'x']) marcarLida(id);   // abriu o painel = viu
+  const aprov = Object.entries(S.notifs).filter(([, n]) => !soProjeto || n.projeto === soProjeto).map(([id, n]) => ({id, ...n}));
+  const avisos = soProjeto ? [] : (S.notifsLocal || []).map((n, i) => ({id: 'lc' + i, ...n}));
+  const lst = [...aprov, ...avisos].sort((a, b) => b.t - a.t).slice(0, 80);
+  let dr = document.getElementById('notifDrawer');
+  if (!dr) { dr = document.createElement('div'); dr.id = 'notifDrawer'; document.body.appendChild(dr); }
+  dr.innerHTML = `<div class="nd-bg" data-ndx></div><aside class="nd" role="dialog" aria-modal="true" aria-labelledby="ndT">
+    <header><h3 id="ndT">🔔 ${soProjeto ? 'Alterações e aprovações do projeto' : 'Notificações'}</h3><button class="btn sm ghost" type="button" data-ndx aria-label="Fechar">✕</button></header>
+    ${soProjeto ? '<button class="btn sm ghost" type="button" id="ndAll">Ver todas</button>' : ''}
+    <div class="nd-list">${lst.length ? lst.map((n) => `<button type="button" class="nd-it ${n.tipo}" ${n.local ? '' : `data-bn="${esc(n.id)}"`} style="${!n.local && (n.lida || {})[ME.id || 'x'] ? 'opacity:.72' : ''}">
+        <span class="ic">${n.tipo === 'info' ? 'ℹ️' : n.tipo === 'ok' ? '✅' : '✏️'}</span><span><b>${esc(n.titulo)}</b>${n.local ? '' : `<span class="sub">${esc(n.projeto_titulo)} · ${esc(n.rotulo)}</span>${n.tipo === 'alt' ? `<span class="txt">“${esc(n.texto)}”</span>` : ''}`}<span class="when">${when(n.t)}</span></span></button>`).join('') : '<p class="hint">Nenhuma notificação ainda.</p>'}</div></aside>`;
+  const fechar = () => { dr.innerHTML = ''; document.removeEventListener('keydown', esc_); };
+  const esc_ = (e) => { if (e.key === 'Escape') fechar(); }; document.addEventListener('keydown', esc_);
+  dr.querySelectorAll('[data-ndx]').forEach((x) => x.onclick = fechar);
+  const all = document.getElementById('ndAll'); if (all) all.onclick = () => abrirSino();
+  dr.querySelectorAll('[data-bn]').forEach((b) => b.onclick = () => { fechar(); abrirNotif(b.dataset.bn); });
+  renderBell(); dr.querySelector('.nd header .btn')?.focus();
 }
 function vigiarNotifs() {
   if (!db) return; let primeira = true;
@@ -3009,7 +3038,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-c';
+const STUDIO_VERSAO = '2026.11.02-d';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
@@ -3381,6 +3410,7 @@ async function anexoImagens(p, lim, primeiro = []) {
   return {blobs, legenda: leg.length ? '\n\nIMAGENS ANEXADAS NESTA MENSAGEM: ' + leg.join('; ') + '.' : ''};
 }
 
+try { S.notifsLocal = JSON.parse(localStorage.getItem('docon-avisos') || '[]'); } catch (e) { S.notifsLocal = []; }
 /* ======================= boot ======================= */
 const APTK = approvalToken(); if (APTK) document.getElementById('app').hidden = true;
 wireInlineEdit(); checkPlayable();
