@@ -220,6 +220,10 @@ O "Diretor" dentro do Studio é o Claude rodando na própria página, na conta d
   - **Agora:** sem AAC no navegador, o Studio codifica o áudio em MP3 com o lamejs e o põe no MP4 (troca o tipo do esds para 0x6B).
   - **Ainda não confirmado:** testei no Chromium e no ffmpeg; no Safari do iPhone, falta confirmar com o cliente.
   - **Vídeo antigo com Opus:** converta com `ffmpeg -c:v copy -c:a aac` e troque o `asset_id` na aprovação e no espelho.
+- **Safari (iPhone/Mac) com play cortado na aprovação, enquanto as imagens carregavam:** o Safari pede o vídeo em pedaços (Range), e o armazenamento de arquivos pode não responder como ele espera. A tela do cliente agora baixa o vídeo inteiro, mostrando o progresso, e toca a partir de um blob local.
+- **Perfil do Instagram é do cliente, não do projeto:** fica em `clientes/<slug do nome>.ig` (`{handle, foto_asset_id, nome, bio, posts, seguidores, seguindo}`).
+  - Ao enviar para aprovação, o Studio pede só o que falta, já preenchido.
+  - Projetos novos do mesmo profissional herdam o perfil.
 - **Legenda gravada:** palavras grudavam ("estámarcada") porque o espaço era medido como 0. Agora o espaço tem largura mínima.
 - **Firefox (a equipe usa):** o `VideoEncoder` do Firefox não entrega `decoderConfig` nos quadros, e o mp4-muxer quebrava (`track.info.decoderConfig is null`). Por isso a cópia do bruto e a exportação falhavam.
   - **Correção:** codificar em Annex B e montar o avcC e as amostras na própria página (`splitAnnexB`, `avccBody`, `avcCOf`). Funciona igual no Chrome.
