@@ -216,6 +216,11 @@ O "Diretor" dentro do Studio é o Claude rodando na própria página, na conta d
 - **Anexos no topo da Direção confundiam a conversa:** o diretor não percebia que um arquivo tinha acabado de chegar.
   - **Agora:** o 📎 Anexar fica na barra de mensagem, tanto na Direção quanto na Sessão. Os arquivos esperam como chips e vão junto com a próxima mensagem, com uma nota "anexos desta mensagem" e as imagens dessa mensagem primeiro.
   - **Na Sessão:** a cópia sobe antes do envio, para o agente conseguir baixar.
+- **Vídeo de aprovação não tocava no iPhone (play cortado):** o Firefox não codifica AAC, e o áudio saía em Opus dentro do MP4, que o iPhone não toca.
+  - **Agora:** sem AAC no navegador, o Studio codifica o áudio em MP3 com o lamejs e o põe no MP4 (troca o tipo do esds para 0x6B).
+  - **Ainda não confirmado:** testei no Chromium e no ffmpeg; no Safari do iPhone, falta confirmar com o cliente.
+  - **Vídeo antigo com Opus:** converta com `ffmpeg -c:v copy -c:a aac` e troque o `asset_id` na aprovação e no espelho.
+- **Legenda gravada:** palavras grudavam ("estámarcada") porque o espaço era medido como 0. Agora o espaço tem largura mínima.
 - **Firefox (a equipe usa):** o `VideoEncoder` do Firefox não entrega `decoderConfig` nos quadros, e o mp4-muxer quebrava (`track.info.decoderConfig is null`). Por isso a cópia do bruto e a exportação falhavam.
   - **Correção:** codificar em Annex B e montar o avcC e as amostras na própria página (`splitAnnexB`, `avccBody`, `avcCOf`). Funciona igual no Chrome.
   - O Firefox também entrega quadros B fora de ordem, e o primeiro quadro chega em 33 ms. Por isso os quadros ficam guardados e o `muxFinal` monta tudo no fim: DTS = i × duração do quadro, ctts = PTS − DTS, e o deslocamento R vale para vídeo e áudio (`cross-track-offset`).

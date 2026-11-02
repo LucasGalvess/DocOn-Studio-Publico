@@ -300,8 +300,8 @@ pre.json{background:var(--bg);border:1px solid var(--line);border-radius:8px;pad
 .igm-bio{display:grid;padding:8px 14px 10px}.igm-bio span{color:#ccc}
 .igm-tabs{display:flex;justify-content:space-around;border-top:1px solid #262626}.igm-tabs span{flex:1;text-align:center;padding:8px 0;color:#777}.igm-tabs .on{color:#fff;border-top:1px solid #fff;margin-top:-1px}
 .igm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
-.igm-t{position:relative;aspect-ratio:3/4;background:#121212;overflow:hidden}.igm-t img{width:100%;height:100%;object-fit:cover;display:block}
-.igm-t.vazio{background:repeating-linear-gradient(135deg,#141414 0 8px,#181818 8px 16px)}
+.igm-t{position:relative;aspect-ratio:3/4;background:#121212;overflow:hidden}.igm-t img,.igm-t video{width:100%;height:100%;object-fit:cover;display:block}
+.igm-t.vazio{background:rgba(255,255,255,.06);outline:1px dashed rgba(255,255,255,.12);outline-offset:-1px}
 .igm-t i{position:absolute;left:4px;top:4px;z-index:1;background:#ee2a7b;color:#fff;font:700 9px sans-serif;padding:2px 5px;border-radius:4px;font-style:normal}
 .igm-t em{position:absolute;right:5px;top:3px;z-index:1;color:#fff;font-style:normal;text-shadow:0 1px 3px #000}
 .igm-link{display:block;text-align:center;padding:10px;color:#4cb5f9;text-decoration:none;font-weight:600}
@@ -759,15 +759,22 @@ function pedirInstagram(pid) {
     const ok = () => { const h = igHandle(document.getElementById('igIn').value); if (!h) { document.getElementById('igIn').focus(); return; } p.profissional.instagram = '@' + h; touch('p', pid, 'Instagram do cliente'); fim(true); };
     document.getElementById('igOk').onclick = ok; document.getElementById('igIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') ok(); }); document.getElementById('igIn').focus(); });
 }
+/* imagem do vídeo (quadro em 1 s, com os grafismos) para a tela do cliente: capa automática, imagem do player e miniatura do perfil */
+async function quadroAprov(p) {
+  const ctx = await snapPrep(p); if (!ctx || !assetsApi) return '';
+  const t = Math.min(1, Math.max(0, (S.videoDur || 2) - 0.1)); const c = document.createElement('canvas'); c.width = 720; c.height = 1280;
+  await seekEl(ctx.src, t); await drawExportFrame(c.getContext('2d'), p, t, ctx.src, 720, 1280, ctx.mediaEls);
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85)); const r = await assetsApi.upload(blob, {type: 'image/jpeg'}); return r.id;
+}
 function igMockHTML(d) {
-  const h = igHandle(d.handle) || 'perfil'; const ini = (d.nome || h).replace(/^(dra?\.?\s*)/i, '').trim().slice(0, 1).toUpperCase() || 'D';
-  const tiles = [d.capa ? {id: d.capa, novo: true} : null, ...(d.feed || []).slice(0, 8).map((id) => ({id}))].filter(Boolean);
+  const h = igHandle(d.handle) || 'seu.perfil'; const ini = (d.nome || h).replace(/^(dra?\.?\s*)/i, '').trim().slice(0, 1).toUpperCase() || 'D';
+  const tiles = [d.capa ? {id: d.capa, novo: true} : d.video ? {video: d.video, novo: true} : null, ...(d.feed || []).slice(0, 8).map((id) => ({id}))].filter(Boolean);
   while (tiles.length < 9) tiles.push({vazio: true});
   return `<div class="igm"><div class="igm-top"><b>${esc(h)}</b><span>⋯</span></div>
     <div class="igm-head"><div class="igm-av">${d.avatar ? `<img src="/_blob/${esc(d.avatar)}" alt="">` : esc(ini)}</div><div class="igm-st"><span><b>—</b>posts</span><span><b>—</b>seguidores</span><span><b>—</b>seguindo</span></div></div>
     <div class="igm-bio"><b>${esc(d.nome || '')}</b>${d.sub ? `<span>${esc(d.sub)}</span>` : ''}</div>
     <div class="igm-tabs"><span class="on">▦</span><span>▶</span><span>☺</span></div>
-    <div class="igm-grid">${tiles.slice(0, 9).map((t) => t.vazio ? '<div class="igm-t vazio"></div>' : `<div class="igm-t">${t.novo ? '<i>NOVO</i><em>▶</em>' : ''}<img src="/_blob/${esc(t.id)}" alt=""></div>`).join('')}</div>
+    <div class="igm-grid">${tiles.slice(0, 9).map((t) => t.vazio ? '<div class="igm-t vazio"></div>' : `<div class="igm-t">${t.novo ? '<i>NOVO</i><em>▶</em>' : ''}${t.video ? `<video src="/_blob/${esc(t.video)}" ${d.quadro ? `poster="/_blob/${esc(d.quadro)}"` : ''} muted autoplay loop playsinline preload="metadata"></video>` : `<img src="/_blob/${esc(t.id)}" alt="">`}</div>`).join('')}</div>
     ${igHandle(d.handle) ? `<a class="igm-link" href="https://www.instagram.com/${esc(h)}/" target="_blank" rel="noopener">Abrir o perfil real no Instagram ↗</a>` : ''}</div>`;
 }
 function feedHTML(p) {
@@ -2120,7 +2127,7 @@ async function sendForApproval(p, v, token) {
   const doc = {...(prev || {}), projeto: S.cur, projeto_titulo: p.titulo, profissional: p.profissional?.nome || '', asset_id: v.asset_id, rotulo: v.rotulo || 'Versão', versao_data: v.data || Date.now(),
     status: 'aguardando', editor: prev?.editor || ME.id, atualizado: Date.now(), eventos: [...(prev?.eventos || []), {t: Date.now(), tipo: prev ? 'reenviado' : 'enviado', autor: ME.id, texto: v.rotulo || ''}]};
   delete doc.pedido; delete doc.processando_por;
-  doc.capa_asset_id = p.capa?.asset_id || ''; doc.instagram = p.profissional?.instagram || ''; doc.subtitulo = p.profissional?.subtitulo || p.profissional?.especialidade || ''; doc.feed = p.feed || [];
+  doc.capa_asset_id = p.capa?.asset_id || ''; doc.quadro_asset_id = v.quadro_asset_id || prev?.quadro_asset_id || ''; doc.instagram = p.profissional?.instagram || ''; doc.subtitulo = p.profissional?.subtitulo || p.profissional?.especialidade || ''; doc.feed = p.feed || [];
   if (!doc.codigo) doc.codigo = novoCodigo();
   await dbSet('aprovacoes/' + tk, doc); S.aprov[tk] = doc; await espelhoCliente(tk, doc); return tk;
 }
@@ -2132,7 +2139,7 @@ function novoCodigo() { const a = new Uint32Array(10); crypto.getRandomValues(a)
 const codNorm = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^(.{5})(.{5})$/, '$1-$2');
 async function espelhoCliente(tk, a) {
   if (!db || !a?.codigo) return;
-  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', instagram: a.instagram || '', subtitulo: a.subtitulo || '', feed: a.feed || [], status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
+  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', quadro_asset_id: a.quadro_asset_id || '', instagram: a.instagram || '', subtitulo: a.subtitulo || '', feed: a.feed || [], status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
   try { await dbSet(`previas/${a.codigo}/v/aprov`, m); } catch (e) {}
 }
 function aprovMensagem(tk) { const a = S.aprov[tk] || {};
@@ -2348,18 +2355,24 @@ function renderClientApproval(tk, path) {
     const done = a.status === 'aprovado', waiting = ['alteracao', 'processando', 'revisar'].includes(a.status);
     root.innerHTML = `<div class="brand"><i></i>DocOn Studio <small>APROVAÇÃO</small></div>
       <div><p class="h">${esc(a.profissional || '')}</p><h3 style="margin:4px 0 0;font:800 22px var(--display)">${esc(a.projeto_titulo)} · ${esc(a.rotulo)}</h3></div>
-      <video controls playsinline preload="metadata" src="/_blob/${esc(a.asset_id)}" ${a.capa_asset_id ? `poster="/_blob/${esc(a.capa_asset_id)}"` : ''} style="width:100%;aspect-ratio:9/16;border-radius:18px;background:#000;object-fit:cover"></video>
-      ${a.capa_asset_id ? `<div class="card" style="display:grid;gap:10px"><b>Capa do Reels</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+      <p class="h" style="margin:0">1 · Vídeo <span class="hint" style="text-transform:none;letter-spacing:0">(toque no ▶ para assistir com som)</span></p>
+      <video id="cVid" controls playsinline preload="metadata" src="/_blob/${esc(a.asset_id)}" ${a.capa_asset_id || a.quadro_asset_id ? `poster="/_blob/${esc(a.capa_asset_id || a.quadro_asset_id)}"` : ''} style="width:100%;aspect-ratio:9/16;border-radius:18px;background:#000;object-fit:cover"></video>
+      <div class="card" id="cVidErr" hidden style="border-color:var(--warn)"><b>Este aparelho não conseguiu abrir o vídeo</b><p>Tente pelo computador ou por outro navegador (Chrome). Se continuar, responda a mensagem da DocOn que mandamos um novo link.</p></div>
+      ${a.capa_asset_id ? `<div class="card" style="display:grid;gap:10px"><b>2 · Capa do Reels</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
         <figure style="margin:0;display:grid;gap:4px"><img src="/_blob/${esc(a.capa_asset_id)}" alt="Capa do Reels" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:12px;background:#000"><figcaption class="hint">No Reels (tela cheia)</figcaption></figure>
         <figure style="margin:0;display:grid;gap:4px"><img src="/_blob/${esc(a.capa_asset_id)}" alt="Capa no perfil" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;background:#000"><figcaption class="hint">No perfil (recorte 3:4)</figcaption></figure></div>
-        <p class="hint" style="margin:0">Ao aprovar, você aprova o vídeo e a capa.</p></div>` : ''}
-      ${a.capa_asset_id && (a.instagram || (a.feed || []).length) ? `<div class="card" style="display:grid;gap:10px"><b>Como fica no seu perfil</b>${igMockHTML({handle: a.instagram, nome: a.profissional, sub: a.subtitulo, capa: a.capa_asset_id, feed: a.feed})}<p class="hint" style="margin:0">Simulação: a capa nova aparece primeiro no feed, no recorte do Instagram.</p></div>` : ''}
+        <p class="hint" style="margin:0">Ao aprovar, você aprova o vídeo e a capa.</p></div>`
+        : `<div class="card" style="display:grid;gap:10px"><b>2 · Capa do Reels</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+        ${['9/16;border-radius:12px', '3/4;border-radius:6px'].map((ar, i) => `<figure style="margin:0;display:grid;gap:4px">${a.quadro_asset_id ? `<img src="/_blob/${esc(a.quadro_asset_id)}" alt="" style="width:100%;aspect-ratio:${ar};object-fit:cover;background:#000">` : `<video src="/_blob/${esc(a.asset_id)}#t=0.8" muted playsinline preload="auto" style="width:100%;aspect-ratio:${ar};object-fit:cover;background:#000"></video>`}<figcaption class="hint">${i ? 'No perfil (recorte 3:4)' : 'No Reels (tela cheia)'}</figcaption></figure>`).join('')}</div>
+        <p class="hint" style="margin:0">Sem capa personalizada: o Instagram mostra um quadro do próprio vídeo.</p></div>`}
+      <div class="card" style="display:grid;gap:10px"><b>3 · Como fica no seu perfil</b>${igMockHTML({handle: a.instagram, nome: a.profissional, sub: a.subtitulo, capa: a.capa_asset_id, video: a.capa_asset_id ? '' : a.asset_id, quadro: a.quadro_asset_id, feed: a.feed})}<p class="hint" style="margin:0">Simulação: o vídeo novo aparece primeiro no seu feed, no recorte do Instagram.</p></div>
       ${done && viaCodigo ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! A equipe da DocOn já recebeu a sua aprovação.</p></div>`
         : done ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! O download começa logo abaixo. A equipe também recebeu os arquivos finais.</p><div class="acts">${FORMATOS.map(([k, n]) => `<button class="btn sm ${k === 'mp4' ? 'pri' : ''}" type="button" data-cx="${k}">${n.split(' ')[0]}</button>`).join('')}</div></div>`
         : waiting ? `<div class="card"><b>Alteração recebida</b><p>“${esc(a.pedido || '')}”</p><p>A equipe está ajustando e confere tudo antes de enviar a nova versão para você aprovar neste mesmo link.</p></div>`
         : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><button class="btn" type="button" id="cAlt" style="padding:14px">Pedir alteração</button><button class="btn pri" type="button" id="cOk" style="padding:14px">Aprovar</button></div>`}
       <p class="hint" id="cSt" role="status">${esc(msg || '')}</p>`;
     const st = (t) => { const e = document.getElementById('cSt'); if (e) e.textContent = t; };
+    const cv = document.getElementById('cVid'); if (cv) cv.addEventListener('error', () => { const e = document.getElementById('cVidErr'); if (e) e.hidden = false; });
     const base = slug(a.projeto_titulo) + '_' + slug(a.rotulo);
     root.querySelectorAll('[data-cx]').forEach((b) => b.onclick = () => exportAs('/_blob/' + a.asset_id, base, b.dataset.cx, st).catch((e) => st(e && e.code === 'declined' ? 'Download cancelado.' : 'Não foi possível baixar aqui.')));
     const ok = document.getElementById('cOk'); if (ok) ok.onclick = async () => {
@@ -2563,7 +2576,7 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
     if (ln) {
       const sub = p.legenda.estilo === 'subtle'; const sz = (sub ? 4.1 : 5) * u * capTs(p); c.font = `${sub ? 600 : 700} ${sz}px ${FX_}`; const xA = cl((t - ln[0].s + 0.05) / 0.18);
       const kws = new Set([...(p.legenda.palavras_chave || '').split(','), ...act.filter((b) => b.tipo === 'destaque').flatMap((b) => (b.palavras || '').split(','))].flatMap((s) => s.trim().toLowerCase().split(/\s+/)).filter(Boolean));
-      const nrm = (w) => w.toLowerCase().replace(/[.,?!:;…"“”]/g, ''); const sp = c.measureText(' ').width; const ws = ln.map((w) => ({...w, wd: c.measureText(w.w).width}));
+      const nrm = (w) => w.toLowerCase().replace(/[.,?!:;…"“”]/g, ''); const sp = Math.max(c.measureText(' ').width, sz * 0.26);   // alguns navegadores medem o espaço como 0 e as palavras grudavam const ws = ln.map((w) => ({...w, wd: c.measureText(w.w).width}));
       const tot = ws.reduce((n, w) => n + w.wd, 0) + sp * (ws.length - 1); let x = (W - tot) / 2; const y = 0.825 * H + sz + (1 - eo(xA)) * 1.2 * u;
       c.save(); c.globalAlpha = xA; c.textAlign = 'left'; c.shadowColor = 'rgba(0,0,0,.8)'; c.shadowBlur = 1.4 * u; c.shadowOffsetY = 0.3 * u;
       for (const w of ws) { const on = t >= w.s && t <= w.e + 0.05; const kk = kws.has(nrm(w.w)); c.fillStyle = !sub && (on || kk) ? pl.key : '#fff'; c.save(); if (!sub && on) { c.translate(x + w.wd / 2, y - sz * 0.35); c.scale(1.08, 1.08); c.translate(-(x + w.wd / 2), -(y - sz * 0.35)); } c.fillText(w.w, x, y);
@@ -2608,7 +2621,10 @@ async function renderMp4(p, o, say = () => {}, bar = () => {}) {
   if (!codec) throw new Error('webcodecs');
   say('Preparando…'); const {Muxer, ArrayBufferTarget} = await loadMuxer();
   // AAC (padrão: abre em qualquer lugar); navegador sem AAC usa Opus no MP4
-  let acodec = 'mp4a.40.2', amux = 'aac'; try { if (!(await AudioEncoder.isConfigSupported({codec: acodec, sampleRate: 48000, numberOfChannels: 2, bitrate: 192000})).supported) { acodec = 'opus'; amux = 'opus'; } } catch (e) { acodec = 'opus'; amux = 'opus'; }
+  // áudio: AAC quando o navegador codifica; senão (Firefox) MP3 dentro do MP4 (lamejs), que iPhone, Android e computador tocam. Opus em MP4 não toca no iPhone.
+  let acodec = 'mp4a.40.2', amux = 'aac', mp3 = false; try { if (!(await AudioEncoder.isConfigSupported({codec: acodec, sampleRate: 48000, numberOfChannels: 2, bitrate: 192000})).supported) mp3 = true; } catch (e) { mp3 = true; }
+  if (mp3) { try { await loadLame(); } catch (e) { mp3 = false; acodec = 'opus'; amux = 'opus'; } }
+  S.ultimoAudio = mp3 ? 'mp3' : amux;
   const muxer = new Muxer({target: new ArrayBufferTarget(), video: {codec: 'avc', width: W, height: H, frameRate: FPS}, audio: {codec: amux, numberOfChannels: 2, sampleRate: 48000}, fastStart: 'in-memory', firstTimestampBehavior: 'cross-track-offset'});   // Firefox começa o primeiro quadro em 33 ms; o áudio mantém o deslocamento R do vídeo
   let fail = null;
   // H.264 em Annex B e o avcC montado aqui: o Firefox não entrega decoderConfig nos quadros, e o MP4 precisa dele
@@ -2622,7 +2638,7 @@ async function renderMp4(p, o, say = () => {}, bar = () => {}) {
       vbuf.push({d: avccBody(splitAnnexB(buf)), k: ch.type, t: ch.timestamp});      // guardado: a ordem de decodificação é montada no fim (Firefox usa quadros B)
     } catch (e) { fail = e; } }, error: (e) => fail = e});
   venc.configure({codec, width: W, height: H, bitrate: o.bitrate, framerate: FPS, avc: {format: 'annexb'}});
-  /* AAC-LC 48 kHz estéreo quando o navegador não manda a config */ let aFirst = true; const aenc = new AudioEncoder({output: (ch, m) => { try { if (aFirst) { aFirst = false; if (!m?.decoderConfig?.description) m = {decoderConfig: {codec: acodec, sampleRate: 48000, numberOfChannels: 2, ...(amux === 'aac' ? {description: new Uint8Array([0x11, 0x90])} : {})}}; } abuf.push([ch, m]); } catch (e) { fail = e; } }, error: (e) => fail = e}); aenc.configure({codec: acodec, sampleRate: 48000, numberOfChannels: 2, bitrate: o.rawOnly ? 128000 : 192000});
+  /* AAC-LC 48 kHz estéreo quando o navegador não manda a config */ let aFirst = true; const aenc = mp3 ? null : new AudioEncoder({output: (ch, m) => { try { if (aFirst) { aFirst = false; if (!m?.decoderConfig?.description) m = {decoderConfig: {codec: acodec, sampleRate: 48000, numberOfChannels: 2, ...(amux === 'aac' ? {description: new Uint8Array([0x11, 0x90])} : {})}}; } abuf.push([ch, m]); } catch (e) { fail = e; } }, error: (e) => fail = e}); aenc?.configure({codec: acodec, sampleRate: 48000, numberOfChannels: 2, bitrate: o.rawOnly ? 128000 : 192000});
   // fontes, ícones e mídias prontos antes do primeiro quadro
   const tpl = tplOf(p); for (const f of [tpl?.fontes?.titulo || 'Montserrat', tpl?.fontes?.texto || 'Inter']) { loadFont(f); for (const w of [400, 500, 600, 700, 800]) await document.fonts.load(`${w} 40px "${f}"`).catch(() => {}); }
   const pl = {...PAL_DEF, ...(tpl?.paleta || {})}; const icons = [...new Set(p.blocos.flatMap((b) => (b.itens || []).map((i) => i.icone)))].map((k) => iconImg(k, pl.icon)); await Promise.all(icons.map((i) => i.decode().catch(() => {})));
@@ -2639,11 +2655,13 @@ async function renderMp4(p, o, say = () => {}, bar = () => {}) {
   }
   say('Codificando o áudio…');
   const CH = 1024; const L = ab.getChannelData(0), R = ab.numberOfChannels > 1 ? ab.getChannelData(1) : L;
-  for (let i = 0; i < ab.length; i += CH) { const n2 = Math.min(CH, ab.length - i); const buf = new Float32Array(n2 * 2); buf.set(L.subarray(i, i + n2), 0); buf.set(R.subarray(i, i + n2), n2);
+  if (mp3) abuf.push(...await mp3Frames(ab));
+  else for (let i = 0; i < ab.length; i += CH) { const n2 = Math.min(CH, ab.length - i); const buf = new Float32Array(n2 * 2); buf.set(L.subarray(i, i + n2), 0); buf.set(R.subarray(i, i + n2), n2);
     const ad = new AudioData({format: 'f32-planar', sampleRate: 48000, numberOfFrames: n2, numberOfChannels: 2, timestamp: Math.round(i / 48000 * 1e6), data: buf}); aenc.encode(ad); ad.close(); }
-  await venc.flush(); await aenc.flush(); if (fail) throw fail;
+  await venc.flush(); if (aenc) await aenc.flush(); if (fail) throw fail;
   muxFinal(muxer, vbuf, vcfg, abuf, FPS); muxer.finalize(); bar(1);
-  return new Blob([muxer.target.buffer], {type: 'video/mp4'});
+  const out = new Uint8Array(muxer.target.buffer); if (mp3) marcarMp3(out);
+  return new Blob([out], {type: 'video/mp4'});
 }
 async function rawAudio() {     // áudio do bruto (arquivo local ou cópia salva no projeto)
   const AC = window.OfflineAudioContext; const buf = S.media.file ? await S.media.file.arrayBuffer() : await (await fetch(S.media.src)).arrayBuffer();
@@ -2994,7 +3012,8 @@ async function sendToApproval() {
     if (PL.playing) pause(); const total = cutMap(p).total; const br = Math.max(8e5, Math.min(4e6, (17.5 * 8e6) / Math.max(1, total) - 2.2e5));
     const blob = await renderMp4(p, {W: 720, H: 1280, bitrate: br}, st, bar);
     st('Salvando a versão…'); const r = await assetsApi.upload(blob, {type: 'video/mp4'});
-    const pp = S.projects[pid]; const v = {rotulo: `Para aprovação ${n}`, data: Date.now(), asset_id: r.id, origem: 'studio', obs: `${fmt(total)} · 720×1280`}; pp.versoes = [...(pp.versoes || []), v];
+    const pp = S.projects[pid]; const v = {rotulo: `Para aprovação ${n}`, data: Date.now(), asset_id: r.id, origem: 'studio', obs: `${fmt(total)} · 720×1280`, audio: S.ultimoAudio || ''}; pp.versoes = [...(pp.versoes || []), v];
+    st('Salvando a imagem do vídeo…'); try { v.quadro_asset_id = await quadroAprov(pp); } catch (e) {}
     touch('p', pid, 'Gerar vídeo para aprovação');
     const tk = await sendForApproval(pp, v, tk0 || undefined); setStatus(pid, 'em aprovação');
     openShare(tk);
@@ -3242,7 +3261,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-i';
+const STUDIO_VERSAO = '2026.11.02-k';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
@@ -3298,6 +3317,36 @@ function splitAnnexB(u) {
 }
 /* quadros na ordem de decodificação: DTS = i × duração do quadro; o deslocamento de composição (ctts) cobre os quadros B.
    Se houver reordenação, vídeo e áudio andam juntos R µs para o DTS nunca ficar negativo (o ctts do MP4 não aceita negativo). */
+function addAudio(muxer, x, R) {
+  if (x.raw) return muxer.addAudioChunkRaw(x.raw, 'key', x.t + R, x.d, x.meta);
+  const [ch, m] = x; muxer.addAudioChunk(ch, m, ch.timestamp + R);
+}
+/* MP3 (lamejs) em quadros de 1152 amostras para o MP4 */
+async function mp3Frames(ab) {
+  const lame = await loadLame(); const enc = new lame.Mp3Encoder(2, 48000, 160); const parts = [];
+  const conv = (f) => { const r = new Int16Array(f.length); for (let i = 0; i < f.length; i++) { const v = Math.max(-1, Math.min(1, f[i])); r[i] = v < 0 ? v * 0x8000 : v * 0x7fff; } return r; };
+  const L = conv(ab.getChannelData(0)), Rr = conv(ab.numberOfChannels > 1 ? ab.getChannelData(1) : ab.getChannelData(0));
+  for (let i = 0; i < L.length; i += 1152) { const m = enc.encodeBuffer(L.subarray(i, i + 1152), Rr.subarray(i, i + 1152)); if (m.length) parts.push(new Uint8Array(m)); }
+  const e = enc.flush(); if (e.length) parts.push(new Uint8Array(e));
+  const all = new Uint8Array(parts.reduce((n, x) => n + x.length, 0)); let o = 0; for (const x of parts) { all.set(x, o); o += x.length; }
+  const BR = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320], SR = [44100, 48000, 32000];
+  const out = []; let p = 0, k = 0;
+  while (p + 4 <= all.length) {
+    if (all[p] !== 0xFF || (all[p + 1] & 0xE0) !== 0xE0) { p++; continue; }
+    const br = BR[all[p + 2] >> 4], sr = SR[(all[p + 2] >> 2) & 3], pad = (all[p + 2] >> 1) & 1; if (!br || !sr) { p++; continue; }
+    const len = Math.floor(144000 * br / sr) + pad; if (p + len > all.length) break;
+    out.push({raw: all.subarray(p, p + len), t: Math.round(k * 1152 / 48000 * 1e6), d: Math.round(1152 / 48000 * 1e6), meta: k === 0 ? {decoderConfig: {codec: 'mp3', sampleRate: 48000, numberOfChannels: 2, description: new Uint8Array(0)}} : undefined});
+    p += len; k++;
+  }
+  return out;
+}
+/* o mp4-muxer escreve 'mp4a' com tipo AAC; troca o tipo do objeto no esds para MP3 (0x6B) */
+function marcarMp3(b) {
+  for (let i = 0; i < b.length - 16; i++) if (b[i] === 0x65 && b[i + 1] === 0x73 && b[i + 2] === 0x64 && b[i + 3] === 0x73) {      // 'esds'
+    for (let j = i + 4; j < i + 40; j++) if (b[j] === 0x04 && b[j + 1] === 0x80 && b[j + 2] === 0x80 && b[j + 3] === 0x80 && b[j + 5] === 0x40) { b[j + 5] = 0x6B; return true; }
+  }
+  return false;
+}
 function muxFinal(muxer, vbuf, vcfg, abuf, FPS) {
   const fd = 1e6 / FPS;
   if (vbuf.length) {
@@ -3305,8 +3354,8 @@ function muxFinal(muxer, vbuf, vcfg, abuf, FPS) {
     vbuf.forEach((x, i) => { R = Math.max(R, i * fd - (x.t - p0)); });
     R = Math.max(0, Math.ceil(R / fd - 0.01)) * fd;          // tolerância de arredondamento: sem reordenação, R = 0
     vbuf.forEach((x, i) => { const pts = Math.round(x.t - p0 + R), dts = Math.round(i * fd); muxer.addVideoChunkRaw(x.d, x.k, pts, fd, i === 0 ? {decoderConfig: vcfg} : undefined, pts - dts); });
-    for (const [ch, m] of abuf) muxer.addAudioChunk(ch, m, ch.timestamp + R);
-  } else for (const [ch, m] of abuf) muxer.addAudioChunk(ch, m);
+    for (const x of abuf) addAudio(muxer, x, R);
+  } else for (const x of abuf) addAudio(muxer, x, 0);
 }
 function avccBody(nals) {
   const keep = nals.filter((x) => { const t = x[0] & 31; return t !== 7 && t !== 8 && t !== 9; });
@@ -3654,7 +3703,7 @@ renderAll(); setSave('Conectando…');
     if (kind === 'p' && (!S.cur || !S.projects[S.cur])) { let r = null; try { r = localStorage.getItem('docon-studio-cur'); } catch (e) {} S.cur = (r && S.projects[r]) ? r : Object.keys(S.projects).sort((a, b) => (S.projects[b].atualizado || 0) - (S.projects[a].atualizado || 0))[0] || null; }
     const editingHere = document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.closest('.side,.insp');
     if (first[kind] || !editingHere) renderAll(); else { renderTop(); renderTL(); renderStage(); }
-    if (first[kind] && kind === 'p' && !Object.keys(S.projects).length && !document.getElementById('mdl')) setTimeout(() => { if (!Object.keys(S.projects).length) openWizard(true); }, 600);
+    if (first[kind] && kind === 'p' && !Object.keys(S.projects).length && !document.getElementById('mdl')) setTimeout(() => { if (!Object.keys(S.projects).length && !document.getElementById('aprov') && !document.getElementById('gate')) openWizard(true); }, 600);
     if (first[kind] && kind === 'p') { recoverBackups(); undoRestore(); uiRestore(); versionCheckpoint(); }
     first[kind] = false; if (!pending.size) setSave('Salvo para a equipe');
   };
