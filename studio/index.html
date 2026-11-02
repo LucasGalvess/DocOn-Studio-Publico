@@ -609,6 +609,7 @@ function renderProj() {
     <div class="f"><label for="p_capx">Tamanho do texto da legenda (px)</label><input id="p_capx" type="number" min="20" max="140" step="1" placeholder="${p.legenda.estilo === 'subtle' ? 44 : 54} (padrão)" value="${numOk(p.legenda.fonte_px) ? +p.legenda.fonte_px : ''}"></div>
     <div class="f"><label for="p_kw">Palavras-chave da legenda (vírgula)</label><textarea id="p_kw" rows="2" placeholder="osteoartrite, qualidade de vida, 1x ao mês">${esc(p.legenda.palavras_chave)}</textarea></div>
     <div class="f"><label for="p_tr">Trilha do banco</label><select id="p_tr"><option value="">(gerada pelo editor)</option>${Object.entries(S.bank).filter(([, v]) => v.tipo === 'trilha').map(([id, v]) => `<option value="${id}" ${id === p.musica.banco_id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
+    ${capaHTML(p)}
     ${(p.versoes || []).length ? `<p class="h">Versões renderizadas</p><div class="vers">${p.versoes.slice().reverse().map((v) => `<div class="card"><b>${esc(v.rotulo || 'Versão')}</b><span class="hint">${when(v.data)}${v.obs ? ' · ' + esc(v.obs) : ''}</span>${v.asset_id ? `<video controls playsinline preload="metadata" src="/_blob/${esc(v.asset_id)}"></video>` : ''}${v.previa_id ? `<img alt="Prévia" src="/_blob/${esc(v.previa_id)}" style="border-radius:8px">` : ''}${v.asset_id ? `<div class="acts"><button class="btn sm pri" type="button" data-vex="${esc(v.asset_id)}">Exportar</button><button class="btn sm" type="button" data-vap="${esc(v.asset_id)}">Enviar para aprovação</button></div>` : ''}</div>`).join('')}</div>` : ''}
     <p class="hint">Duração do projeto: <b>${fmt(projDur(p))}</b>, ${S.videoDur || p.dur_origem === 'arquivo' ? 'igual ao vídeo bruto' : 'até o último bloco (abra o vídeo bruto para seguir o tamanho real)'}. Não há tempo fixo: o projeto termina onde o vídeo termina.</p>
     <div><button class="btn" type="button" id="delProj" style="color:var(--bad)">Excluir projeto e liberar espaço</button></div>`;
@@ -624,9 +625,51 @@ function renderProj() {
   el.querySelectorAll('[data-fi]').forEach((e) => e.addEventListener('input', () => { p.arquivos[+e.dataset.fi][e.dataset.fk] = e.value; touch(); }));
   el.querySelectorAll('[data-frm]').forEach((e) => e.addEventListener('click', () => { p.arquivos.splice(+e.dataset.frm, 1); touch(); renderProj(); }));
   el.querySelectorAll('[data-vex]').forEach((b) => b.onclick = () => openExportVideo(p.versoes.find((v) => v.asset_id === b.dataset.vex), p));
-  el.querySelectorAll('[data-vap]').forEach((b) => b.onclick = async () => { const v = p.versoes.find((x) => x.asset_id === b.dataset.vap); try { const tk = await sendForApproval(p, v); openShare(tk); if (!window.DOCON_SITE) askSession(`Publique a página de pré-visualização da aprovação aprovacoes/${tk} (studio/aprovacao.html, vídeo ${v.asset_id}) e grave link_preview nela.`); } catch (e) { toast('Não foi possível criar o link (sem permissão de escrita)'); } });
+  el.querySelectorAll('[data-vap]').forEach((b) => b.onclick = async () => { const v = p.versoes.find((x) => x.asset_id === b.dataset.vap); try { const tk = await sendForApproval(p, v); openShare(tk); } catch (e) { toast('Não foi possível criar o link (sem permissão de escrita)'); } });
   document.getElementById('addFile').onclick = () => { p.arquivos.push({nome: '', papel: 'broll', obs: ''}); touch(); renderProj(); };
   document.getElementById('delProj').onclick = () => openDeleteProject(S.cur);
+  wireCapa(p);
+}
+/* ======================= capa do Reels =======================
+   Uma imagem 9:16 por projeto (p.capa = {asset_id, nome, origem, t?}): enviada do computador ou tirada do quadro atual da
+   prévia (com os grafismos). Vai junto no envio para aprovação: o cliente vê o vídeo e a capa e aprova os dois. */
+function capaHTML(p) {
+  const c = p.capa;
+  return `<p class="h">Capa do Reels</p><div class="card" style="display:grid;grid-template-columns:${c ? '96px ' : ''}minmax(0,1fr);gap:12px;align-items:start">
+    ${c ? `<img src="/_blob/${esc(c.asset_id)}" alt="Capa do Reels" style="width:96px;aspect-ratio:9/16;object-fit:cover;border-radius:8px;background:#000">` : ''}
+    <div style="display:grid;gap:6px"><span class="hint">${c ? `${c.origem === 'quadro' ? `Quadro da prévia em ${fmt(c.t || 0)}` : esc(c.nome || 'Imagem enviada')} · vai junto para aprovação` : 'Sem capa. Envie uma imagem 1080×1920 (JPG ou PNG) ou use o quadro atual da prévia, com os textos.'}</span>
+      <div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn sm" type="button" id="capaUp">Enviar imagem</button><input id="capaFile" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+        <button class="btn sm" type="button" id="capaQuadro" title="Usa o que aparece na prévia agora">Usar o quadro atual</button>
+        ${c ? `<a class="btn sm ghost" href="/_blob/${esc(c.asset_id)}" download="capa_${esc(slug(p.titulo || 'reels'))}.jpg">Baixar</a><button class="btn sm ghost" type="button" id="capaDel">Remover</button>` : ''}</div>
+      <span class="hint" id="capaSt" role="status"></span></div></div>`;
+}
+function wireCapa(p) {
+  const pid = S.cur; const st = (t) => { const e = document.getElementById('capaSt'); if (e) e.textContent = t; };
+  const salvar = async (blob, extra) => {
+    if (!assetsApi) { st('Sem permissão para salvar arquivos nesta página.'); return; }
+    if (blob.size > 19.5 * 1048576) { st('Imagem acima de 20 MB: reduza antes de enviar.'); return; }
+    st('Salvando a capa…');
+    try { const r = await assetsApi.upload(blob, {type: blob.type || 'image/jpeg'}); const pp = S.projects[pid]; if (!pp) return; pp.capa = {asset_id: r.id, ...extra, salvo: Date.now()}; touch('p', pid, 'Capa do Reels'); renderProj(); toast('Capa salva no projeto: vai junto no próximo envio para aprovação'); atualizarCapaAprov(pid); }
+    catch (e) { st('Não consegui salvar a capa (' + ((e && e.code) || 'erro') + ').'); }
+  };
+  const up = document.getElementById('capaUp'), f = document.getElementById('capaFile'); if (!up) return;
+  up.onclick = () => f.click(); f.onchange = async () => { const file = f.files[0]; f.value = ''; if (!file) return; let blob = file;
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) { st('Use JPG, PNG ou WEBP.'); return; }
+    const dm = await imgDims(URL.createObjectURL(file)); if (dm && Math.abs(dm.w / dm.h - 9 / 16) > 0.03) toast('A capa não está em 9:16: o Instagram vai cortar as bordas');
+    salvar(blob, {nome: file.name, origem: 'arquivo', w: dm?.w, h: dm?.h}); };
+  document.getElementById('capaQuadro').onclick = async () => {
+    const pp = S.projects[pid]; st('Gerando a capa do quadro atual…');
+    try { const ctx = await snapPrep(pp); if (!ctx) { st('Abra o vídeo bruto para tirar a capa da prévia.'); return; }
+      const c = document.createElement('canvas'); c.width = 1080; c.height = 1920; const t = S.t; await seekEl(ctx.src, t); await drawExportFrame(c.getContext('2d'), pp, t, ctx.src, 1080, 1920, ctx.mediaEls);
+      const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.92)); salvar(blob, {nome: 'quadro', origem: 'quadro', t: +t.toFixed(2), w: 1080, h: 1920}); }
+    catch (e) { st('Não consegui gerar a capa: ' + String(e && e.message || e).slice(0, 80)); }
+  };
+  const del = document.getElementById('capaDel'); if (del) del.onclick = () => { const pp = S.projects[pid]; delete pp.capa; touch('p', pid, 'Remover capa'); renderProj(); atualizarCapaAprov(pid); };
+}
+/* aprovação aberta deste projeto recebe a capa nova na hora (o cliente vê no mesmo código) */
+async function atualizarCapaAprov(pid) {
+  const tk = openAprovFor(pid); const a = tk && S.aprov[tk]; if (!a || a.status !== 'aguardando') return; const cap = S.projects[pid]?.capa?.asset_id || '';
+  a.capa_asset_id = cap; try { await db.doc('aprovacoes/' + tk).update({capa_asset_id: cap}); await espelhoCliente(tk, a); } catch (e) {}
 }
 
 /* ======================= render: aba Estilos ======================= */
@@ -1953,6 +1996,7 @@ async function sendForApproval(p, v, token) {
   const doc = {...(prev || {}), projeto: S.cur, projeto_titulo: p.titulo, profissional: p.profissional?.nome || '', asset_id: v.asset_id, rotulo: v.rotulo || 'Versão', versao_data: v.data || Date.now(),
     status: 'aguardando', editor: prev?.editor || ME.id, atualizado: Date.now(), eventos: [...(prev?.eventos || []), {t: Date.now(), tipo: prev ? 'reenviado' : 'enviado', autor: ME.id, texto: v.rotulo || ''}]};
   delete doc.pedido; delete doc.processando_por;
+  doc.capa_asset_id = p.capa?.asset_id || '';
   if (!doc.codigo) doc.codigo = novoCodigo();
   await dbSet('aprovacoes/' + tk, doc); S.aprov[tk] = doc; await espelhoCliente(tk, doc); return tk;
 }
@@ -1964,7 +2008,7 @@ function novoCodigo() { const a = new Uint32Array(10); crypto.getRandomValues(a)
 const codNorm = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^(.{5})(.{5})$/, '$1-$2');
 async function espelhoCliente(tk, a) {
   if (!db || !a?.codigo) return;
-  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
+  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
   try { await dbSet(`previas/${a.codigo}/v/aprov`, m); } catch (e) {}
 }
 function aprovMensagem(tk) { const a = S.aprov[tk] || {}; return `Olá! O vídeo "${a.projeto_titulo || ''}" está pronto para a sua aprovação.\n1. Abra: ${STUDIO_URL}\n2. Digite o código: ${a.codigo}\nVocê pode assistir, aprovar ou pedir alteração por lá.`; }
@@ -2022,6 +2066,19 @@ async function registrarNotif(tk, a, tipo) {
   try { const d = await db.doc('notificacoes/' + id).get(); if (d.exists) { if (!S.notifs[id]) S.notifs[id] = JSON.parse(JSON.stringify(d.data())); return; } } catch (e) {}   // outra aba já registrou
   if (S.notifs[id]) return; S.notifs[id] = n; mostrarNotif(id, n); dbSet('notificacoes/' + id, n).catch(() => {});
 }
+/* sininho sintético (Web Audio): duas notas para aprovação/alteração, uma mais suave para avisos. Desliga no painel do sino. */
+let sinoAC = null, sinoUlt = 0;
+function sinoCtx() { try { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; sinoAC = sinoAC || new AC(); if (sinoAC.state === 'suspended') sinoAC.resume().catch(() => {}); return sinoAC; } catch (e) { return null; } }
+addEventListener('pointerdown', () => sinoCtx(), {once: true});        // o navegador só libera o som depois do primeiro clique
+function somSino(forte) {
+  if (localGet('som') === '0' || Date.now() - sinoUlt < 1200) return; const ac = sinoCtx(); if (!ac || ac.state !== 'running') return; sinoUlt = Date.now();
+  const vol = forte ? 0.16 : 0.07; const notas = forte ? [[1318.5, 0], [1760, 0.13]] : [[1567.98, 0]];
+  for (const [f, d] of notas) for (const [mult, amp, dec] of [[1, 1, 1.1], [2.76, 0.35, 0.35], [5.4, 0.12, 0.18]]) {   // fundamental + parciais de sino
+    const t0 = ac.currentTime + d, o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f * mult;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol * amp, t0 + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dec);
+    o.connect(g).connect(ac.destination); o.start(t0); o.stop(t0 + dec + 0.05);
+  }
+}
 function mostrarNotif(id, n) {
   let box = document.getElementById('notifs'); if (!box) { box = document.createElement('div'); box.id = 'notifs'; box.className = 'notifs'; box.setAttribute('role', 'status'); box.setAttribute('aria-live', 'polite'); document.body.appendChild(box); }
   if (box.querySelector(`[data-nt="${id}"]`)) return;
@@ -2029,7 +2086,7 @@ function mostrarNotif(id, n) {
   const info = n.tipo === 'info';
   el.innerHTML = `<span class="ic">${info ? 'ℹ️' : n.tipo === 'ok' ? '✅' : '✏️'}</span><div><b>${esc(n.titulo)}</b>${info ? '' : `<p>${esc(n.tipo === 'ok' ? n.texto : `${n.projeto_titulo}: “${n.texto}”`)}</p>`}<p style="color:var(--faint);font-size:11px">${info ? 'agora' : when(n.t) + ' · clique para ver'}</p></div><button class="x" type="button" aria-label="Fechar notificação">✕</button>`;
   el.onclick = (e) => { el.remove(); if (e.target.closest('.x')) return; if (info) abrirSino(); else abrirNotif(id); };
-  box.prepend(el); while (box.children.length > 4) box.lastChild.remove();
+  box.prepend(el); while (box.children.length > 4) box.lastChild.remove(); somSino(!info);
   let timer = setTimeout(() => el.remove(), 5000);                       // some em 5 s; com o mouse em cima, espera
   el.onmouseenter = () => clearTimeout(timer); el.onmouseleave = () => { timer = setTimeout(() => el.remove(), 2500); };
   try { if ('Notification' in window && Notification.permission === 'granted' && document.visibilityState === 'hidden') new Notification(n.titulo, {body: n.texto}); } catch (e) {}
@@ -2058,7 +2115,7 @@ function abrirSino(soProjeto) {
   let dr = document.getElementById('notifDrawer');
   if (!dr) { dr = document.createElement('div'); dr.id = 'notifDrawer'; document.body.appendChild(dr); }
   dr.innerHTML = `<div class="nd-bg" data-ndx></div><aside class="nd" role="dialog" aria-modal="true" aria-labelledby="ndT">
-    <header><h3 id="ndT">🔔 ${soProjeto ? 'Alterações e aprovações do projeto' : 'Notificações'}</h3><button class="btn sm ghost" type="button" data-ndx aria-label="Fechar">✕</button></header>
+    <header><h3 id="ndT">🔔 ${soProjeto ? 'Alterações e aprovações do projeto' : 'Notificações'}</h3><span style="display:flex;gap:6px;align-items:center"><label class="chk" style="font-size:12px"><input type="checkbox" id="ndSom" ${localGet('som') === '0' ? '' : 'checked'}> Som</label><button class="btn sm ghost" type="button" data-ndx aria-label="Fechar">✕</button></span></header>
     ${soProjeto ? '<button class="btn sm ghost" type="button" id="ndAll">Ver todas</button>' : ''}
     <div class="nd-list">${lst.length ? lst.map((n) => `<button type="button" class="nd-it ${n.tipo}" ${n.local ? '' : `data-bn="${esc(n.id)}"`} style="${!n.local && (n.lida || {})[ME.id || 'x'] ? 'opacity:.72' : ''}">
         <span class="ic">${n.tipo === 'info' ? 'ℹ️' : n.tipo === 'ok' ? '✅' : '✏️'}</span><span><b>${esc(n.titulo)}</b>${n.local ? '' : `<span class="sub">${esc(n.projeto_titulo)} · ${esc(n.rotulo)}</span>${n.tipo === 'alt' ? `<span class="txt">“${esc(n.texto)}”</span>` : ''}`}<span class="when">${when(n.t)}</span></span></button>`).join('') : '<p class="hint">Nenhuma notificação ainda.</p>'}</div></aside>`;
@@ -2066,6 +2123,7 @@ function abrirSino(soProjeto) {
   const esc_ = (e) => { if (e.key === 'Escape') fechar(); }; document.addEventListener('keydown', esc_);
   dr.querySelectorAll('[data-ndx]').forEach((x) => x.onclick = fechar);
   const all = document.getElementById('ndAll'); if (all) all.onclick = () => abrirSino();
+  document.getElementById('ndSom').onchange = (e) => { localSet('som', e.target.checked ? '1' : '0'); if (e.target.checked) { sinoUlt = 0; somSino(true); } };
   dr.querySelectorAll('[data-bn]').forEach((b) => b.onclick = () => { fechar(); abrirNotif(b.dataset.bn); });
   renderBell(); dr.querySelector('.nd header .btn')?.focus();
 }
@@ -2163,7 +2221,11 @@ function renderClientApproval(tk, path) {
     const done = a.status === 'aprovado', waiting = ['alteracao', 'processando', 'revisar'].includes(a.status);
     root.innerHTML = `<div class="brand"><i></i>DocOn Studio <small>APROVAÇÃO</small></div>
       <div><p class="h">${esc(a.profissional || '')}</p><h3 style="margin:4px 0 0;font:800 22px var(--display)">${esc(a.projeto_titulo)} · ${esc(a.rotulo)}</h3></div>
-      <video controls playsinline preload="metadata" src="/_blob/${esc(a.asset_id)}" style="width:100%;aspect-ratio:9/16;border-radius:18px;background:#000;object-fit:cover"></video>
+      <video controls playsinline preload="metadata" src="/_blob/${esc(a.asset_id)}" ${a.capa_asset_id ? `poster="/_blob/${esc(a.capa_asset_id)}"` : ''} style="width:100%;aspect-ratio:9/16;border-radius:18px;background:#000;object-fit:cover"></video>
+      ${a.capa_asset_id ? `<div class="card" style="display:grid;gap:10px"><b>Capa do Reels</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
+        <figure style="margin:0;display:grid;gap:4px"><img src="/_blob/${esc(a.capa_asset_id)}" alt="Capa do Reels" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:12px;background:#000"><figcaption class="hint">No Reels (tela cheia)</figcaption></figure>
+        <figure style="margin:0;display:grid;gap:4px"><img src="/_blob/${esc(a.capa_asset_id)}" alt="Capa no perfil" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:6px;background:#000"><figcaption class="hint">No perfil (recorte 3:4)</figcaption></figure></div>
+        <p class="hint" style="margin:0">Ao aprovar, você aprova o vídeo e a capa.</p></div>` : ''}
       ${done && viaCodigo ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! A equipe da DocOn já recebeu a sua aprovação.</p></div>`
         : done ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! O download começa logo abaixo. A equipe também recebeu os arquivos finais.</p><div class="acts">${FORMATOS.map(([k, n]) => `<button class="btn sm ${k === 'mp4' ? 'pri' : ''}" type="button" data-cx="${k}">${n.split(' ')[0]}</button>`).join('')}</div></div>`
         : waiting ? `<div class="card"><b>Alteração recebida</b><p>“${esc(a.pedido || '')}”</p><p>A equipe está ajustando e confere tudo antes de enviar a nova versão para você aprovar neste mesmo link.</p></div>`
@@ -3038,7 +3100,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-d';
+const STUDIO_VERSAO = '2026.11.02-e';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
