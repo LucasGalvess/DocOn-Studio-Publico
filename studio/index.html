@@ -304,6 +304,8 @@ pre.json{background:var(--bg);border:1px solid var(--line);border-radius:8px;pad
 .igm-t.vazio{background:rgba(255,255,255,.06);outline:1px dashed rgba(255,255,255,.12);outline-offset:-1px}
 .igm-t i{position:absolute;left:4px;top:4px;z-index:1;background:#ee2a7b;color:#fff;font:700 9px sans-serif;padding:2px 5px;border-radius:4px;font-style:normal}
 .igm-t em{position:absolute;right:5px;top:3px;z-index:1;color:#fff;font-style:normal;text-shadow:0 1px 3px #000}
+.igm-t[data-play]{cursor:pointer}.igm-pl{position:absolute;inset:0;margin:auto;width:34px;height:34px;border-radius:50%;background:rgba(0,0,0,.45);color:#fff;display:grid;place-items:center;font-size:14px;z-index:1;pointer-events:none}
+.igm-t.tocando .igm-pl,.igm-t.tocando i,.igm-t.tocando em{display:none}
 .igm-link{display:block;text-align:center;padding:10px;color:#4cb5f9;text-decoration:none;font-weight:600}
 .nd-bg{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.35)}
 .nd{position:fixed;top:0;right:0;bottom:0;z-index:71;width:min(400px,100vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:-16px 0 40px rgba(0,0,0,.35);display:grid;grid-template-rows:auto auto minmax(0,1fr);gap:8px;padding:14px 14px max(14px,env(safe-area-inset-bottom,0px));animation:ndIn .25s ease-out}
@@ -781,13 +783,14 @@ function pedirInstagram(pid, soEditar) {
 }
 function igMockHTML(d) {
   const h = igHandle(d.handle) || 'seu.perfil'; const ini = (d.nome || h).replace(/^(dra?\.?\s*)/i, '').trim().slice(0, 1).toUpperCase() || 'D';
-  const tiles = [d.capa ? {id: d.capa, novo: true} : d.video ? {video: d.video, novo: true} : null, ...(d.feed || []).slice(0, 8).map((id) => ({id}))].filter(Boolean);
+  const novoV = d.video || d.videoPlay; const capaImg = d.capa || d.quadro;
+  const tiles = [capaImg ? {id: capaImg, novo: true, play: novoV} : novoV ? {video: novoV, novo: true} : null, ...(d.feed || []).slice(0, 8).map((id) => ({id}))].filter(Boolean);
   while (tiles.length < 9) tiles.push({vazio: true});
   return `<div class="igm"><div class="igm-top"><b>${esc(h)}</b><span>⋯</span></div>
     <div class="igm-head"><div class="igm-av">${d.avatar ? `<img src="/_blob/${esc(d.avatar)}" alt="">` : esc(ini)}</div><div class="igm-st"><span><b>${esc(d.posts || '—')}</b>posts</span><span><b>${esc(d.seguidores || '—')}</b>seguidores</span><span><b>${esc(d.seguindo || '—')}</b>seguindo</span></div></div>
     <div class="igm-bio"><b>${esc(d.nome || '')}</b>${d.sub ? `<span style="white-space:pre-wrap">${esc(d.sub)}</span>` : ''}</div>
     <div class="igm-tabs"><span class="on">▦</span><span>▶</span><span>☺</span></div>
-    <div class="igm-grid">${tiles.slice(0, 9).map((t) => t.vazio ? '<div class="igm-t vazio"></div>' : `<div class="igm-t">${t.novo ? '<i>NOVO</i><em>▶</em>' : ''}${t.video ? `<video data-vsrc="${esc(t.video)}" ${S.cliVid?.id === t.video ? `src="${S.cliVid.url}"` : `src="/_blob/${esc(t.video)}"`} ${d.quadro ? `poster="/_blob/${esc(d.quadro)}"` : ''} muted autoplay loop playsinline preload="metadata"></video>` : `<img src="/_blob/${esc(t.id)}" alt="">`}</div>`).join('')}</div>
+    <div class="igm-grid">${tiles.slice(0, 9).map((t) => t.vazio ? '<div class="igm-t vazio"></div>' : `<div class="igm-t" ${t.play ? `data-play="${esc(t.play)}" role="button" tabindex="0" title="Tocar o vídeo" aria-label="Tocar o vídeo"` : ''}>${t.novo ? '<i>NOVO</i><em>▶</em>' : ''}${t.play ? '<b class="igm-pl">▶</b>' : ''}${t.video ? `<video data-vsrc="${esc(t.video)}" ${S.cliVid?.id === t.video ? `src="${S.cliVid.url}"` : `src="/_blob/${esc(t.video)}"`} ${d.quadro ? `poster="/_blob/${esc(d.quadro)}"` : ''} muted autoplay loop playsinline preload="metadata"></video>` : `<img src="/_blob/${esc(t.id)}" alt="">`}</div>`).join('')}</div>
     ${igHandle(d.handle) ? `<a class="igm-link" href="https://www.instagram.com/${esc(h)}/" target="_blank" rel="noopener">Abrir o perfil real no Instagram ↗</a>` : ''}</div>`;
 }
 function feedHTML(p) {
@@ -807,7 +810,7 @@ function wireFeed(p) {
     for (const [i, f] of fs.entries()) { st(`Enviando ${i + 1} de ${fs.length}…`); try { const blob = await toJpeg(URL.createObjectURL(f), 720); const r = await assetsApi.upload(blob, {type: 'image/jpeg'}); const pp = S.projects[pid]; pp.feed = [...(pp.feed || []), r.id].slice(0, 8); } catch (e) {} }
     touch('p', pid, 'Fotos do feed'); renderProj(); atualizarCapaAprov(pid); };
   document.querySelectorAll('[data-fdel]').forEach((b) => b.onclick = () => { p.feed.splice(+b.dataset.fdel, 1); touch('p', pid, 'Fotos do feed'); renderProj(); atualizarCapaAprov(pid); });
-  document.getElementById('feedVer').onclick = () => { document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="fvT" style="width:min(420px,100%)"><h3 id="fvT">Como fica no perfil</h3>${(() => { const g = igDe(p); const vs = (p.versoes || []).filter((v) => v.asset_id); return igMockHTML({handle: g.handle, nome: g.nome, sub: g.bio, avatar: g.foto, posts: g.posts, seguidores: g.seguidores, seguindo: g.seguindo, capa: p.capa?.asset_id, video: p.capa ? '' : vs[vs.length - 1]?.asset_id, quadro: vs[vs.length - 1]?.quadro_asset_id, feed: p.feed}); })()}${p.capa ? '' : '<p class="hint">Sem capa: crie uma em Capa do Reels.</p>'}<div style="display:flex;justify-content:flex-end"><button class="btn" type="button" id="fvX">Fechar</button></div></div></div>`; document.getElementById('fvX').onclick = () => document.getElementById('modalRoot').innerHTML = ''; };
+  document.getElementById('feedVer').onclick = () => { document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="fvT" style="width:min(420px,100%)"><h3 id="fvT">Como fica no perfil</h3>${(() => { const g = igDe(p); const vs = (p.versoes || []).filter((v) => v.asset_id); return igMockHTML({handle: g.handle, nome: g.nome, sub: g.bio, avatar: g.foto, posts: g.posts, seguidores: g.seguidores, seguindo: g.seguindo, capa: p.capa?.asset_id, quadro: vs[vs.length - 1]?.quadro_asset_id, video: p.capa || vs[vs.length - 1]?.quadro_asset_id ? '' : vs[vs.length - 1]?.asset_id, videoPlay: vs[vs.length - 1]?.asset_id, feed: p.feed}); })()}${p.capa ? '' : '<p class="hint">Sem capa: crie uma em Capa do Reels.</p>'}<div style="display:flex;justify-content:flex-end"><button class="btn" type="button" id="fvX">Fechar</button></div></div></div>`; document.getElementById('fvX').onclick = () => document.getElementById('modalRoot').innerHTML = ''; };
 }
 /* aprovação aberta deste projeto recebe a capa nova na hora (o cliente vê no mesmo código) */
 async function atualizarCapaAprov(pid) {
@@ -2152,7 +2155,7 @@ function novoCodigo() { const a = new Uint32Array(10); crypto.getRandomValues(a)
 const codNorm = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^(.{5})(.{5})$/, '$1-$2');
 async function espelhoCliente(tk, a) {
   if (!db || !a?.codigo) return;
-  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', quadro_asset_id: a.quadro_asset_id || '', instagram: a.instagram || '', subtitulo: a.subtitulo || '', ig: a.ig || null, feed: a.feed || [], status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
+  const m = {token: tk, projeto_titulo: a.projeto_titulo || '', profissional: a.profissional || '', rotulo: a.rotulo || '', asset_id: a.asset_id, capa_asset_id: a.capa_asset_id || '', quadro_asset_id: a.quadro_asset_id || '', whatsapp: S.contato?.whatsapp || '', instagram: a.instagram || '', subtitulo: a.subtitulo || '', ig: a.ig || null, feed: a.feed || [], status: a.status === 'aguardando' ? 'aguardando' : a.status, atualizado: a.atualizado || Date.now(), pedido: a.status === 'alteracao' ? (a.pedido || '') : ''};
   try { await dbSet(`previas/${a.codigo}/v/aprov`, m); } catch (e) {}
 }
 function aprovMensagem(tk) { const a = S.aprov[tk] || {};
@@ -2187,6 +2190,7 @@ function openShare(tk) {
     ${!window.DOCON_SITE && a.codigo ? `<p class="hint">O cliente abre o link do Studio, digita o código e vê <b>só este vídeo</b>, com <b>Aprovar</b> e <b>Pedir alteração</b> (sem download). A resposta chega aqui sozinha; se a conta dele não puder registrar, ele manda a resposta pronta por WhatsApp e você marca em Aprovações.</p>` : `<p class="hint">Uma página só com o vídeo, no visual do Studio. O cliente assiste e decide pelos botões <b>Aprovar</b> (o vídeo é baixado na hora) e <b>Pedir alteração</b> (a IA aplica e você confere o antes e depois antes de reenviar).</p>`}
     ${!window.DOCON_SITE && a.codigo ? `<p class="h">Mande para o cliente</p><pre class="json" id="lnkMsg" style="white-space:pre-wrap">${esc(aprovMensagem(tk))}</pre>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" type="button" data-cp="lnkMsg">Copiar mensagem</button><button class="btn" type="button" id="verCliente" title="Mostra exatamente o que o cliente vê (para conferir antes de mandar)">Ver como o cliente</button><a class="btn" href="https://wa.me/?text=${encodeURIComponent(aprovMensagem(tk))}" target="_blank" rel="noopener">Enviar pelo WhatsApp ↗</a></div>
+      <div class="f"><label for="zapDocon">WhatsApp da DocOn para as respostas dos clientes</label><input id="zapDocon" inputmode="tel" placeholder="55 11 91234-5678" value="${esc(S.contato?.whatsapp || '')}"><span class="hint">Com o número, os botões Aprovar e Pedir alteração do cliente abrem o WhatsApp direto na conversa com a DocOn, com a mensagem pronta.</span></div>
       <p class="hint">Link: <b>${esc(STUDIO_URL)}</b> · Código: <b style="font:700 15px var(--mono);letter-spacing:.06em">${esc(a.codigo)}</b>. O cliente vê só este vídeo. Ele precisa entrar com uma conta do claude.ai; a página precisa estar compartilhada por link (menu Compartilhar).</p>
       ${a.link_preview ? `<p class="hint">Página antiga desta aprovação: <a href="${esc(a.link_preview)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(a.link_preview)}</a></p>` : ''}`
     : l1 ? `<p class="h">Link de aprovação (com os botões)</p><pre class="json" id="lnk1">${esc(l1)}</pre><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn pri" type="button" data-cp="lnk1">Copiar</button><a class="btn" href="${esc(l1)}" target="_blank" rel="noopener">Abrir ↗</a></div>`
@@ -2197,6 +2201,7 @@ function openShare(tk) {
   document.querySelectorAll('[data-cp]').forEach((b) => b.onclick = async () => { const el = document.getElementById(b.dataset.cp); try { await navigator.clipboard.writeText(el.textContent.trim()); toast('Link copiado'); } catch (e) { const r = document.createRange(); r.selectNodeContents(el); getSelection().removeAllRanges(); getSelection().addRange(r); toast('Use Ctrl+C'); } });
   document.getElementById('sClose').onclick = () => { S.shareOpen = null; clearTimeout(S.shareT); document.getElementById('modalRoot').innerHTML = ''; };
   const rt = document.getElementById('pvRetry'); if (rt) rt.onclick = () => { rt.disabled = true; pedirPrevia(tk, !S.aprov[tk]?.link_preview); };
+  const zi = document.getElementById('zapDocon'); if (zi) zi.onchange = async () => { const n = zi.value.replace(/\D/g, ''); S.contato = {...(S.contato || {}), whatsapp: n}; try { await dbSet('config/contato', S.contato); } catch (e) {} for (const [k, a] of Object.entries(S.aprov)) if (a.status === 'aguardando' && a.codigo) espelhoCliente(k, a); toast(n ? 'WhatsApp da DocOn salvo para as respostas' : 'WhatsApp removido'); };
   const vc = document.getElementById('verCliente'); if (vc) vc.onclick = () => { S.shareOpen = null; document.getElementById('modalRoot').innerHTML = ''; const cod = a.codigo; renderClientGate(); const i = document.getElementById('gCod'); if (i) { i.value = cod; document.getElementById('gGo').click(); }
     const back = document.createElement('button'); back.className = 'btn sm'; back.textContent = '← Voltar ao editor'; back.style.cssText = 'position:fixed;left:12px;top:12px;z-index:80'; back.onclick = () => location.reload(); document.body.appendChild(back); };
   const cp = document.getElementById('pvCopy'); if (cp) cp.onclick = async () => { try { await navigator.clipboard.writeText(`Publique a página de pré-visualização da aprovação aprovacoes/${tk}`); toast('Pedido copiado: cole na conversa do Claude Code'); } catch (e) { toast('Não consegui copiar'); } };
@@ -2385,7 +2390,7 @@ function renderClientApproval(tk, path) {
         : `<div class="card" style="display:grid;gap:10px"><b>2 · Capa do Reels</b><div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:end">
         ${['9/16;border-radius:12px', '3/4;border-radius:6px'].map((ar, i) => `<figure style="margin:0;display:grid;gap:4px">${a.quadro_asset_id ? `<img src="/_blob/${esc(a.quadro_asset_id)}" alt="" style="width:100%;aspect-ratio:${ar};object-fit:cover;background:#000">` : `<video src="/_blob/${esc(a.asset_id)}#t=0.8" muted playsinline preload="auto" style="width:100%;aspect-ratio:${ar};object-fit:cover;background:#000"></video>`}<figcaption class="hint">${i ? 'No perfil (recorte 3:4)' : 'No Reels (tela cheia)'}</figcaption></figure>`).join('')}</div>
         <p class="hint" style="margin:0">Sem capa personalizada: o Instagram mostra um quadro do próprio vídeo.</p></div>`}
-      <div class="card" style="display:grid;gap:10px"><b>3 · Como fica no seu perfil</b>${igMockHTML({handle: a.ig?.handle || a.instagram, nome: a.ig?.nome || a.profissional, sub: a.ig ? a.ig.bio : a.subtitulo, avatar: a.ig?.foto, posts: a.ig?.posts, seguidores: a.ig?.seguidores, seguindo: a.ig?.seguindo, capa: a.capa_asset_id, video: a.capa_asset_id ? '' : a.asset_id, quadro: a.quadro_asset_id, feed: a.feed})}<p class="hint" style="margin:0">Simulação: o vídeo novo aparece primeiro no seu feed, no recorte do Instagram.</p></div>
+      <div class="card" style="display:grid;gap:10px"><b>3 · Como fica no seu perfil</b>${igMockHTML({handle: a.ig?.handle || a.instagram, nome: a.ig?.nome || a.profissional, sub: a.ig ? a.ig.bio : a.subtitulo, avatar: a.ig?.foto, posts: a.ig?.posts, seguidores: a.ig?.seguidores, seguindo: a.ig?.seguindo, capa: a.capa_asset_id, quadro: a.quadro_asset_id, video: a.capa_asset_id || a.quadro_asset_id ? '' : a.asset_id, videoPlay: a.asset_id, feed: a.feed})}<p class="hint" style="margin:0">Simulação: o vídeo novo aparece primeiro no seu feed, no recorte do Instagram. Toque nele para ver tocando.</p></div>
       ${done && viaCodigo ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! A equipe da DocOn já recebeu a sua aprovação.</p></div>`
         : done ? `<div class="card on"><b>Vídeo aprovado</b><p>Obrigado! O download começa logo abaixo. A equipe também recebeu os arquivos finais.</p><div class="acts">${FORMATOS.map(([k, n]) => `<button class="btn sm ${k === 'mp4' ? 'pri' : ''}" type="button" data-cx="${k}">${n.split(' ')[0]}</button>`).join('')}</div></div>`
         : waiting ? `<div class="card"><b>Alteração recebida</b><p>“${esc(a.pedido || '')}”</p><p>A equipe está ajustando e confere tudo antes de enviar a nova versão para você aprovar neste mesmo link.</p></div>`
@@ -2421,6 +2426,13 @@ function renderClientApproval(tk, path) {
   })();
 }
 
+/* miniatura do perfil: mostra a capa; um toque troca pela reprodução do vídeo (com som), outro toque pausa */
+document.addEventListener('click', (e) => { const t = e.target.closest('.igm-t[data-play]'); if (!t) return;
+  let v = t.querySelector('video'); if (v) { if (v.paused) v.play().catch(() => {}); else v.pause(); return; }
+  const id = t.dataset.play; v = document.createElement('video'); v.playsInline = true; v.setAttribute('playsinline', ''); v.dataset.vsrc = id; v.src = S.cliVid?.id === id ? S.cliVid.url : '/_blob/' + id; v.loop = true;
+  const im = t.querySelector('img'); if (im) v.poster = im.src; t.classList.add('tocando'); if (im) im.replaceWith(v); else t.appendChild(v); v.play().catch(() => {});
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.closest?.('.igm-t[data-play]')) e.target.click(); });
 /* O Safari (iPhone e Mac) toca vídeo pedindo o arquivo em pedaços (Range); o armazenamento de arquivos pode não
    responder do jeito que ele espera, e o vídeo fica com o play cortado. Por isso a tela do cliente baixa o vídeo inteiro
    (mostrando o progresso) e toca a partir da cópia local, o que funciona em Safari, Chrome, Firefox e Edge. */
@@ -2439,12 +2451,12 @@ async function carregarVideoCliente(id) {
 }
 /* quem abre pelo link público (fora da organização) só pode ler: a resposta vai pronta por WhatsApp ou e-mail, e a equipe marca no Studio */
 function respostaPorMensagem(a, status, pedido) {
-  const cod = a.codigo || S.cliCodigo || '';
+  const cod = a.codigo || S.cliCodigo || ''; const zap = String(a.whatsapp || '').replace(/\D/g, '');
   const msg = status === 'aprovado' ? `Aprovo o vídeo "${a.projeto_titulo}" (${a.rotulo})${cod ? ' · código ' + cod : ''}.` : `Peço alteração no vídeo "${a.projeto_titulo}" (${a.rotulo})${cod ? ' · código ' + cod : ''}:\n${pedido || ''}`;
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="rmT"><h3 id="rmT">${status === 'aprovado' ? 'Envie a sua aprovação' : 'Envie o seu pedido'}</h3>
-    <p class="hint">Sua conta pode assistir, mas não registrar a resposta aqui. Mande esta mensagem para a equipe da DocOn: ela marca no Studio na hora.</p>
+    <p class="hint">${zap ? 'Falta só um toque: abra o WhatsApp da DocOn com a mensagem pronta e toque em enviar.' : 'Sua conta pode assistir, mas não registrar a resposta aqui. Mande esta mensagem para a equipe da DocOn: ela marca no Studio na hora.'}</p>
     <pre class="json" id="rmMsg" style="white-space:pre-wrap">${esc(msg)}</pre>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn" type="button" id="rmX">Fechar</button><button class="btn" type="button" id="rmCp">Copiar</button><a class="btn" href="mailto:?subject=${encodeURIComponent('Aprovação do vídeo · ' + (a.projeto_titulo || ''))}&body=${encodeURIComponent(msg)}" target="_blank" rel="noopener">E-mail ↗</a><a class="btn pri" href="https://wa.me/?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener">WhatsApp ↗</a></div></div></div>`;
+    <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end"><button class="btn" type="button" id="rmX">Fechar</button><button class="btn" type="button" id="rmCp">Copiar</button><a class="btn" href="mailto:?subject=${encodeURIComponent('Aprovação do vídeo · ' + (a.projeto_titulo || ''))}&body=${encodeURIComponent(msg)}" target="_blank" rel="noopener">E-mail ↗</a><a class="btn pri" href="https://wa.me/${zap}?text=${encodeURIComponent(msg)}" target="_blank" rel="noopener" style="${zap ? 'padding:12px 18px' : ''}">${zap ? 'Enviar no WhatsApp da DocOn ↗' : 'WhatsApp ↗'}</a></div></div></div>`;
   document.getElementById('rmX').onclick = () => document.getElementById('modalRoot').innerHTML = '';
   document.getElementById('rmCp').onclick = async () => { try { await navigator.clipboard.writeText(msg); toast('Mensagem copiada'); } catch (e) { toast('Selecione e copie o texto'); } };
 }
@@ -3298,7 +3310,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-n';
+const STUDIO_VERSAO = '2026.11.02-o';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
@@ -3750,7 +3762,7 @@ renderAll(); setSave('Conectando…');
   db.collection('estilos').onSnapshot((s) => apply('estilos', s), err);
   db.collection('banco').onSnapshot((s) => { for (const ch of s.docChanges()) { if (ch.type === 'removed') delete S.bank[ch.doc.id]; else S.bank[ch.doc.id] = JSON.parse(JSON.stringify(ch.doc.data())); } renderBank(); if (S.rightTab === 'insp') renderInsp(); }, () => {});
   db.doc('sessoes/ativa').onSnapshot((d) => { S.sess = d.exists ? JSON.parse(JSON.stringify(d.data())) : null; renderSessChip(); watchCanal(); if (S.rightTab === 'sess') renderSess(true); if (S.sess && !window.__sessOpened && location.hash !== '#sem-sessao') { window.__sessOpened = true; showTab('sess'); } }, () => {});
-  watchApprovals(); vigiarNotifs(); vigiarClientes(); document.getElementById('bellBtn').onclick = () => abrirSino();
+  watchApprovals(); vigiarNotifs(); vigiarClientes(); db.doc('config/contato').onSnapshot((d) => { S.contato = d.exists ? JSON.parse(JSON.stringify(d.data())) : {}; }, () => {}); document.getElementById('bellBtn').onclick = () => abrirSino();
   db.collection('buscas').onSnapshot((sn) => { for (const ch of sn.docChanges()) { if (ch.type === 'removed') delete S.buscas[ch.doc.id]; else S.buscas[ch.doc.id] = JSON.parse(JSON.stringify(ch.doc.data())); } if (S.bankFilter === 'online' || S.bankFilter === 'ia') renderBank(); }, () => {});
   db.doc('config/voz').onSnapshot((d) => { S.vozCfg = d.exists ? JSON.parse(JSON.stringify(d.data())) : {}; }, () => {});
   db.collection('narracoes').onSnapshot((sn) => { for (const ch of sn.docChanges()) { if (ch.type === 'removed') delete S.narr[ch.doc.id]; else { const o = S.narr[ch.doc.id]; S.narr[ch.doc.id] = JSON.parse(JSON.stringify(ch.doc.data())); if (o?.status === 'pedido' && S.narr[ch.doc.id].status === 'pronto') toast('Voz da DocOn pronta para os efeitos explicados'); } } }, () => {});
