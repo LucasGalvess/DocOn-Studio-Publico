@@ -312,6 +312,8 @@ pre.json{background:var(--bg);border:1px solid var(--line);border-radius:8px;pad
 .nd-it{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;text-align:left;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--raised);color:var(--fg);cursor:default;font:inherit}
 .nd-it[data-bn]{cursor:pointer}.nd-it .ic{font-size:16px;line-height:1.3}.nd-it b{display:block;font-size:13.5px;font-weight:600}
 .nd-it .sub,.nd-it .txt,.nd-it .when{display:block;font-size:12.5px;color:var(--muted)}.nd-it .txt{color:var(--fg);white-space:pre-wrap;margin-top:2px}.nd-it .when{font-size:11px;color:var(--faint);margin-top:2px}
+.nd-it{grid-template-columns:auto minmax(0,1fr) auto}.nd-ok{align-self:start;border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:14px}.nd-ok:hover{border-color:var(--ok);color:var(--ok)}
+.nd-it b,.notif b{background:none!important;color:var(--fg)!important;padding:0!important}
 .nd-it.alt{border-color:color-mix(in srgb,var(--warn) 55%,var(--line))}.nd-it.ok{border-color:color-mix(in srgb,var(--ok) 55%,var(--line))}
 @keyframes ndIn{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
 .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);font-weight:600;padding:9px 14px;border-radius:9px;z-index:30}
@@ -1349,8 +1351,8 @@ let ultimoAviso = {t: '', em: 0};
 function toast(t) {
   t = String(t || ''); if (!t) return; if (ultimoAviso.t === t && Date.now() - ultimoAviso.em < 2500) return; ultimoAviso = {t, em: Date.now()};
   const id = 'lc-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  const n = {tipo: 'info', titulo: t, texto: '', t: Date.now(), local: true};
-  S.notifsLocal = [n, ...(S.notifsLocal || [])].slice(0, 60); S.localNaoLidas = (S.localNaoLidas || 0) + 1;
+  const n = {id, tipo: 'info', titulo: t, texto: '', t: Date.now(), local: true, lida: false};
+  S.notifsLocal = [n, ...(S.notifsLocal || [])].slice(0, 60);
   try { localStorage.setItem('docon-avisos', JSON.stringify(S.notifsLocal.slice(0, 60))); } catch (e) {}
   if (typeof mostrarNotif === 'function') mostrarNotif(id, n); else { const d = document.createElement('div'); d.className = 'toast'; d.textContent = t; document.body.appendChild(d); setTimeout(() => d.remove(), 5000); }
 }
@@ -2219,7 +2221,7 @@ function mostrarNotif(id, n) {
   const el = document.createElement('div'); el.className = 'notif ' + n.tipo; el.dataset.nt = id;
   const info = n.tipo === 'info';
   el.innerHTML = `<span class="ic">${info ? 'ℹ️' : n.tipo === 'ok' ? '✅' : '✏️'}</span><div><b>${esc(n.titulo)}</b>${info ? '' : `<p>${esc(n.tipo === 'ok' ? n.texto : `${n.projeto_titulo}: “${n.texto}”`)}</p>`}<p style="color:var(--faint);font-size:11px">${info ? 'agora' : when(n.t) + ' · clique para ver'}</p></div><button class="x" type="button" aria-label="Fechar notificação">✕</button>`;
-  el.onclick = (e) => { el.remove(); if (e.target.closest('.x')) return; if (info) abrirSino(); else abrirNotif(id); };
+  el.onclick = (e) => { el.remove(); if (e.target.closest('.x')) return; if (info) { marcarQualquer(id); abrirSino(null, 'lidas'); } else abrirNotif(id); };
   box.prepend(el); while (box.children.length > 4) box.lastChild.remove(); somSino(!info);
   let timer = setTimeout(() => el.remove(), 5000);                       // some em 5 s; com o mouse em cima, espera
   el.onmouseenter = () => clearTimeout(timer); el.onmouseleave = () => { timer = setTimeout(() => el.remove(), 2500); };
@@ -2240,25 +2242,31 @@ function abrirNotif(id) {
   document.getElementById('nHist').onclick = () => abrirSino(n.projeto);
   const rq = document.getElementById('nReq'); if (rq) rq.onclick = () => openChangeRequest(n.tk);
 }
-function renderBell() { const el = document.getElementById('bellN'); if (!el) return; const k = Object.values(S.notifs || {}).filter((n) => !(n.lida || {})[ME.id || 'x']).length + (S.localNaoLidas || 0); el.textContent = k ? String(Math.min(k, 99)) : ''; }
-function abrirSino(soProjeto) {
-  S.localNaoLidas = 0; for (const [id, n] of Object.entries(S.notifs || {})) if (!(n.lida || {})[ME.id || 'x']) marcarLida(id);   // abriu o painel = viu
-  const aprov = Object.entries(S.notifs).filter(([, n]) => !soProjeto || n.projeto === soProjeto).map(([id, n]) => ({id, ...n}));
-  const avisos = soProjeto ? [] : (S.notifsLocal || []).map((n, i) => ({id: 'lc' + i, ...n}));
-  const lst = [...aprov, ...avisos].sort((a, b) => b.t - a.t).slice(0, 80);
-  let dr = document.getElementById('notifDrawer');
-  if (!dr) { dr = document.createElement('div'); dr.id = 'notifDrawer'; document.body.appendChild(dr); }
+const lidaN = (n) => n.local ? !!n.lida : !!(n.lida || {})[ME.id || 'x'];
+function naoLidas() { return Object.values(S.notifs || {}).filter((n) => !lidaN(n)).length + (S.notifsLocal || []).filter((n) => !n.lida).length; }
+function renderBell() { const el = document.getElementById('bellN'); if (!el) return; const k = naoLidas(); el.textContent = k ? String(Math.min(k, 99)) : ''; }
+function marcarQualquer(id) { if (S.notifs?.[id]) return marcarLida(id); const n = (S.notifsLocal || []).find((x) => x.id === id); if (n && !n.lida) { n.lida = true; salvarAvisos(); renderBell(); } }
+function abrirSino(soProjeto, aba) {
+  aba = aba || S.sinoAba || 'novas'; S.sinoAba = aba;
+  const todas = [...Object.entries(S.notifs || {}).filter(([, n]) => !soProjeto || n.projeto === soProjeto).map(([id, n]) => ({id, ...n})), ...(soProjeto ? [] : (S.notifsLocal || []))].sort((x, y) => y.t - x.t);
+  const novas = todas.filter((n) => !lidaN(n)), lidas = todas.filter((n) => lidaN(n)); const lst = (aba === 'lidas' ? lidas : novas).slice(0, 100);
+  let dr = document.getElementById('notifDrawer'); if (!dr) { dr = document.createElement('div'); dr.id = 'notifDrawer'; document.body.appendChild(dr); }
   dr.innerHTML = `<div class="nd-bg" data-ndx></div><aside class="nd" role="dialog" aria-modal="true" aria-labelledby="ndT">
     <header><h3 id="ndT">🔔 ${soProjeto ? 'Alterações e aprovações do projeto' : 'Notificações'}</h3><span style="display:flex;gap:6px;align-items:center"><label class="chk" style="font-size:12px"><input type="checkbox" id="ndSom" ${localGet('som') === '0' ? '' : 'checked'}> Som</label><button class="btn sm ghost" type="button" data-ndx aria-label="Fechar">✕</button></span></header>
-    ${soProjeto ? '<button class="btn sm ghost" type="button" id="ndAll">Ver todas</button>' : ''}
-    <div class="nd-list">${lst.length ? lst.map((n) => `<button type="button" class="nd-it ${n.tipo}" ${n.local ? '' : `data-bn="${esc(n.id)}"`} style="${!n.local && (n.lida || {})[ME.id || 'x'] ? 'opacity:.72' : ''}">
-        <span class="ic">${n.tipo === 'info' ? 'ℹ️' : n.tipo === 'ok' ? '✅' : '✏️'}</span><span><b>${esc(n.titulo)}</b>${n.local ? '' : `<span class="sub">${esc(n.projeto_titulo)} · ${esc(n.rotulo)}</span>${n.tipo === 'alt' ? `<span class="txt">“${esc(n.texto)}”</span>` : ''}`}<span class="when">${when(n.t)}</span></span></button>`).join('') : '<p class="hint">Nenhuma notificação ainda.</p>'}</div></aside>`;
+    <div style="display:grid;gap:8px"><div class="chips" role="tablist"><button class="chip" type="button" role="tab" aria-pressed="${aba === 'novas'}" data-nda="novas">Não lidas · ${novas.length}</button><button class="chip" type="button" role="tab" aria-pressed="${aba === 'lidas'}" data-nda="lidas">Lidas · ${lidas.length}</button>${soProjeto ? '<button class="chip" type="button" id="ndAll">Todos os projetos</button>' : ''}</div>
+      ${aba === 'novas' && novas.length ? '<button class="btn sm ghost" type="button" id="ndTodas" style="justify-self:end">✓ Marcar todas como lidas</button>' : ''}</div>
+    <div class="nd-list">${lst.length ? lst.map((n) => `<div class="nd-it ${n.tipo}" ${n.local ? '' : `data-bn="${esc(n.id)}"`} role="${n.local ? 'listitem' : 'button'}" tabindex="0">
+        <span class="ic">${n.tipo === 'info' ? 'ℹ️' : n.tipo === 'ok' ? '✅' : '✏️'}</span><span><b>${esc(n.titulo)}</b>${n.local ? '' : `<span class="sub">${esc(n.projeto_titulo)} · ${esc(n.rotulo)}</span>${n.tipo === 'alt' ? `<span class="txt">“${esc(n.texto)}”</span>` : ''}`}<span class="when">${when(n.t)}</span></span>
+        ${aba === 'novas' ? `<button class="nd-ok" type="button" data-ndok="${esc(n.id)}" title="Marcar como lida" aria-label="Marcar como lida">✓</button>` : ''}</div>`).join('') : `<p class="hint">${aba === 'novas' ? 'Tudo lido por aqui. As notificações lidas ficam na aba “Lidas”.' : 'Nenhuma notificação lida ainda.'}</p>`}</div></aside>`;
   const fechar = () => { dr.innerHTML = ''; document.removeEventListener('keydown', esc_); };
   const esc_ = (e) => { if (e.key === 'Escape') fechar(); }; document.addEventListener('keydown', esc_);
   dr.querySelectorAll('[data-ndx]').forEach((x) => x.onclick = fechar);
-  const all = document.getElementById('ndAll'); if (all) all.onclick = () => abrirSino();
+  dr.querySelectorAll('[data-nda]').forEach((x) => x.onclick = () => { document.removeEventListener('keydown', esc_); abrirSino(soProjeto, x.dataset.nda); });
+  const all = document.getElementById('ndAll'); if (all) all.onclick = () => { document.removeEventListener('keydown', esc_); abrirSino(null, aba); };
+  const td = document.getElementById('ndTodas'); if (td) td.onclick = () => { novas.forEach((n) => marcarQualquer(n.id)); document.removeEventListener('keydown', esc_); abrirSino(soProjeto, 'novas'); };
+  dr.querySelectorAll('[data-ndok]').forEach((x) => x.onclick = (e) => { e.stopPropagation(); marcarQualquer(x.dataset.ndok); document.removeEventListener('keydown', esc_); abrirSino(soProjeto, aba); });
+  dr.querySelectorAll('[data-bn]').forEach((b) => { const go = () => { fechar(); abrirNotif(b.dataset.bn); }; b.onclick = go; b.onkeydown = (e) => { if (e.key === 'Enter') go(); }; });
   document.getElementById('ndSom').onchange = (e) => { localSet('som', e.target.checked ? '1' : '0'); if (e.target.checked) { sinoUlt = 0; somSino(true); } };
-  dr.querySelectorAll('[data-bn]').forEach((b) => b.onclick = () => { fechar(); abrirNotif(b.dataset.bn); });
   renderBell(); dr.querySelector('.nd header .btn')?.focus();
 }
 function vigiarNotifs() {
@@ -3261,7 +3269,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-k';
+const STUDIO_VERSAO = '2026.11.02-l';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
@@ -3663,7 +3671,8 @@ async function anexoImagens(p, lim, primeiro = []) {
   return {blobs, legenda: leg.length ? '\n\nIMAGENS ANEXADAS NESTA MENSAGEM: ' + leg.join('; ') + '.' : ''};
 }
 
-try { S.notifsLocal = JSON.parse(localStorage.getItem('docon-avisos') || '[]'); } catch (e) { S.notifsLocal = []; }
+try { S.notifsLocal = JSON.parse(localStorage.getItem('docon-avisos') || '[]').map((n, i) => ({...n, id: n.id || 'lc-old' + i, lida: n.lida ?? true})); } catch (e) { S.notifsLocal = []; }
+function salvarAvisos() { try { localStorage.setItem('docon-avisos', JSON.stringify((S.notifsLocal || []).slice(0, 60))); } catch (e) {} }
 /* ======================= boot ======================= */
 const APTK = approvalToken(); if (APTK) document.getElementById('app').hidden = true;
 if (window.claude && !window.DOCON_SITE && !APTK) document.getElementById('app').style.visibility = 'hidden';   // nada do editor aparece antes de saber se é Editor
