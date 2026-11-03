@@ -2838,8 +2838,9 @@ function openExportFinal() {
   document.querySelectorAll('[data-xv]').forEach((b) => b.onclick = () => openExportVideo(p.versoes.find((v) => v.asset_id === b.dataset.xv), p));
   document.getElementById('xGo').onclick = async () => {
     if (EXP.busy) return; EXP.busy = true; EXP.cancel = false; const go = document.getElementById('xGo'); go.disabled = true; document.getElementById('xStop').hidden = false; if (PL.playing) pause();
-    try { await exportVideo(document.getElementById('xFmt').value, document.getElementById('xQ').value, st, bar); }
-    catch (e) { const m = String(e && e.message || e); st(m === 'cancelado' ? 'Exportação cancelada.' : m === 'bruto' ? 'Abra o vídeo bruto para exportar.' : m === 'webcodecs' ? 'Este navegador não exporta vídeo. Use o Chrome ou o Edge atualizados (MP3 e WAV funcionam aqui).' : e && e.code === 'declined' ? 'Download cancelado.' : m === 'lamejs' ? 'Não consegui carregar o codificador de MP3. Use WAV.' : 'Não foi possível exportar: ' + m.slice(0, 120)); }
+    const xf = document.getElementById('xFmt').value, xq = document.getElementById('xQ').value, xt0 = Date.now();
+    try { await exportVideo(xf, xq, st, bar); diagLog('exportar', {ok: true, fmt: xf, q: xq, s: Math.round((Date.now() - xt0) / 1000), audio: S.ultimoAudio || ''}); }
+    catch (e) { const m = String(e && e.message || e); diagLog('exportar', {ok: false, fmt: xf, q: xq, s: Math.round((Date.now() - xt0) / 1000), erro: (e && e.name ? e.name + ': ' : '') + m.slice(0, 300), etapa: document.getElementById('xSt')?.textContent?.slice(0, 120) || ''}); st(m === 'cancelado' ? 'Exportação cancelada.' : m === 'bruto' ? 'Abra o vídeo bruto para exportar.' : m === 'webcodecs' ? 'Este navegador não exporta vídeo. Use o Chrome ou o Edge atualizados (MP3 e WAV funcionam aqui).' : e && e.code === 'declined' ? 'Download cancelado.' : m === 'lamejs' ? 'Não consegui carregar o codificador de MP3. Use WAV.' : 'Não foi possível exportar: ' + m.slice(0, 120)); }
     finally { EXP.busy = false; const g2 = document.getElementById('xGo'); if (g2) g2.disabled = false; const s2 = document.getElementById('xStop'); if (s2) s2.hidden = true; }
   };
 }
