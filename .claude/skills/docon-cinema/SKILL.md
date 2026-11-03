@@ -256,6 +256,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 - **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
   - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.
+- **Proxy de 720p no pipeline:** o Studio guarda uma versão menor do bruto (720x1280) quando o original passa de 20 MB. O compositor supunha 1080x1920, e o vídeo ocupava só parte do quadro, com reflexo nas bordas.
+  - **Agora:** o `core.py` leva cada quadro para 1080x1920 e ajusta os rostos e a estabilização na mesma escala. Para entregar, prefira o original (link do Drive), porque o zoom sobre 720p perde nitidez.
 - **Zoom em quem fala num plano aberto:** o detector de rosto não acha rostos pequenos e de perfil num plano aberto com duas pessoas.
   - **Agora:** marque o foco à mão, nos quadros ou com o clique de foco do Studio, e use blocos de câmera colados para a câmera deslizar de um para o outro.
 

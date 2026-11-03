@@ -52,6 +52,7 @@ class Reader:
             ok, f = self.cap.read(); self.i += 1
             if not ok: f = self.last
             self.last = f
+            if f.shape[0] != H or f.shape[1] != W: f = cv2.resize(f, (W, H), interpolation=cv2.INTER_CUBIC)   # proxy 720p do Studio etc.: trabalha sempre em 1080x1920
             self.cache[self.i] = cv2.cvtColor(f, cv2.COLOR_BGR2RGB).astype(np.float32) / 255
             for k in list(self.cache):
                 if k < self.i - 3: del self.cache[k]
@@ -64,6 +65,9 @@ class Edit:
         self.video, self.wd, self.speed, self.tail = video, wd, speed, tail
         info = json.load(open(wd + '/shots.json')); self.CUTS = info['cuts']; self.NF = info['n']; self.SFPS = info['fps']
         self.corr = np.load(wd + '/corr.npy'); self.LM = np.load(wd + '/lms.npy')
+        _c = cv2.VideoCapture(video); _sw = _c.get(cv2.CAP_PROP_FRAME_WIDTH) or W; _c.release()
+        if abs(_sw - W) > 1:                     # bruto fora de 1080 de largura (ex.: proxy 720p): rostos e estabilização na escala da saída
+            k = W / _sw; self.LM = self.LM * k; self.corr = self.corr.copy(); self.corr[:, :2] *= k
         self.sharpen, self.vig_amt = sharpen, vignette
         raw = json.load(open(wd + '/words_raw.json'))
         # ---- correções de transcrição: {'old','new'[,'near']} troca; {'after','insert':[(w,t),..]} insere; {'old','drop':True}
