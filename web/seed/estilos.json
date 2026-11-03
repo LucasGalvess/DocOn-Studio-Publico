@@ -82,5 +82,51 @@
   "efeitos": [
    "leak"
   ]
+ },
+ "podcast-conversa": {
+  "id": "podcast-conversa",
+  "nome": "Podcast · conversa a dois",
+  "ordem": 3,
+  "formato": "podcast",
+  "descricao": "Recorte vertical de podcast: pergunta como gancho, assinatura de cada locutor na primeira fala, takes em sequência com transição curta, legenda DocOn e painéis só com o que o especialista disse.",
+  "imagem": {
+   "cortar_pausas": true,
+   "desfoque_fundo": false,
+   "suavizar_pele": true,
+   "velocidade": 1.0
+  },
+  "legenda": {
+   "estilo": "docon"
+  },
+  "musica": {
+   "ativa": false,
+   "bpm": 88,
+   "clima": "warm"
+  },
+  "paleta": {
+   "border": "#e8d3b0",
+   "button": "#b76e79",
+   "button_fg": "#f8f3ea",
+   "glass": "#34241e",
+   "grad1": "#f6deac",
+   "grad2": "#c99660",
+   "icon": "#e9c48c",
+   "key": "#f2d6a6",
+   "pill_bg": "#f2d6a6",
+   "pill_fg": "#34241e",
+   "text": "#f8f3ea"
+  },
+  "fontes": {
+   "titulo": "Montserrat",
+   "texto": "Inter"
+  },
+  "efeitos": [
+   "flash"
+  ],
+  "regras": "Formato podcast (conversa a dois, vertical). Ordem: os takes do roteiro, na sequência. Abertura: a PERGUNTA do take 1 como gancho tipográfico (curta, com palavra-chave em destaque). Assinatura (nome + papel) de cada locutor na primeira vez que fala, depois do gancho. Um painel por take do especialista, com 2 a 4 itens tirados da fala dele (gatilho nas palavras exatas). Destaques na legenda nos termos técnicos. Transição curta e discreta entre takes (flash suave). Velocidade natural (1,0), só cortando pausas longas. CTA final sem inventar @ ou dado. Nunca cobrir rostos.",
+  "capa": {
+   "layout": "podcast",
+   "cor": "#ead8d2"
+  }
  }
 }

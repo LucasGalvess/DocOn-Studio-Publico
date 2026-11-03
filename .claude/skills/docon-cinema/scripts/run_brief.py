@@ -33,7 +33,7 @@ def versioned(path):
     while os.path.exists(f'{base}_v{k}{ext}'): k += 1
     return f'{base}_v{k}{ext}'
 BR = json.load(open(A.brief)); PJ = BR['projeto']; ST = BR.get('estilo') or {}; IMG = ST.get('imagem', {})
-TALK = PJ.get('formato', ST.get('formato')) in ('talking_head', 'misto')
+TALK = PJ.get('formato', ST.get('formato')) in ('talking_head', 'misto', 'podcast')
 def sh(cmd):
     print('$', ' '.join(cmd) if isinstance(cmd, list) else cmd, flush=True)
     subprocess.run(cmd, check=True, shell=isinstance(cmd, str))
@@ -239,6 +239,19 @@ for b in blocks:
             for k, it in enumerate(items): ed.row(p, ic(it.get('icone')), it['texto'], yy + 92 * k, it_t[k], size=44)
         plan.append(f'painel {t0:.2f}-{t1:.2f} ({src}) {lay} · {b.get("kicker")} · itens {[round(x, 2) for x in it_t]}')
 
+# ---- podcast (conversa a dois): assinatura de cada locutor na 1ª fala e transição curta entre os takes (mapa do podcast_prep.py)
+if PJ.get('formato') == 'podcast' and os.path.exists(os.path.join(A.work, 'podcast_mapa.json')):
+    mapa = json.load(open(os.path.join(A.work, 'podcast_mapa.json'))); papeis = {l.get('nome'): l.get('papel', '') for l in PJ.get('locutores', [])}
+    ja = {(b.get('nome') or '').strip().lower() for b in blocks if b['tipo'] == 'nome'}; vistos = set()
+    for m in mapa:
+        nm = (m.get('locutor') or '').strip()
+        if nm and nm.lower() not in ja and nm.lower() not in vistos:
+            t0 = max(out_of(m['inicio'] + 0.4), ed.hook_end + 0.25 if out_of(m['inicio']) < ed.hook_end + 0.5 else 0); t1 = min(out_of(m['fim']) - 0.2, t0 + 3.6)   # depois do gancho, sem cobrir a frase
+            if t1 - t0 > 1.2: ed.lower_third(t0, t1, nm, papeis.get(nm, ''), y=1290); topics.append(t0); plan.append(f'podcast: assinatura de {nm} em {t0:.2f}s')
+            vistos.add(nm.lower())
+    if not any(b['tipo'] == 'fx' for b in blocks):
+        for m in mapa[1:]:
+            tb = out_of(m['inicio']); ed.fx.add('flash', max(0, tb - 0.05), tb + 0.25, 'suave'); plan.append(f'podcast: transição no take {m["take"]} ({tb:.2f}s)')
 ed.camera(topics=sorted(topics))
 leg = PJ.get('legenda', {}).get('estilo', ST.get('legenda', {}).get('estilo', 'docon'))
 if leg != 'nenhuma':

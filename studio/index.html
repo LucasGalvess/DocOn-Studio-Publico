@@ -493,6 +493,7 @@ const fontLoaded = new Set();
 function loadFont(f) {
   const it = FONTS.find((x) => x.f === f); if (!it || fontLoaded.has(f)) return; fontLoaded.add(f);
   const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f).replace(/%20/g, '+')}:wght@${it.w}&display=swap`; document.head.appendChild(l);
+  const it2 = document.createElement('link'); it2.rel = 'stylesheet'; it2.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(f).replace(/%20/g, '+')}:ital,wght@${it.w.split(';').map((w) => '1,' + w).join(';')}&display=swap`; document.head.appendChild(it2);   // itálico à parte (nem toda fonte tem; se faltar, só este pedido falha)
 }
 const ICONS = ['check','heart','paw','calendar','doc','house','clock','chat','scale','cake','dog','bolt','target','diamond','sparkle','sun','mirror','curves','dress','jeans','bikini'];
 const ICON_LABEL = {check:'Check',heart:'Coração',paw:'Pata',calendar:'Calendário',doc:'Folheto',house:'Casa',clock:'Relógio',chat:'Conversa',scale:'Balança',cake:'Idade',dog:'Cão',bolt:'Raio (dor)',target:'Alvo',diamond:'Diamante',sparkle:'Brilho',sun:'Sol',mirror:'Espelho',curves:'Curvas',dress:'Vestido',jeans:'Jeans',bikini:'Biquíni'};
@@ -609,7 +610,7 @@ function renderProj() {
     ${fld('p_titulo', 'Título interno', p.titulo)}
     <div class="row2"><div class="f"><label for="p_status">Status</label><select id="p_status">${STATUS.map((s) => `<option ${s === stOf(p) ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
     <div class="f"><label for="p_estilo">Estilo</label><select id="p_estilo">${tOpts || '<option value="">(sem estilos)</option>'}</select></div></div>
-    <div class="row2"><div class="f"><label for="p_formato">Formato</label><select id="p_formato">${[['talking_head', 'Falando p/ câmera'], ['vlog', 'Vlog narrado'], ['misto', 'Misto']].map(([v, n]) => `<option value="${v}" ${v === p.formato ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    <div class="row2"><div class="f"><label for="p_formato">Formato</label><select id="p_formato">${[['talking_head', 'Falando p/ câmera'], ['vlog', 'Vlog narrado'], ['misto', 'Misto'], ['podcast', 'Podcast (conversa a dois)']].map(([v, n]) => `<option value="${v}" ${v === p.formato ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     ${fld('p_alvo', 'Duração-alvo (s)', p.duracao_alvo)}</div>
     ${fld('p_tema', 'Tema', p.tema, 'text', 'placeholder="Ex.: Verão Leve, osteoartrite em cães idosos"')}
     <p class="h">Profissional</p>
@@ -627,6 +628,7 @@ function renderProj() {
     <div class="f"><label for="p_capx">Tamanho do texto da legenda (px)</label><input id="p_capx" type="number" min="20" max="140" step="1" placeholder="${p.legenda.estilo === 'subtle' ? 44 : 54} (padrão)" value="${numOk(p.legenda.fonte_px) ? +p.legenda.fonte_px : ''}"></div>
     <div class="f"><label for="p_kw">Palavras-chave da legenda (vírgula)</label><textarea id="p_kw" rows="2" placeholder="osteoartrite, qualidade de vida, 1x ao mês">${esc(p.legenda.palavras_chave)}</textarea></div>
     <div class="f"><label for="p_tr">Trilha do banco</label><select id="p_tr"><option value="">(gerada pelo editor)</option>${Object.entries(S.bank).filter(([, v]) => v.tipo === 'trilha').map(([id, v]) => `<option value="${id}" ${id === p.musica.banco_id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
+    ${p.formato === 'podcast' ? podcastHTML(p) : ''}
     ${capaHTML(p)}
     ${feedHTML(p)}
     ${(p.versoes || []).length ? `<p class="h">Versões renderizadas</p><div class="vers">${p.versoes.slice().reverse().map((v) => `<div class="card"><b>${esc(v.rotulo || 'Versão')}</b><span class="hint">${when(v.data)}${v.obs ? ' · ' + esc(v.obs) : ''}</span>${v.asset_id ? `<video controls playsinline preload="metadata" src="/_blob/${esc(v.asset_id)}"></video>` : ''}${v.previa_id ? `<img alt="Prévia" src="/_blob/${esc(v.previa_id)}" style="border-radius:8px">` : ''}${v.asset_id ? `<div class="acts"><button class="btn sm pri" type="button" data-vex="${esc(v.asset_id)}">Exportar</button><button class="btn sm" type="button" data-vap="${esc(v.asset_id)}">Enviar para aprovação</button></div>` : ''}</div>`).join('')}</div>` : ''}
@@ -634,7 +636,7 @@ function renderProj() {
     <div><button class="btn" type="button" id="delProj" style="color:var(--bad)">Excluir projeto e liberar espaço</button></div>`;
   const bind = (id, fn) => { const e = document.getElementById(id); e.addEventListener('input', () => { fn(e.value); touch(); if (id === 'p_titulo') renderTop(); if (id === 'p_tr' || id === 'p_mus') { renderTL(); syncMusic(); } renderStage(); }); };
   bind('p_titulo', (v) => p.titulo = v); bind('p_status', (v) => { p.status = v; renderTop(); }); bind('p_tema', (v) => p.tema = v);
-  bind('p_estilo', (v) => { p.estilo_id = v; renderStyles(); }); bind('p_formato', (v) => p.formato = v); bind('p_alvo', (v) => p.duracao_alvo = v);
+  bind('p_estilo', (v) => { p.estilo_id = v; renderStyles(); }); bind('p_formato', (v) => { p.formato = v; setTimeout(renderProj, 0); }); bind('p_alvo', (v) => p.duracao_alvo = v);
   bind('p_nome', (v) => p.profissional.nome = v); bind('p_sub', (v) => p.profissional.subtitulo = v); bind('p_esp', (v) => p.profissional.especialidade = v); bind('p_ig', (v) => p.profissional.instagram = v);
   bind('p_leg', (v) => p.legenda.estilo = v); bind('p_kw', (v) => p.legenda.palavras_chave = v); bind('p_capx', (v) => { if (numOk(v)) p.legenda.fonte_px = Math.round(+v); else delete p.legenda.fonte_px; });
   bind('p_mus', (v) => p.musica.ativa = v === '1'); bind('p_clima', (v) => p.musica.clima = v); bind('p_vol', (v) => p.musica.volume = v);
@@ -647,7 +649,30 @@ function renderProj() {
   el.querySelectorAll('[data-vap]').forEach((b) => b.onclick = async () => { const v = p.versoes.find((x) => x.asset_id === b.dataset.vap); try { const tk = await sendForApproval(p, v); openShare(tk); } catch (e) { toast('Não foi possível criar o link (sem permissão de escrita)'); } });
   document.getElementById('addFile').onclick = () => { p.arquivos.push({nome: '', papel: 'broll', obs: ''}); touch(); renderProj(); };
   document.getElementById('delProj').onclick = () => openDeleteProject(S.cur);
-  wireCapa(p); wireFeed(p);
+  wireCapa(p); wireFeed(p); wirePodcast(p);
+}
+/* ======================= formato podcast (conversa a dois) =======================
+   p.locutores = [{nome, papel}] (quem pergunta e quem responde; assinatura de cada um na 1ª vez que fala)
+   p.takes = [{titulo, trecho, locutor}] (o roteiro em takes, na ordem do vídeo; a skill acha cada trecho na transcrição,
+   monta o vídeo vertical com scripts/podcast_prep.py e os blocos passam a usar os tempos do vídeo montado) */
+function podcastHTML(p) {
+  const L = p.locutores?.length ? p.locutores : [{nome: '', papel: 'Quem pergunta'}, {nome: p.profissional?.nome || '', papel: p.profissional?.subtitulo || ''}];
+  const T = p.takes || [];
+  return `<p class="h">Podcast · conversa a dois</p><div class="card" style="display:grid;gap:8px">
+    <span class="hint">Locutores (cada um ganha a assinatura na primeira vez que fala)</span>
+    ${L.map((l, i) => `<div class="row2"><div class="f"><label for="lo_n${i}">Locutor ${i + 1}</label><input id="lo_n${i}" data-lo="${i}" data-lk="nome" value="${esc(l.nome || '')}" placeholder="${i ? 'Dr. …' : 'Nome de quem pergunta'}"></div><div class="f"><label for="lo_p${i}">Papel / subtítulo</label><input id="lo_p${i}" data-lo="${i}" data-lk="papel" value="${esc(l.papel || '')}" placeholder="${i ? 'Cirurgião plástico' : 'Host do podcast'}"></div></div>`).join('')}
+    <span class="hint">Takes, na ordem do vídeo (o trecho da fala que entra em cada um)</span>
+    ${T.map((t, i) => `<div class="card" style="display:grid;gap:6px;padding:8px"><div class="row2"><div class="f"><label for="tk_t${i}">Take ${i + 1}</label><input id="tk_t${i}" data-tk="${i}" data-tkk="titulo" value="${esc(t.titulo || '')}"></div><div class="f"><label for="tk_l${i}">Quem fala</label><select id="tk_l${i}" data-tk="${i}" data-tkk="locutor">${L.map((l) => `<option ${l.nome === t.locutor ? 'selected' : ''}>${esc(l.nome || '(sem nome)')}</option>`).join('')}</select></div></div>
+      <div class="f"><label for="tk_x${i}">Trecho da fala</label><textarea id="tk_x${i}" rows="2" data-tk="${i}" data-tkk="trecho">${esc(t.trecho || '')}</textarea></div><button class="btn sm ghost" type="button" data-tkdel="${i}" style="justify-self:end">Remover take</button></div>`).join('')}
+    <button class="btn sm" type="button" id="tkAdd" style="justify-self:start">+ Adicionar take</button></div>`;
+}
+function wirePodcast(p) {
+  if (p.formato !== 'podcast') return;
+  if (!p.locutores?.length) p.locutores = [{nome: '', papel: 'Quem pergunta'}, {nome: p.profissional?.nome || '', papel: p.profissional?.subtitulo || ''}];
+  document.querySelectorAll('[data-lo]').forEach((e) => e.addEventListener('input', () => { p.locutores[+e.dataset.lo][e.dataset.lk] = e.value; touch(); }));
+  document.querySelectorAll('[data-tk]').forEach((e) => e.addEventListener(e.tagName === 'SELECT' ? 'change' : 'input', () => { p.takes[+e.dataset.tk][e.dataset.tkk] = e.value; touch(); }));
+  document.querySelectorAll('[data-tkdel]').forEach((b) => b.onclick = () => { p.takes.splice(+b.dataset.tkdel, 1); touch('p', S.cur, 'Remover take'); renderProj(); });
+  const ad = document.getElementById('tkAdd'); if (ad) ad.onclick = () => { p.takes = [...(p.takes || []), {titulo: 'Take ' + ((p.takes || []).length + 1), trecho: '', locutor: p.locutores[1]?.nome || ''}]; touch('p', S.cur, 'Adicionar take'); renderProj(); };
 }
 /* ======================= capa do Reels =======================
    Uma imagem 9:16 por projeto (p.capa = {asset_id, nome, origem, t?}): enviada do computador ou tirada do quadro atual da
@@ -689,7 +714,27 @@ function wireCapa(p) {
 }
 /* capa gerada pela IA: o Claude olha 4 quadros do bruto, escolhe o melhor (rosto, expressão) e escreve a chamada;
    a página desenha a capa com as fontes e cores do estilo do projeto. Dá para ajustar o texto e o quadro antes de usar. */
+function capaLayout(p) { return tplOf(p)?.capa?.layout || (p.formato === 'podcast' ? 'podcast' : 'docon'); }
+/* layout "podcast" (referência da equipe): foto inteira, sem faixa; linha 1 em branco, peso médio, alinhada à direita a ~2/3
+   da altura; linha 2 enorme, MAIÚSCULA, itálico e negrito, num tom claro (estilo.capa.cor, padrão rosado #EAD8D2) */
+function desenharCapaPodcast(c, p, src, spec) {
+  const W = 1080, H = 1920, u = W / 100; const tpl = tplOf(p); const cor = tpl?.capa?.cor || '#ead8d2';
+  const FT = `"${tpl?.fontes?.titulo || 'Montserrat'}", "Montserrat", sans-serif`;
+  c.setTransform(1, 0, 0, 1, 0, 0); c.filter = 'none'; c.globalAlpha = 1; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  const vw = src.videoWidth || W, vh = src.videoHeight || H, s0 = Math.max(W / vw, H / vh) * (spec.zoom || 1);
+  c.filter = 'brightness(1.02) saturate(1.04)'; c.drawImage(src, (W - vw * s0) / 2, (H - vh * s0) / 2 + (spec.desloc || 0) * H, vw * s0, vh * s0); c.filter = 'none';
+  const alto = spec.posicao === 'alto'; const xr = W - 10 * u; let y = (alto ? 0.16 : 0.665) * H;
+  c.textAlign = 'right'; c.shadowColor = 'rgba(0,0,0,.35)'; c.shadowBlur = 2.2 * u; c.shadowOffsetY = 0.4 * u;
+  let f1 = 5.8 * u; c.font = `600 ${f1}px ${FT}`; const l1 = String(spec.titulo || '').trim();
+  while (c.measureText(l1).width > W - 16 * u && f1 > 3.6 * u) { f1 -= 0.2 * u; c.font = `600 ${f1}px ${FT}`; }
+  if (l1) { c.fillStyle = '#ffffff'; c.fillText(l1, xr, y); y += f1 * 0.25; }
+  const l2 = String(spec.palavra_chave || '').trim().toUpperCase();
+  let f2 = 11 * u; c.font = `italic 800 ${f2}px ${FT}`; while (c.measureText(l2).width > W - 14 * u && f2 > 6 * u) { f2 -= 0.3 * u; c.font = `italic 800 ${f2}px ${FT}`; }
+  if (l2) { y += f2 * 0.92; c.fillStyle = cor; c.fillText(l2, xr + 0.6 * u, y); }
+  c.shadowBlur = 0; c.shadowOffsetY = 0; c.textAlign = 'left';
+}
 function desenharCapa(c, p, src, spec) {
+  if (capaLayout(p) === 'podcast') return desenharCapaPodcast(c, p, src, spec);
   const W = 1080, H = 1920, u = W / 100; const tpl = tplOf(p); const pl = {...PAL_DEF, ...(tpl?.paleta || {})};
   const FT = `"${tpl?.fontes?.titulo || 'Montserrat'}", "Bricolage Grotesque", sans-serif`, FX_ = `"${tpl?.fontes?.texto || 'Inter'}", Figtree, sans-serif`;
   c.setTransform(1, 0, 0, 1, 0, 0); c.filter = 'none'; c.globalAlpha = 1; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
@@ -721,7 +766,8 @@ async function gerarCapaIA(pid, salvar, st) {
   const prompt = `Você é diretor de arte da DocOn Marketing Médico. Crie a CAPA do Reels (1080x1920) deste vídeo de profissional de saúde, no padrão DocOn: chamada curta e forte, sem prometer resultado, sem inventar dado clínico, nome ou @ que não estejam abaixo.
 Projeto: ${JSON.stringify({titulo: p.titulo, tema: p.tema, profissional: p.profissional, direcao: (p.direcionamentos || '').slice(0, 800), fala: (p.transcricao?.texto || '').slice(0, 2500), gancho: p.blocos.find((b) => b.tipo === 'gancho')?.frase || ''})}
 ${comImg ? `Imagens 1 a 4 = quadros do vídeo em ${ts.join(', ')} s. Escolha o melhor para capa (rosto nítido e expressivo, olhos abertos, bem enquadrado).` : 'Sem imagens: use o quadro 2.'}
-Responda só JSON: {"quadro": 1-4, "kicker": "até 22 caracteres, tema", "titulo": "chamada de 3 a 7 palavras", "palavra_chave": "uma palavra do título para destacar", "posicao": "alto" ou "baixo" (onde o texto NÃO cobre o rosto no quadro escolhido)}`;
+${capaLayout(p) === 'podcast' ? `Layout PODCAST (referência da equipe): a capa é a pergunta do episódio em duas linhas — linha 1 curta em texto normal (ex.: "O que é possível melhorar") e linha 2 com 1 a 3 palavras de impacto que fecham a pergunta (ex.: "sem cirurgia?"). Prefira um quadro com as DUAS pessoas bem enquadradas e sorrindo.
+Responda só JSON: {"quadro": 1-4, "kicker": "", "titulo": "linha 1, até 32 caracteres", "palavra_chave": "linha 2, 1 a 3 palavras com a pontuação", "posicao": "alto" ou "baixo" (onde o texto NÃO cobre os rostos)}` : `Responda só JSON: {"quadro": 1-4, "kicker": "até 22 caracteres, tema", "titulo": "chamada de 3 a 7 palavras", "palavra_chave": "uma palavra do título para destacar", "posicao": "alto" ou "baixo" (onde o texto NÃO cobre o rosto no quadro escolhido)}`}`;
   let spec; try { spec = await sampleApi.json(prompt, {modelTier: 'default', ...(comImg ? {images: blobs} : {})}); }
   catch (e) { st(e?.code === 'not_granted' ? 'O uso do Claude não foi permitido nesta página.' : 'A IA não conseguiu gerar agora. Tente de novo.'); return; }
   spec.t = ts[Math.min(3, Math.max(0, (+spec.quadro || 2) - 1))]; st('');
@@ -729,13 +775,14 @@ Responda só JSON: {"quadro": 1-4, "kicker": "até 22 caracteres, tema", "titulo
 }
 function abrirEditorCapa(pid, ctx, spec, ts, salvar) {
   const p = S.projects[pid]; const cv = document.createElement('canvas'); cv.width = 1080; cv.height = 1920;
+  const ft = tplOf(p)?.fontes?.titulo || 'Montserrat'; loadFont(ft); document.fonts.load(`italic 800 40px "${ft}"`).then(() => desenhar()).catch(() => {});
   const desenhar = async () => { await seekEl(ctx.src, spec.t); desenharCapa(cv.getContext('2d'), p, ctx.src, spec); const im = document.getElementById('ceImg'); if (im) im.src = cv.toDataURL('image/jpeg', 0.85); };
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="ceT" style="width:min(760px,100%)"><h3 id="ceT">✨ Capa gerada pela IA</h3>
     <div style="display:grid;grid-template-columns:minmax(0,220px) minmax(0,1fr);gap:16px;align-items:start"><img id="ceImg" alt="Prévia da capa" style="width:100%;aspect-ratio:9/16;border-radius:12px;background:#000">
     <div style="display:grid;gap:8px">
-      <div class="f"><label for="ceK">Kicker</label><input id="ceK" value="${esc(spec.kicker || '')}"></div>
-      <div class="f"><label for="ceTi">Chamada</label><textarea id="ceTi" rows="2">${esc(spec.titulo || '')}</textarea></div>
-      <div class="row2"><div class="f"><label for="cePk">Palavra em destaque</label><input id="cePk" value="${esc(spec.palavra_chave || '')}"></div>
+      ${capaLayout(p) === 'podcast' ? `<input id="ceK" type="hidden" value="">` : `<div class="f"><label for="ceK">Kicker</label><input id="ceK" value="${esc(spec.kicker || '')}"></div>`}
+      <div class="f"><label for="ceTi">${capaLayout(p) === 'podcast' ? 'Linha 1 (texto normal)' : 'Chamada'}</label><textarea id="ceTi" rows="2">${esc(spec.titulo || '')}</textarea></div>
+      <div class="row2"><div class="f"><label for="cePk">${capaLayout(p) === 'podcast' ? 'Linha 2 (destaque grande, itálico)' : 'Palavra em destaque'}</label><input id="cePk" value="${esc(spec.palavra_chave || '')}"></div>
         <div class="f"><label for="cePo">Texto</label><select id="cePo"><option value="baixo" ${spec.posicao !== 'alto' ? 'selected' : ''}>Embaixo</option><option value="alto" ${spec.posicao === 'alto' ? 'selected' : ''}>No alto</option></select></div></div>
       <div class="f"><label for="ceQ">Quadro do vídeo</label><select id="ceQ">${ts.map((t, i) => `<option value="${t}" ${t === spec.t ? 'selected' : ''}>Quadro ${i + 1} · ${fmt(t)}</option>`).join('')}<option value="atual">Cursor da prévia · ${fmt(S.t)}</option></select></div>
       <p class="hint">Fontes e cores do estilo do projeto. Ajuste e veja na hora.</p></div></div>
@@ -852,7 +899,7 @@ function renderStyleEditor(el, t) {
   el.innerHTML = `<div class="pad"><span class="typepill"><i style="background:var(--accent)"></i>Estilo</span>
   ${fld('s_nome', 'Nome', t.nome)}
   <div class="f"><label for="s_desc">Descrição</label><textarea id="s_desc" rows="3">${esc(t.descricao)}</textarea></div>
-  <div class="f"><label for="s_form">Formato</label><select id="s_form">${[['talking_head', 'Falando p/ câmera'], ['vlog', 'Vlog narrado'], ['misto', 'Misto']].map(([v, n]) => `<option value="${v}" ${v === t.formato ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+  <div class="f"><label for="s_form">Formato</label><select id="s_form">${[['talking_head', 'Falando p/ câmera'], ['vlog', 'Vlog narrado'], ['misto', 'Misto'], ['podcast', 'Podcast (conversa a dois)']].map(([v, n]) => `<option value="${v}" ${v === t.formato ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
   <p class="h">Paleta</p>
   <div class="row2">${PAL_KEYS.map(([k, n]) => `<div class="f"><label for="pal_${k}_hex">${n}</label>${corCampo('pal_' + k, t.paleta?.[k] || '#888888', `data-pal="${k}"`)}</div>`).join('')}</div>
   <p class="h">Imagem e ritmo</p>
@@ -1332,7 +1379,7 @@ async function dropMedia(files, t) {
 function buildBrief() {
   const p = cur(); const t = tplOf(p);
   const bl = [...p.blocos].sort((a, b) => a.inicio - b.inicio).map((b) => { const c = {...b}; delete c.id; delete c.local; if (c.anexo) { const a = (p.anexos || []).find((x) => x.id === c.anexo); if (a?.asset_id) c.anexo_asset_id = a.asset_id; } return c; });
-  return {docon_briefing: 1, gerado_em: new Date().toISOString(), projeto: {titulo: p.titulo, tema: p.tema, formato: p.formato, duracao_alvo: p.duracao_alvo, duracao_bruto: projDur(p), duracao_no_ar: +airDur(p).toFixed(2),
+  return {docon_briefing: 1, gerado_em: new Date().toISOString(), projeto: {titulo: p.titulo, tema: p.tema, formato: p.formato, ...(p.formato === 'podcast' ? {locutores: p.locutores || [], takes: p.takes || []} : {}), duracao_alvo: p.duracao_alvo, duracao_bruto: projDur(p), duracao_no_ar: +airDur(p).toFixed(2),
     profissional: p.profissional, arquivos: p.arquivos.filter((a) => a.nome), direcionamentos: p.direcionamentos, legenda: p.legenda, musica: p.musica},
     estilo: t ? JSON.parse(JSON.stringify(t)) : null, blocos: bl,
     banco: Object.fromEntries([...bl.map((b) => b.banco_id), p.musica.banco_id].filter((id) => id && S.bank[id]).map((id) => [id, S.bank[id]])),
@@ -1595,7 +1642,7 @@ function compactProject() {
   return JSON.stringify({titulo: p.titulo, tema: p.tema, formato: p.formato, profissional: p.profissional, legenda: p.legenda, musica: {ativa: p.musica.ativa, clima: p.musica.clima, volume: p.musica.volume, trilha: p.musica.arquivo || ''},
     direcionamentos: p.direcionamentos, estilo: t ? {nome: t.nome, regras: t.regras} : null, duracao_bruto: projDur(p), duracao_no_ar: +airDur(p).toFixed(2),
     blocos: [...p.blocos].sort((a, b) => a.inicio - b.inicio).map((b) => { const c = {...b}; if (c.itens) c.itens = c.itens.map((i) => [i.icone, i.texto, i.gatilho]); return c; }),
-    anexos: anexosParaDiretor(p),
+    anexos: anexosParaDiretor(p), ...(p.formato === 'podcast' ? {podcast: {locutores: p.locutores || [], takes: p.takes || []}} : {}),
     transcricao: (p.transcricao?.texto || '').slice(0, 6000),
     legenda_tempos: (() => { const ls = capLines(p); if (!ls) return null; let n = 0; const out = [];
       for (const l of ls) { const t = l.map((w) => w.w).join(' '); n += t.length + 20; if (n > 14000) break; out.push([+l[0].s.toFixed(2), +l[l.length - 1].e.toFixed(2), t]); } return out; })()});
@@ -1608,6 +1655,7 @@ function memText() {
 const RULES = () => `Você é o Diretor de Edição da DocOn Marketing Médico, dentro do DocOn Studio (uma mesa de briefing de reels verticais 1080x1920 para profissionais de saúde). Fale em português do Brasil, de forma calorosa, direta e curta, como um diretor de arte ao lado da equipe.
 Seu trabalho aqui: montar e ajustar o briefing (timeline de blocos) que o editor Claude vai renderizar depois. Você NÃO renderiza vídeo. Use as ferramentas para mudar a timeline; depois de mudar, diga em 1-2 frases o que fez.
 Padrão DocOn Cinema: gancho tipográfico com palavra-chave gigante; um painel de vidro por ideia (kicker curto em maiúsculas, título ≤ 28 caracteres, itens ≤ 32 caracteres com ícone); lower third na apresentação; cartão final com CTA; legenda (docon ou sutil); respiro de 2-5 s entre painéis; nunca cobrir rosto; nunca inventar dado clínico, credencial, @ ou nome de clínica que não foi dito.
+PODCAST: quando o formato for "podcast" (conversa a dois), o vídeo é a montagem dos takes na ordem de "podcast.takes" (o bruto aberto já é o vídeo montado pela skill). Abra com a PERGUNTA do take 1 como gancho tipográfico (frase curta, palavra-chave forte), assinatura (bloco nome) de cada locutor na primeira vez que ele fala, painéis só com o que o especialista disse (2 a 4 itens com gatilho), um destaque por take, legenda sempre ligada, transição curta entre takes (fx flash ou whip, discreta) e CTA final sem inventar @ ou dado. Nunca coloque texto sobre os rostos.
 VISÃO: quando vierem QUADROS DA PRÉVIA, olhe-os antes de decidir. Nunca deixe painel, nome, gancho ou CTA cobrindo o rosto (olhos e boca) ou o assunto principal: ache o rosto no lado esquerdo (vídeo limpo) e confira no direito (com grafismos). Para mover na vertical use o campo pos_y (porcentagem do topo da tela onde o bloco começa; use as marcas amarelas: rosto no alto → pos_y 50-60; rosto no meio → 8-14 ou deixe o painel baixo; rosto embaixo → 8-14). Para diminuir ou aumentar, use escala (% do painel inteiro) e texto_px (px do texto). Diga o que viu em poucas palavras ("o painel cobria o queixo, subi para 12%").
 Tempos são segundos do vídeo bruto. Quando o projeto trouxer "legenda_tempos" ([início, fim, frase], vindo do SRT/VTT importado ou da transcrição), USE esses tempos para posicionar cada bloco exatamente na fala: não peça o SRT de novo e não diga que precisa de render, porque a prévia já mostra as animações e a legenda ao vivo. Sem legenda_tempos, peça para importar o SRT em Direção › Fala do vídeo. Sempre que possível preencha "gatilho" com 2-5 palavras EXATAS da fala (o render sincroniza pelo áudio). Ícones válidos: ${ICONS.join(', ')}. Layouts de painel: lista, linha_do_tempo, destaque, opcoes. Efeitos visuais (tipo fx, campo efeito): ${FX.map((f) => f.k + ' = ' + f.n).join('; ')}. Use efeitos com moderação (no máximo um a cada 6-8 s) e sempre a serviço da fala. Quando o projeto tiver "anexos" (arquivos que a equipe mandou pela Direção): documentos trazem o texto (roteiro, pauta, artigo, briefing) e servem de base para gancho, painéis e CTA, sem inventar além deles; imagens e vídeos podem vir junto desta mensagem como imagens (a legenda diz qual é qual): descreva o que vê só quando ajudar e coloque no vídeo com usar_anexo, no trecho da fala que combina com eles, respeitando a nota da equipe. Para B-roll, imagem ou som que não existam no banco nem nos anexos, use buscar_midia (fontes online) ou gerar_midia (IA): os resultados aparecem para a equipe aprovar; não coloque mídia sem aprovação.${(cur()?.referencias || []).length ? ' Referências visuais da equipe (inspiração, não usar a imagem): ' + cur().referencias.map((r) => (r.titulo || r.url)).join(' | ') : ''} O CTA vai até o fim do vídeo (ate_o_fim: true); o projeto termina onde o vídeo bruto termina.
 ${memText()}`;
@@ -2883,7 +2931,7 @@ function openWizard(start) {
       ${WZ.modo === 'ajuste' ? `<div class="f"><label for="wzBusca">Qual projeto?</label><input id="wzBusca" placeholder="Buscar pelo título"></div><div class="checks" id="wzLista" style="max-height:260px;overflow:auto">${ps.map(([id, p]) => `<div style="display:flex;gap:6px;margin-bottom:6px" data-wrow="${id}"><button class="card" type="button" data-wp="${id}" style="text-align:left;cursor:pointer;flex:1"><b>${esc(p.titulo || 'Sem título')}</b><span class="hint">${esc(p.profissional?.nome || '')} · ${esc(stOf(p))} · ${when(p.atualizado)}</span></button><button class="btn sm ghost" type="button" data-wdel="${id}" title="Excluir este projeto" aria-label="Excluir ${esc(p.titulo || 'projeto')}" style="color:var(--bad)">Excluir</button></div>`).join('') || '<p class="hint">Nenhum projeto ainda.</p>'}</div>`
         : `<div class="f"><label for="wzT">Título do vídeo</label><input id="wzT" value="${esc(d.titulo)}" placeholder="Ex.: Verão Leve · contorno corporal"></div>
            <div class="row2"><div class="f"><label for="wzN">Profissional (como aparece no vídeo)</label><input id="wzN" value="${esc(d.nome)}" placeholder="Dra. …"></div><div class="f"><label for="wzS">Especialidade / subtítulo</label><input id="wzS" value="${esc(d.subtitulo)}" placeholder="Médica dermatologista"></div></div>
-           <div class="f"><label for="wzF">Formato</label><select id="wzF"><option value="talking_head" ${d.formato === 'talking_head' ? 'selected' : ''}>Falando para a câmera</option><option value="vlog" ${d.formato === 'vlog' ? 'selected' : ''}>Vlog narrado</option><option value="misto" ${d.formato === 'misto' ? 'selected' : ''}>Misto</option></select></div>`}`;
+           <div class="f"><label for="wzF">Formato</label><select id="wzF"><option value="talking_head" ${d.formato === 'talking_head' ? 'selected' : ''}>Falando para a câmera</option><option value="vlog" ${d.formato === 'vlog' ? 'selected' : ''}>Vlog narrado</option><option value="misto" ${d.formato === 'misto' ? 'selected' : ''}>Misto</option><option value="podcast" ${d.formato === 'podcast' ? 'selected' : ''}>Podcast (conversa a dois)</option></select></div>`}`;
   } else if (WZ.step === 2) {
     const list = Object.values(S.templates).sort((a, b) => (a.ordem || 0) - (b.ordem || 0)); const ne = WZ.novoEstilo;
     body = ne ? `<p class="h">Novo estilo</p>
@@ -3326,7 +3374,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.02-p';
+const STUDIO_VERSAO = '2026.11.03-b';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

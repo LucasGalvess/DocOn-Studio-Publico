@@ -155,6 +155,27 @@ O "Diretor" dentro do Studio é o Claude rodando na própria página, na conta d
 - **Nunca invente fatos clínicos.** Painéis só repetem ou resumem o que foi dito. Nome de medicamento só se foi falado. Credenciais/CRM/CRMV só se ditos ou informados.
 - **Dúvidas que não bloqueiam** (sobrenome, @, nome da clínica ouvido errado): siga com a opção mais segura (omitir) e liste na entrega.
 
+## Formato podcast (conversa a dois, vertical)
+
+Use quando o projeto tiver `formato: "podcast"` (estilo "Podcast · conversa a dois"). O projeto traz:
+- `locutores`: `[{nome, papel}]`, quem pergunta e o especialista.
+- `takes`: `[{titulo, trecho, locutor}]`, o roteiro em takes, na ordem do vídeo. O `trecho` é a fala (exata ou descrita).
+
+1. **Transcrever o bruto inteiro:** `transcribe.py`. Ache cada take na fala, com o início e o fim exatos da frase e sem cortar palavra. Se o trecho for uma descrição, escolha o trecho real que diz aquilo e mostre a escolha antes de renderizar.
+2. **Montar:** grave `trechos.json` (`{"trechos": [{inicio, fim, locutor, enquadramento}]}`) e rode `python3 scripts/podcast_prep.py BRUTO trechos.json WORK`.
+   - **Bruto vertical:** só corta e junta os takes.
+   - **Bruto horizontal:** reenquadra em 9:16 no locutor (`esquerda`, `centro`, `direita`, um número de 0 a 1, ou `auto`).
+   - **Saída:** `WORK/podcast.mp4` e `WORK/podcast_mapa.json`.
+3. **Editar:** `podcast.mp4` passa a ser o bruto do projeto (Studio e `run_brief.py`), e os tempos dos blocos são os do vídeo montado.
+4. **Estrutura:**
+   - pergunta do take 1 como gancho;
+   - assinatura de cada locutor na primeira fala (o `run_brief.py` coloca sozinho a partir do mapa, depois do gancho, se faltar bloco `nome`);
+   - um painel por take do especialista, só com o que ele disse;
+   - destaques na legenda;
+   - flash suave entre takes (automático se não houver bloco `fx`);
+   - CTA sem inventar @.
+5. **Velocidade:** natural (1,0) nesse estilo; cortar só pausas longas.
+
 ## Transcrição importada
 
 - **Formatos:** em Direção › Fala do vídeo › Importar arquivo (ou soltando o arquivo no campo), o Studio aceita TXT, MD, DOCX, PDF, RTF, SRT, VTT e JSON.
@@ -220,6 +241,7 @@ O "Diretor" dentro do Studio é o Claude rodando na própria página, na conta d
   - **Agora:** sem AAC no navegador, o Studio codifica o áudio em MP3 com o lamejs e o põe no MP4 (troca o tipo do esds para 0x6B).
   - **Ainda não confirmado:** testei no Chromium e no ffmpeg; no Safari do iPhone, falta confirmar com o cliente.
   - **Vídeo antigo com Opus:** converta com `ffmpeg -c:v copy -c:a aac` e troque o `asset_id` na aprovação e no espelho.
+- **Podcast:** o pipeline supunha uma pessoa em vídeo vertical. Agora `podcast_prep.py` monta os takes na ordem do roteiro, reenquadra se o bruto for horizontal e grava o mapa. O `run_brief.py` põe as assinaturas dos locutores depois do gancho, porque a primeira assinatura cobria a frase do gancho.
 - **Safari (iPhone/Mac) com play cortado na aprovação, enquanto as imagens carregavam:** o Safari pede o vídeo em pedaços (Range), e o armazenamento de arquivos pode não responder como ele espera. A tela do cliente agora baixa o vídeo inteiro, mostrando o progresso, e toca a partir de um blob local.
 - **Perfil do Instagram é do cliente, não do projeto:** fica em `clientes/<slug do nome>.ig` (`{handle, foto_asset_id, nome, bio, posts, seguidores, seguindo}`).
   - Ao enviar para aprovação, o Studio pede só o que falta, já preenchido.
