@@ -176,6 +176,49 @@ Use quando o projeto tiver `formato: "podcast"` (estilo "Podcast · conversa a d
    - CTA sem inventar @.
 5. **Velocidade:** natural (1,0) nesse estilo; cortar só pausas longas.
 
+## Zoom / câmera (zoom em quem fala)
+
+- **No Studio:** Efeitos visuais › "Zoom / câmera" (bloco `fx` com `efeito: "camera"`). Campos:
+  - `zoom`: de 1 a 3, padrão 1,6;
+  - `foco_x` e `foco_y`: % do quadro do bruto, sem zoom. O botão "◎ Escolher o foco clicando no vídeo" preenche os dois;
+  - `transicao`: segundos do movimento, padrão 0,7.
+- **Movimento:** o foco fica a ~40% da altura da tela, e a câmera nunca mostra borda.
+  - Dois blocos colados (fim de um = início do outro) com focos diferentes viram um movimento de câmera de um rosto para o outro, com ease in-out.
+  - Fora disso, a câmera entra e sai suave. No primeiro quadro do vídeo já começa no zoom.
+- **Pipeline:** `run_brief.py` lê o mesmo bloco (ou `tipo: "camera"`) e chama `ed.zoom_on(t0, t1, z, fx, fy, d)` no `core.py`. A prévia do Studio usa a mesma conta (`camAt`), então o que a equipe vê é o que sai no render.
+- **Plano aberto com duas pessoas (podcast, entrevista):**
+  1. Ache os rostos nos quadros.
+  2. Separe quem fala quando pela legenda ou transcrição.
+  3. Crie um bloco camera por fala, colados, com zoom de 1,5 a 2,0. Acima de 2,2 perde nitidez, sobretudo em proxy de 720p.
+  4. Troque o foco só entre frases.
+- **Sem o Studio:** `podcast_prep.py` aceita `zoom`, `foco` e `transicao` por trecho e grava o vídeo já reenquadrado.
+
+## Ofício de movimento e revisão (aprendido do HyperFrames)
+
+Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos quadro a quadro nos filmes deles, adaptados ao reels DocOn.
+
+- **Ease por papel:** chegada com cauda longa (expo/power4 out); câmera e troca de foco nos dois sentidos (power2 in-out); saída acelerando. O mesmo ease em tudo deixa cara de "gerado".
+- **Tempos:**
+  - saídas 40-50% mais curtas que as entradas;
+  - o próximo elemento entra quando o anterior está 30-50% pronto;
+  - stagger de palavras de 60 a 120 ms e de itens de lista de 40 a 80 ms.
+- **Leitura:** uma linha precisa de 0,5 s + 0,3 s por palavra. Um título pousado fica parado; o movimento passa para o próximo elemento ou para a câmera.
+- **Densidade:**
+  - em vídeo de até 1 minuto, um cartão a cada 6-8 s; até 3 minutos, um a cada 8-12 s;
+  - um cartão parado "morre" depois de ~8 s, e acima de ~15 s precisa revelar por partes;
+  - mais de 8 s sem nada mudando (painel, zoom, efeito, B-roll) é trecho parado.
+- **Transições com causa:** use de 3 a 5 tipos num vídeo, cada um motivado pelo que está na tela (whip, dip cut, desfoque de troca, zoom). Corte seco serve para punch-in dentro da mesma cena.
+- **Zona segura vertical (1080x1920):**
+  - nada importante no topo (0-168 px);
+  - abaixo de ~1560 px, a legenda do post e o @ cobrem;
+  - a coluna de botões à direita cobre de ~1000 a 1560 px.
+  - O Studio tem a caixa "Zona segura" na prévia.
+- **Antes de pôr legenda, olhe uma folha de quadros a 1 fps:** o arquivo pode já vir com legenda ou letreiros gravados.
+- **Revisão:**
+  - o `run_brief.py` grava linhas `REVISÃO` no `plano.txt`: leitura curta, cartão parado demais, trecho parado, gráfico sob a interface do Instagram, vídeo sem som;
+  - cada aviso é uma pergunta: corrija ou mantenha de propósito e diga por quê;
+  - anote problemas como `t=4,2s · onde · problema → mudança`, em P0 (quebra a leitura), P1 (enfraquece) e P2 (polimento).
+
 ## Transcrição importada
 
 - **Formatos:** em Direção › Fala do vídeo › Importar arquivo (ou soltando o arquivo no campo), o Studio aceita TXT, MD, DOCX, PDF, RTF, SRT, VTT e JSON.
@@ -210,6 +253,11 @@ Use quando o projeto tiver `formato: "podcast"` (estilo "Podcast · conversa a d
 - **Pinterest** e outros links: só referência visual no projeto (`projeto.referencias`), lida pelo diretor. A imagem é de quem publicou e nunca entra no vídeo.
 
 ## Lições aprendidas (não repita)
+
+- **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
+  - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.
+- **Zoom em quem fala num plano aberto:** o detector de rosto não acha rostos pequenos e de perfil num plano aberto com duas pessoas.
+  - **Agora:** marque o foco à mão, nos quadros ou com o clique de foco do Studio, e use blocos de câmera colados para a câmera deslizar de um para o outro.
 
 - **Vídeo do computador desvinculado depois de atualizar o Studio:** o navegador não guarda o caminho de um arquivo, então o B-roll solto na timeline (só um link temporário) sumia ao recarregar.
   - **Agora:** todo arquivo local ganha uma chave e o próprio arquivo fica no IndexedDB do navegador (`docon-local`). Ao abrir o projeto, o Studio religa pela chave.

@@ -171,6 +171,26 @@ class Edit:
             else: base = 1.0; k = 1
             plan.append((a, bb, base, dl))
         self.plan = plan; self.push = push; self.dolly = dolly
+    # ---- zoom / câmera manual (blocos "camera" do Studio): aproxima no ponto de foco, com movimento suave entre focos
+    def zoom_on(self, t0, t1, z=1.6, fx=0.5, fy=0.45, d=0.7):
+        """t0..t1 em tempo de saída; fx, fy = ponto de foco no quadro (0..1), que fica a ~40% da altura da tela;
+        d = duração do movimento de entrada/saída/troca de foco (ease in-out, como câmera)."""
+        if not hasattr(self, 'cams'): self.cams = []
+        self.cams.append((float(t0), float(t1), max(1.0, float(z)), min(max(float(fx), 0), 1), min(max(float(fy), 0), 1), max(0.05, float(d))))
+        self.cams.sort()
+    def _cam_state(self, t):
+        for a, b, z, fx, fy, d in getattr(self, 'cams', []):
+            if a <= t < b: return np.array([z, fx, fy])
+        return np.array([1.0, 0.5, 0.5])
+    def cam_at(self, t):
+        cams = getattr(self, 'cams', [])
+        if not cams: return None
+        bounds = sorted({(round(a, 3), d) for a, b, z, fx, fy, d in cams} | {(round(b, 3), d) for a, b, z, fx, fy, d in cams})
+        for B, d in bounds:
+            if B > 0.05 and B - d / 2 <= t < B + d / 2:          # no 1º quadro do vídeo já começa no zoom
+                s0, s1 = self._cam_state(B - d / 2 - 1e-3), self._cam_state(B + d / 2 + 1e-3)
+                if not np.allclose(s0, s1): return s0 + (s1 - s0) * (0.5 - 0.5 * math.cos(math.pi * (t - (B - d / 2)) / d))
+        return self._cam_state(t)
     def zoom_at(self, t):
         for a, b, base, dl in self.plan:
             if a <= t < b:
@@ -197,6 +217,11 @@ class Edit:
         z = self.zoom_at(t); ax, ay = self.FACE[i0] if w < .5 else self.FACE[i1]
         if t > self.DUR: z *= 1 + 0.01 * (t - self.DUR)
         C = np.array([[z, 0, ax - z * ax], [0, z, ay - z * ay], [0, 0, 1]])
+        cs = self.cam_at(t)
+        if cs is not None and (cs[0] > 1.0005 or z > 1.0005):     # zoom manual: foco a ~40% da altura, sem sair do quadro
+            zt = cs[0] * z; cx, cy = cs[1] * W, cs[2] * H
+            tx = min(max(W / 2 - zt * cx, W - zt * W), 0); ty = min(max(0.40 * H - zt * cy, H - zt * H), 0)
+            C = np.array([[zt, 0, tx], [0, zt, ty], [0, 0, 1]])
         def warp(i):
             Ms = np.vstack([self.M_of(i), [0, 0, 1]])        # estabilização + câmera numa única reamostragem
             return cv2.warpAffine(reader.get(i), (C @ Ms)[:2].astype(np.float32), (W, H), flags=cv2.INTER_LANCZOS4, borderMode=cv2.BORDER_REFLECT)

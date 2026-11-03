@@ -175,6 +175,14 @@ for b in blocks:
     if tp in ('gancho', 'cta', 'corte'): continue
     t0, src = when(b, out_of(b['inicio']))
     if t0 >= ed.TOTAL - 0.2: plan.append(f'AVISO {tp} depois do fim do vídeo ({b["inicio"]}s): ignorado'); continue
+    if tp == 'fx' and b.get('efeito') == 'camera': tp = 'camera'   # Zoom / câmera do Studio
+    if tp == 'camera':                               # zoom / câmera manual do Studio (aproxima em quem fala, troca de foco com movimento)
+        t1 = out_of(b['fim']); t1 = ed.TOTAL + 1 if t1 >= ed.DUR - 0.05 else t1   # até o fim do bruto: segue no zoom até o último quadro
+        def _n(v, d):
+            try: return float(v) / 100 if v not in (None, '') else d
+            except (TypeError, ValueError): return d
+        ed.zoom_on(t0, t1, float(b.get('zoom') or 1.6), _n(b.get('foco_x'), 0.5), _n(b.get('foco_y'), 0.45), float(b.get('transicao') or 0.7))
+        plan.append(f'câmera {t0:.2f}-{t1:.2f} zoom {b.get("zoom")}x foco {b.get("foco_x")}%,{b.get("foco_y")}%'); continue
     if tp == 'fx':                                   # efeito visual: dura o que a timeline diz (sem mínimo de 1,6 s)
         t1 = min(max(out_of(b['fim']), t0 + 0.15), ed.TOTAL)
         if b.get('efeito') == 'fundo_desfocado': ed.bg_blur(t0, t1, bgk(b)); plan.append(f'desfoque de fundo {t0:.2f}-{t1:.2f} {round(bgk(b) * 100)}%'); continue
@@ -261,6 +269,25 @@ if leg != 'nenhuma':
     if not (PJ.get('legenda') or {}).get('fonte_px'): cap_s = 1.0
     ed.captions(style='subtle' if leg == 'subtle' else 'docon', y=1600 if leg == 'subtle' else 1585, maxc=30 if leg == 'subtle' else 26, keywords=kwords, s=cap_s)
 warn = ed.check(); plan += ['AVISO ' + w for w in warn]
+# ---- revisão de ofício (critérios medidos dos filmes do HyperFrames, adaptados ao reels DocOn): avisos, não regras
+def revisao():
+    av = []; ev = sorted({round(x, 2) for p in ed.panels for x in (p.t0, p.t1)} | {round(f['t0'], 2) for f in ed.fx.items}
+                       | {round(a, 2) for a, *_ in getattr(ed, 'cams', [])} | {round(b, 2) for _, b, *_ in getattr(ed, 'cams', [])} | {0.0, round(ed.TOTAL, 2)})
+    for a, b in zip(ev, ev[1:]):
+        if b - a > 8.0 and a > ed.hook_end: av.append(f'trecho parado {a:.1f}-{b:.1f}s ({b - a:.0f} s sem painel, zoom, efeito ou B-roll): ponha um destaque, um punch-in ou um B-roll')
+    for bb in blocks:
+        if bb['tipo'] != 'painel': continue
+        nw = len(' '.join([bb.get('kicker') or '', bb.get('titulo') or ''] + [i.get('texto') or '' for i in bb.get('itens', [])]).split())
+        t0b, t1b = out_of(bb['inicio']), out_of(bb['fim'])
+        if t1b - t0b < 0.5 + 0.3 * nw: av.append(f'painel "{bb.get("kicker") or bb.get("titulo")}" fica {t1b - t0b:.1f}s para {nw} palavras (leitura pede {0.5 + 0.3 * nw:.1f}s)')
+        if t1b - t0b > 15 and len(bb.get('itens', [])) < 3: av.append(f'painel "{bb.get("kicker") or bb.get("titulo")}" parado {t1b - t0b:.0f}s: acima de ~8-15 s o cartão "morre"; divida ou revele por partes')
+    for p in ed.panels:
+        if p is getattr(ed, 'ec', None): continue
+        if p.y < 168: av.append(f'gráfico em {p.t0:.1f}s começa em y={p.y}: o topo (0-168 px) fica sob a barra do Instagram')
+        if p.y + p.h > 1560: av.append(f'gráfico em {p.t0:.1f}s desce até y={p.y + p.h}: abaixo de ~1560 px a legenda do post e o @ do Instagram cobrem')
+    if ed.TOTAL > 20 and not (BR.get('projeto', {}).get('musica') or {}).get('ativa') and not ed.sfx: av.append('vídeo sem trilha e sem efeitos sonoros: confirme que é de propósito')
+    return av
+REV = revisao(); plan += ['REVISÃO ' + w for w in REV]
 open(os.path.join(A.work, 'plano.txt'), 'w').write(f'duração final {ed.TOTAL:.2f}s · segmentos {[(round(a, 2), round(b, 2)) for a, b in ed.SEGS]}\n' + '\n'.join(plan) + '\n')
 print(open(os.path.join(A.work, 'plano.txt')).read())
 
