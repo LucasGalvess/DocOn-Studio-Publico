@@ -128,9 +128,13 @@ def posy(b, d):  # pos_y do Studio = % do topo onde o bloco começa (vazio = pos
     except (TypeError, ValueError): return d
 # tamanho vindo do Studio: escala (% do tamanho total do bloco) e texto_px (px do texto principal na tela de 1080)
 TXT_BASE = {'painel': 45, 'cta': 80, 'gancho': 82, 'nome': 50}
+def lado(b):     # pos_x do Studio: "esquerda" | "centro" | "direita" ("" = padrão DocOn)
+    v = str((b or {}).get('pos_x') or '').lower()
+    return v if v in ('esquerda', 'centro', 'direita') else ''
 def escala(b):
     try: v = float((b or {}).get('escala') or 0)
     except (TypeError, ValueError): v = 0
+    if v <= 0 and (b or {}).get('tipo') == 'painel' and lado(b) in ('esquerda', 'direita'): return 0.72   # painel de lado: mais estreito
     return min(1.6, max(0.4, v / 100)) if v > 0 else 1.0
 def bgk(b):   # desfoque do fundo (0..1): CTA ligado por padrão (50%), outros só com a caixa marcada (40%)
     b = b or {}; tp = b.get('tipo')
@@ -192,7 +196,7 @@ for b in blocks:
     if bgk(b) > 0: ed.bg_blur(t0 - 0.1, t1, bgk(b)); plan.append(f'desfoque de fundo com {tp} {round(bgk(b) * 100)}%')
     if tp == 'destaque': kws += [k.strip() for k in (b.get('palavras') or '').split(',') if k.strip()]; continue
     if tp == 'nome':
-        ed.lower_third(t0 - 0.05, t1, b.get('nome') or PJ['profissional'].get('nome', ''), b.get('subtitulo') or PJ['profissional'].get('subtitulo', ''), y=int(posy(b, 1290)), s=escala(b) * txt(b))
+        ed.lower_third(t0 - 0.05, t1, b.get('nome') or PJ['profissional'].get('nome', ''), b.get('subtitulo') or PJ['profissional'].get('subtitulo', ''), y=int(posy(b, 1290)), s=escala(b) * txt(b), align=lado(b) or 'esquerda')
         topics.append(t0); plan.append(f'nome {t0:.2f}-{t1:.2f} ({src}) {b.get("nome")}'); continue
     if tp == 'som':
         w = bank_wav(b.get('banco_id'))
@@ -217,7 +221,8 @@ for b in blocks:
             h = int(h * es * tx)
             if b.get('pos_y') in (None, ''): y = int(min(max(1200 - h / 2, 930), 1470 - h))
             y = int(min(max(y, 40), 1880 - h))
-        p = ed.panel(t0 - 0.1, t1, y=y, h=h, x=int(70 + 940 * (1 - es) / 2), w=int(940 * es), r=int(34 * es), s=es * tx); topics.append(t0)
+        px = {'esquerda': 70, 'direita': int(70 + 940 * (1 - es))}.get(lado(b), int(70 + 940 * (1 - es) / 2))
+        p = ed.panel(t0 - 0.1, t1, y=y, h=h, x=px, w=int(940 * es), r=int(34 * es), s=es * tx); topics.append(t0)
         it_t = [find(i.get('gatilho'), b['inicio'] - 1, t0 - 0.3) for i in items]
         it_t = [x if x is not None and x < t1 - 0.3 else t0 + 0.35 + 0.45 * k for k, x in enumerate(it_t)]
         if lay == 'destaque':

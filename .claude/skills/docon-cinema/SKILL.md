@@ -193,6 +193,15 @@ Use quando o projeto tiver `formato: "podcast"` (estilo "Podcast · conversa a d
   4. Troque o foco só entre frases.
 - **Sem o Studio:** `podcast_prep.py` aceita `zoom`, `foco` e `transicao` por trecho e grava o vídeo já reenquadrado.
 
+## Lado na tela (nomes e painéis)
+
+- **Campo `pos_x` do bloco `nome` ou `painel`:** `"esquerda"`, `"centro"` ou `"direita"`. Vazio é o padrão DocOn: nome à esquerda, painel na largura toda.
+  - No Studio fica em Inspetor › "Lado na tela". O Diretor também usa.
+- **Painel de lado:** fica com 72% da largura e encosta na margem. Para mudar, use `escala`.
+- **Nome à direita:** a assinatura encosta na margem direita e se revela da direita para a esquerda.
+- **Regra:** o gráfico vai do lado oposto ao rosto de quem fala. Rosto à direita: nome e painel à esquerda, e vice-versa. Combine com `pos_y` abaixo do queixo e confira nos quadros.
+- **Pipeline:** `run_brief.py` lê `pos_x` (`lado()`), e `core.lower_third(..., align=)` alinha a assinatura. A prévia do Studio (`ladoOf`/`ladoShift`) e a exportação usam a mesma conta.
+
 ## Ofício de movimento e revisão (aprendido do HyperFrames)
 
 Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos quadro a quadro nos filmes deles, adaptados ao reels DocOn.
@@ -256,6 +265,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 - **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
   - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.
+- **Nome e painel sempre do mesmo lado:** o nome ficava sempre à esquerda e o painel sempre na largura toda. Quando o rosto estava à esquerda (ou o zoom o deixava no meio), os dois cobriam a pessoa.
+  - **Agora:** use `pos_x` (esquerda, centro ou direita) no lado oposto ao rosto.
 - **Proxy de 720p no pipeline:** o Studio guarda uma versão menor do bruto (720x1280) quando o original passa de 20 MB. O compositor supunha 1080x1920, e o vídeo ocupava só parte do quadro, com reflexo nas bordas.
   - **Agora:** o `core.py` leva cada quadro para 1080x1920 e ajusta os rostos e a estabilização na mesma escala. Para entregar, prefira o original (link do Drive), porque o zoom sobre 720p perde nitidez.
 - **Zoom em quem fala num plano aberto:** o detector de rosto não acha rostos pequenos e de perfil num plano aberto com duas pessoas.

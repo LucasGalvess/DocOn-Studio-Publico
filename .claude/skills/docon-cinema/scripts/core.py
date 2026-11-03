@@ -258,9 +258,12 @@ class Edit:
             p.add(ls, x + icon.width + 30, top, t + 0.05); p.add(ss, x + icon.width + 30, top + ls.height - 4, t + 0.12)
         else:
             p.add(ls, x + icon.width + 30, ry + (icon.height - ls.height) // 2, t + 0.05)
-    def lower_third(self, t0, t1, name, sub, y=1300, x=70, s=1.0):
+    def lower_third(self, t0, t1, name, sub, y=1300, x=70, s=1.0, align='esquerda'):
         n_ = text_sprite(name, INTER('Bold', 50), P['key'], pad=0); s_ = text_sprite(sub, INTER('Medium', 34), P['text'], pad=0)
-        lt = Panel(self, t0, t1, x, y, int((max(n_.width, s_.width) + 110) * s), int(170 * s), int(34 * s), s)
+        w = int((max(n_.width, s_.width) + 110) * s)
+        if align == 'direita': x = W - x - w               # lado oposto ao rosto: assinatura encostada à direita
+        elif align == 'centro': x = (W - w) // 2
+        lt = Panel(self, t0, t1, x, y, w, int(170 * s), int(34 * s), s)
         lt.add(Image.new('RGBA', (6, 104), tuple(P['accent']) + (255,)), 40, 33, t0 + 0.05)
         lt.add(n_, 66, 32, t0 + 0.1); lt.add(s_, 66, 104, t0 + 0.22); self.panels.append(lt); return lt
     def end_card(self, t0, kicker, title_lines, subtitle, name, button, foot=None, icon='sparkle', h=760, y=640, s=1.0, blur=0.5):

@@ -26,3 +26,4 @@ Regras de conduta:
 - Olhe a prévia (Read na imagem) uma vez antes de renderizar o vídeo inteiro. Corrija o que estiver ilegível, cobrindo rosto ou ação, ou fora de tempo.
 - Nunca invente informação clínica, credencial, @ ou nome de clínica. Use só o que foi dito ou informado e liste o que ficou de fora.
 - Entregue o MP4 final e a folha de contato. Responda em 3–5 linhas, com a lista do que foi deduzido e os B-rolls usados.
+- Nomes (lower thirds) e painéis têm `pos_x`: esquerda, centro ou direita. Ponha do lado oposto ao rosto de quem fala, com `pos_y` abaixo do queixo, e confira nos quadros da prévia.
