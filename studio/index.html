@@ -2719,7 +2719,7 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
     if (ln) {
       const sub = p.legenda.estilo === 'subtle'; const sz = (sub ? 4.1 : 5) * u * capTs(p); c.font = `${sub ? 600 : 700} ${sz}px ${FX_}`; const xA = cl((t - ln[0].s + 0.05) / 0.18);
       const kws = new Set([...(p.legenda.palavras_chave || '').split(','), ...act.filter((b) => b.tipo === 'destaque').flatMap((b) => (b.palavras || '').split(','))].flatMap((s) => s.trim().toLowerCase().split(/\s+/)).filter(Boolean));
-      const nrm = (w) => w.toLowerCase().replace(/[.,?!:;…"“”]/g, ''); const sp = Math.max(c.measureText(' ').width, sz * 0.26);   // alguns navegadores medem o espaço como 0 e as palavras grudavam const ws = ln.map((w) => ({...w, wd: c.measureText(w.w).width}));
+      const nrm = (w) => w.toLowerCase().replace(/[.,?!:;…"“”]/g, ''); const sp = Math.max(c.measureText(' ').width, sz * 0.26); const ws = ln.map((w) => ({...w, wd: c.measureText(w.w).width}));   // espaço mínimo: alguns navegadores medem o espaço como 0 e as palavras grudavam
       const tot = ws.reduce((n, w) => n + w.wd, 0) + sp * (ws.length - 1); let x = (W - tot) / 2; const y = 0.825 * H + sz + (1 - eo(xA)) * 1.2 * u;
       c.save(); c.globalAlpha = xA; c.textAlign = 'left'; c.shadowColor = 'rgba(0,0,0,.8)'; c.shadowBlur = 1.4 * u; c.shadowOffsetY = 0.3 * u;
       for (const w of ws) { const on = t >= w.s && t <= w.e + 0.05; const kk = kws.has(nrm(w.w)); c.fillStyle = !sub && (on || kk) ? pl.key : '#fff'; c.save(); if (!sub && on) { c.translate(x + w.wd / 2, y - sz * 0.35); c.scale(1.08, 1.08); c.translate(-(x + w.wd / 2), -(y - sz * 0.35)); } c.fillText(w.w, x, y);
@@ -3414,7 +3414,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.03-e';
+const STUDIO_VERSAO = '2026.11.03-f';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

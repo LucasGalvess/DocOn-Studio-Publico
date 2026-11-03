@@ -265,6 +265,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 - **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
   - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.
+- **"ws is not defined" ao exportar:** um comentário `//` colocado no meio de uma linha de código do Studio anulou o resto da linha (`const ws = ...`, na legenda). Toda exportação com legenda falhava.
+  - **Agora:** comentário só no fim da linha ou em linha própria. Depois de editar `studio/index.html`, rode uma exportação de teste (Playwright) antes de publicar.
 - **Nome e painel sempre do mesmo lado:** o nome ficava sempre à esquerda e o painel sempre na largura toda. Quando o rosto estava à esquerda (ou o zoom o deixava no meio), os dois cobriam a pessoa.
   - **Agora:** use `pos_x` (esquerda, centro ou direita) no lado oposto ao rosto.
 - **Proxy de 720p no pipeline:** o Studio guarda uma versão menor do bruto (720x1280) quando o original passa de 20 MB. O compositor supunha 1080x1920, e o vídeo ocupava só parte do quadro, com reflexo nas bordas.
