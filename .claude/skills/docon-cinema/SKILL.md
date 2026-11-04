@@ -193,6 +193,51 @@ Use quando o projeto tiver `formato: "podcast"` (estilo "Podcast · conversa a d
   4. Troque o foco só entre frases.
 - **Sem o Studio:** `podcast_prep.py` aceita `zoom`, `foco` e `transicao` por trecho e grava o vídeo já reenquadrado.
 
+## Reels Dinâmico (textos na tela, sem fala)
+
+- **Quando usar:** `formato: "dinamico"`, estilo "Reels Dinâmico · rotina com textos". O vídeo não tem fala: a pessoa aparece fazendo algo da rotina, e a história é contada por textos simples na tela. Leva trilha e não leva legenda nem gancho falado.
+- **Bloco `texto`** (Studio: trilha "Textos na tela"; Biblioteca › Textos tem modelos prontos). Campos:
+  - `texto` (`\n` quebra a linha);
+  - `animacao`: `escrever` (letra a letra), `escala`, `opacidade`, `subir`, `descer`, `esquerda` ou `direita`;
+  - `saida`: `opacidade`, `escala`, `subir` ou `descer`;
+  - posição e aparência: `pos_y` (% do topo), `pos_x`, `texto_px` (padrão 72), `peso`, `fonte` (`titulo` ou `texto`), `cor` (`text`, `key`, `icon`, `grad2` ou #hex), `sombra` (%) e `fundo` (caixa de vidro).
+- **Movimento suave, igual no Studio e no render** (`txState` e `core.texto_tela`):
+  - a entrada leva ~0,7 s com cauda longa;
+  - o texto fica parado durante a leitura;
+  - a saída leva 0,4 s;
+  - no `escrever`, as linhas não mudam de lugar enquanto o texto aparece.
+- **Regras:**
+  - um texto por vez, até ~8 palavras;
+  - 0,5 s + 0,3 s por palavra na tela (mais 0,045 s por letra no `escrever`);
+  - varie a entrada ao longo do vídeo;
+  - deixe o texto longe do rosto e das mãos;
+  - feche com um texto de chamada, sem inventar @.
+- **Pipeline:** com `formato: "dinamico"`, o `run_brief.py` usa o vídeo inteiro (`Edit(sem_fala=True)`, sem cortar pausas) e não monta gancho nem legenda.
+
+## Sombras (todos os estilos)
+
+- **No estilo:** `sombras: {texto: 0-100, geral: 0-100}`. O projeto pode sobrepor com `p.sombras`.
+  - `texto`: sombra atrás de todo texto (gancho, painéis, nomes, legenda e textos na tela). No pipeline é `gfx.SOMBRA`.
+  - `geral`: escurece o vídeo inteiro atrás dos grafismos. 100% deixa o vídeo 60% mais escuro.
+- **Num trecho:** efeito `fx` `escurecer`, com `escuro_pct`. Entra em 0,4 s e sai em 0,35 s (`core.escurecer`).
+- **No Reels Dinâmico:** sombra dos textos em ~55% e fundo escurecido em 20-35%. Escureça mais nos trechos claros.
+
+## Identidade do cliente (logo, cores, fontes, materiais)
+
+- **Onde fica:** Projeto › "Identidade de <cliente>" grava `clientes/<cliente>.identidade` e vale para todos os projetos do mesmo profissional. Contém:
+  - `logo_asset`, mais `logo_pos`, `logo_tam` e `logo_op` (posição, tamanho e opacidade);
+  - `paleta`, `fontes` (qualquer fonte do Google Fonts) e `notas`;
+  - `materiais`: `[{nome, tipo: imagem|pdf|documento, asset_id (imagem ou 1ª página do PDF), pdf_asset, texto, nota}]`.
+- **Botões:**
+  - "Pegar as cores da logo" sugere a paleta;
+  - "Criar estilo com esta identidade" duplica o estilo do projeto com as cores e fontes do cliente e põe as notas nas regras;
+  - "Logomarca no vídeo" grava `p.logo = {ativo, asset_id, pos, tam, op}`.
+- **Briefing:** `projeto.identidade`, com os textos dos materiais cortados, e `projeto.logo`.
+- **Editor:**
+  1. Baixe a logo com `Artifact` `read`, `path` = `asset_id`, e salve em `WORK/banco/<asset_id>.png`. O `run_brief.py` aplica a logo (`core.set_logo`: fora da barra do topo e acima da legenda do post; some no cartão final).
+  2. Leia os textos e veja as imagens dos materiais para seguir o visual. Não invente cor, fonte ou elemento fora da identidade.
+- **Diretor:** vê até 3 imagens dos materiais e recebe a identidade no projeto.
+
 ## Lado na tela (nomes e painéis)
 
 - **Campo `pos_x` do bloco `nome` ou `painel`:** `"esquerda"`, `"centro"` ou `"direita"`. Vazio é o padrão DocOn: nome à esquerda, painel na largura toda.
@@ -265,6 +310,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 - **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
   - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.
+- **Vídeo sem fala quebrava o pipeline:** os cortes e o gancho supunham palavras na transcrição.
+  - **Agora:** `Edit(sem_fala=True)` usa o vídeo inteiro, e o gancho e a legenda são pulados quando não há palavras.
 - **"ws is not defined" ao exportar:** um comentário `//` colocado no meio de uma linha de código do Studio anulou o resto da linha (`const ws = ...`, na legenda). Toda exportação com legenda falhava.
   - **Agora:** comentário só no fim da linha ou em linha própria. Depois de editar `studio/index.html`, rode uma exportação de teste (Playwright) antes de publicar.
 - **Nome e painel sempre do mesmo lado:** o nome ficava sempre à esquerda e o painel sempre na largura toda. Quando o rosto estava à esquerda (ou o zoom o deixava no meio), os dois cobriam a pessoa.

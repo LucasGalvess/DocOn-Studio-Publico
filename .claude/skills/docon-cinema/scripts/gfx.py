@@ -42,8 +42,10 @@ def INTER(w, s):
 def down(im):
     return im.resize((im.width // SS, im.height // SS), Image.LANCZOS)
 
+SOMBRA = 0.0      # sombra de texto do estilo (0..1): vale para todo texto desenhado com text_sprite
 def text_sprite(txt, fnt, fill, shadow=0.0, shadow_r=10, track=0, pad=30):
     """RGBA sprite of text, optional diffuse shadow."""
+    shadow = max(shadow, SOMBRA)
     l, t, r, b = fnt.getbbox(txt); asc, desc = fnt.getmetrics(); t = 0
     w = r - l + 2 * pad + track * len(txt); h = asc + desc + 2 * pad
     im = Image.new('RGBA', (w, h), (0, 0, 0, 0)); d = ImageDraw.Draw(im)

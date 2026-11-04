@@ -59,8 +59,15 @@ fixes = json.load(open(A.fixes)) if A.fixes else []
 for f in fixes:
     if 'insert' in f: f['insert'] = [tuple(x) for x in f['insert']]
 remove = [(b['inicio'], b['fim']) for b in blocks if b['tipo'] == 'corte']
-ed = Edit(A.video, A.work, speed=float(IMG.get('velocidade', 1.08)), tail=1.3, cut_pauses=IMG.get('cortar_pausas', True) is not False,
-          fixes=fixes, remove=remove)
+DIN = PJ.get('formato', ST.get('formato')) == 'dinamico'      # Reels Dinâmico: sem fala; textos na tela contam a história
+SOMB = {**(ST.get('sombras') or {}), **(PJ.get('sombras') or {})}  # sombra de texto e sombra geral (escurecer o fundo), em %
+def _pct(v, d=0.0):
+    try: return min(100.0, max(0.0, float(v))) / 100
+    except (TypeError, ValueError): return d
+gfx.SOMBRA = _pct(SOMB.get('texto'), 0.0)
+ed = Edit(A.video, A.work, speed=float(IMG.get('velocidade', 1.0 if DIN else 1.08)), tail=1.3, cut_pauses=(IMG.get('cortar_pausas', True) is not False) and not DIN,
+          fixes=fixes, remove=remove, sem_fala=DIN)
+ed.escuro = _pct(SOMB.get('geral'), 0.0)
 T = ed.t; NW = [norm(d['w']) for d in ed.WORDS]; plan = []
 
 def find(phrase, near=None, after_out=None):
@@ -104,7 +111,7 @@ else:  # primeira frase da fala
     nwords = next((i + 1 for i, d in enumerate(ed.WORDS) if d['w'][-1] in '.?!'), min(12, len(ed.WORDS)))
 nwords = min(max(nwords, 3), 18)
 kw = norm((hk or {}).get('palavra_chave', ''))
-words = [ed.WORDS[i]['w'].upper() for i in range(nwords)]
+words = [ed.WORDS[i]['w'].upper() for i in range(min(nwords, len(ed.WORDS)))]   # sem fala (Reels Dinâmico): nenhuma palavra
 pages, lines, cur = [], [], ''
 for w in words:
     if kw and norm(w) == kw:
@@ -157,7 +164,8 @@ def ys_for(pg):
     hs = [(150 if kw and kw in [norm(x) for x in l.split()] else 112) * HK_S for l in pg]; y = HOOK_C - sum(hs) / 2; out = []
     for h in hs: out.append(y + h / 2); y += h
     return tuple(int(v) for v in out)
-ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=min(1000, int(860 * HK_S)), size=int(92 * HK_S), kw_size=int(150 * HK_S))
+if DIN or not ed.WORDS: pages = []            # sem fala não há gancho falado: use blocos "texto"
+if pages: ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=min(1000, int(860 * HK_S)), size=int(92 * HK_S), kw_size=int(150 * HK_S))
 if hk and bgk(hk) > 0: ed.bg_blur(0, ed.hook_end + 0.2, bgk(hk)); plan.append(f'desfoque de fundo com o gancho {round(bgk(hk) * 100)}%')
 plan.append(f'gancho {ed.hook_end:.2f}s · {nwords} palavras · {len(pages)} página(s)')
 
@@ -180,6 +188,17 @@ for b in blocks:
     t0, src = when(b, out_of(b['inicio']))
     if t0 >= ed.TOTAL - 0.2: plan.append(f'AVISO {tp} depois do fim do vídeo ({b["inicio"]}s): ignorado'); continue
     if tp == 'fx' and b.get('efeito') == 'camera': tp = 'camera'   # Zoom / câmera do Studio
+    if tp == 'fx' and b.get('efeito') == 'escurecer':              # sombra geral num trecho
+        t1 = min(max(out_of(b['fim']), t0 + 0.3), ed.TOTAL); k = _pct(b.get('escuro_pct'), 0.4); ed.escurecer(t0, t1, k); plan.append(f'escurecer fundo {t0:.2f}-{t1:.2f} {round(k * 100)}%'); continue
+    if tp == 'texto':                                              # texto na tela (Reels Dinâmico e qualquer estilo)
+        t1 = min(max(out_of(b['fim']), t0 + 0.8), ed.TOTAL)
+        try: px = float(b.get('texto_px') or 72)
+        except (TypeError, ValueError): px = 72
+        cor = b.get('cor') or 'text'; cor = rgb(cor) if str(cor).startswith('#') else tuple(P.get(cor, P['text']))
+        ed.texto_tela(t0, t1, b.get('texto') or '', anim=b.get('animacao') or 'opacidade', saida=b.get('saida') or 'opacidade', y=int(posy(b, 0.40 * 1920)),
+                      align=lado(b) or 'centro', px=px, peso=int(b.get('peso') or 800), fonte=b.get('fonte') or 'titulo', cor=cor,
+                      sombra=_pct(b.get('sombra'), max(0.45, gfx.SOMBRA)), fundo=bool(b.get('fundo')))
+        plan.append(f'texto {t0:.2f}-{t1:.2f} {b.get("animacao") or "opacidade"} · {(b.get("texto") or "")[:40]!r}'); continue
     if tp == 'camera':                               # zoom / câmera manual do Studio (aproxima em quem fala, troca de foco com movimento)
         t1 = out_of(b['fim']); t1 = ed.TOTAL + 1 if t1 >= ed.DUR - 0.05 else t1   # até o fim do bruto: segue no zoom até o último quadro
         def _n(v, d):
@@ -267,6 +286,12 @@ if PJ.get('formato') == 'podcast' and os.path.exists(os.path.join(A.work, 'podca
             tb = out_of(m['inicio']); ed.fx.add('flash', max(0, tb - 0.05), tb + 0.25, 'suave'); plan.append(f'podcast: transição no take {m["take"]} ({tb:.2f}s)')
 ed.camera(topics=sorted(topics))
 leg = PJ.get('legenda', {}).get('estilo', ST.get('legenda', {}).get('estilo', 'docon'))
+if DIN: leg = 'nenhuma'                        # sem fala, sem legenda
+LG = PJ.get('logo') or {}
+if LG.get('ativo') and (LG.get('asset_id') or LG.get('arquivo')):     # logomarca do cliente (identidade): baixe para WORK/banco/<asset_id>.png
+    lp = bank_file(LG.get('asset_id')) or next((c for c in [LG.get('arquivo') or '', os.path.join(A.media or '', LG.get('arquivo') or '')] if c and os.path.isfile(c)), None)
+    if lp: ed.set_logo(lp, LG.get('pos') or 'sup_dir', _pct(LG.get('tam'), 0.16), _pct(LG.get('op'), 0.9)); plan.append(f'logo {LG.get("pos") or "sup_dir"} {LG.get("tam") or 16}%')
+    else: plan.append(f'AVISO logo sem arquivo (asset {LG.get("asset_id")}): baixe para WORK/banco/')
 if leg != 'nenhuma':
     kwords = sorted({w for k in kws for w in k.split()})
     try: cap_s = min(2.5, max(0.4, float((PJ.get('legenda') or {}).get('fonte_px') or 0) / (44 if leg == 'subtle' else 54))) or 1.0
@@ -277,10 +302,14 @@ warn = ed.check(); plan += ['AVISO ' + w for w in warn]
 # ---- revisão de ofício (critérios medidos dos filmes do HyperFrames, adaptados ao reels DocOn): avisos, não regras
 def revisao():
     av = []; ev = sorted({round(x, 2) for p in ed.panels for x in (p.t0, p.t1)} | {round(f['t0'], 2) for f in ed.fx.items}
-                       | {round(a, 2) for a, *_ in getattr(ed, 'cams', [])} | {round(b, 2) for _, b, *_ in getattr(ed, 'cams', [])} | {0.0, round(ed.TOTAL, 2)})
+                       | {round(x['t0'], 2) for x in ed.textos} | {round(x['t1'], 2) for x in ed.textos} | {round(a, 2) for a, *_ in getattr(ed, 'cams', [])} | {round(b, 2) for _, b, *_ in getattr(ed, 'cams', [])} | {0.0, round(ed.TOTAL, 2)})
     for a, b in zip(ev, ev[1:]):
         if b - a > 8.0 and a > ed.hook_end: av.append(f'trecho parado {a:.1f}-{b:.1f}s ({b - a:.0f} s sem painel, zoom, efeito ou B-roll): ponha um destaque, um punch-in ou um B-roll')
     for bb in blocks:
+        if bb['tipo'] == 'texto':
+            nw = len((bb.get('texto') or '').split()); d = out_of(bb['fim']) - out_of(bb['inicio']); need = 0.5 + 0.3 * nw + (0.045 * len(bb.get('texto') or '') if bb.get('animacao') == 'escrever' else 0)
+            if d < need: av.append(f'texto "{(bb.get("texto") or "")[:30]}" fica {d:.1f}s para {nw} palavras (leitura pede {need:.1f}s)')
+            continue
         if bb['tipo'] != 'painel': continue
         nw = len(' '.join([bb.get('kicker') or '', bb.get('titulo') or ''] + [i.get('texto') or '' for i in bb.get('itens', [])]).split())
         t0b, t1b = out_of(bb['inicio']), out_of(bb['fim'])

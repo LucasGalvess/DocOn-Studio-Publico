@@ -128,5 +128,53 @@
    "layout": "podcast",
    "cor": "#ead8d2"
   }
+ },
+ "reels-dinamico": {
+  "id": "reels-dinamico",
+  "nome": "Reels Dinâmico · rotina com textos",
+  "ordem": 4,
+  "formato": "dinamico",
+  "descricao": "Sem fala: a pessoa fazendo algo da rotina e textos simples na tela, com animação suave (escrevendo, escala, opacidade, posição), sombra nos textos e o fundo levemente escurecido. Com trilha.",
+  "imagem": {
+   "cortar_pausas": false,
+   "desfoque_fundo": false,
+   "suavizar_pele": false,
+   "velocidade": 1.0,
+   "camera": true
+  },
+  "legenda": {
+   "estilo": "nenhuma"
+  },
+  "musica": {
+   "ativa": true,
+   "bpm": 96,
+   "clima": "warm"
+  },
+  "paleta": {
+   "border": "#e8d3b0",
+   "button": "#b76e79",
+   "button_fg": "#f8f3ea",
+   "glass": "#34241e",
+   "grad1": "#f6deac",
+   "grad2": "#c99660",
+   "icon": "#e9c48c",
+   "key": "#f2d6a6",
+   "pill_bg": "#f2d6a6",
+   "pill_fg": "#34241e",
+   "text": "#f8f3ea"
+  },
+  "fontes": {
+   "titulo": "Montserrat",
+   "texto": "Inter"
+  },
+  "sombras": {
+   "texto": 55,
+   "geral": 25
+  },
+  "efeitos": [
+   "desfoque",
+   "zoom"
+  ],
+  "regras": "Reels Dinâmico (sem fala). A história é contada por blocos de texto na tela, curtos (até ~8 palavras, 1-2 linhas), um por vez, trocando quando a ação muda. Animações suaves: entrada com cauda longa (escrever, escala, opacidade, subir/descer, vir da esquerda/direita), texto parado na leitura (0,5 s + 0,3 s por palavra), saída mais curta. Varie a entrada ao longo do vídeo. Longe do rosto e das mãos. Sombra nos textos e fundo levemente escurecido (sombra geral 20-35%; mais nos trechos claros). Trilha ritmada e suave; sem legenda. Final com um texto de chamada (sem inventar @)."
  }
 }

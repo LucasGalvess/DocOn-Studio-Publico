@@ -7,7 +7,7 @@ tempo de saída (já com cortes e 1,08x) da palavra.
 """
 import json, math, os, subprocess
 import numpy as np, cv2, soundfile as sf
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw, ImageFilter, ImageChops
 from scipy.ndimage import gaussian_filter1d
 import gfx
 from gfx import *
@@ -61,7 +61,7 @@ class Reader:
 # ======================================================================= Edit
 class Edit:
     def __init__(self, video, wd, speed=1.08, tail=1.3, cut_pauses=True, min_pause=0.35, keep=0.06,
-                 fixes=(), anchor_y=0.42, sharpen=0.45, vignette=0.05, remove=()):
+                 fixes=(), anchor_y=0.42, sharpen=0.45, vignette=0.05, remove=(), sem_fala=False):
         self.video, self.wd, self.speed, self.tail = video, wd, speed, tail
         info = json.load(open(wd + '/shots.json')); self.CUTS = info['cuts']; self.NF = info['n']; self.SFPS = info['fps']
         self.corr = np.load(wd + '/corr.npy'); self.LM = np.load(wd + '/lms.npy')
@@ -71,7 +71,7 @@ class Edit:
         self.sharpen, self.vig_amt = sharpen, vignette
         raw = json.load(open(wd + '/words_raw.json'))
         # ---- correções de transcrição: {'old','new'[,'near']} troca; {'after','insert':[(w,t),..]} insere; {'old','drop':True}
-        words = [[x[0], x[1]] for x in raw]
+        words = [] if sem_fala else [[x[0], x[1]] for x in raw]     # Reels Dinâmico: sem fala, o vídeo inteiro conta
         for fx in fixes:
             if 'insert' in fx:
                 k = next(i for i, (w, s) in enumerate(words) if norm(w) == norm(fx['after']) and abs(s - fx.get('near', s)) < 0.6)
@@ -86,7 +86,7 @@ class Edit:
         dur_src = self.NF / self.SFPS
         # ---- segmentos mantidos (corta pausas > min_pause, preservando `keep` s de cada lado)
         sil = []
-        if cut_pauses:
+        if cut_pauses and words:
             a, sr = sf.read(wd + '/a16.wav'); hop = 160
             rms = np.array([np.sqrt(np.mean(a[i:i + 320] ** 2)) for i in range(0, len(a) - 320, hop)]); db = 20 * np.log10(rms + 1e-9)
             thr = np.percentile(db, 20) + 6; s_ = db < thr; i = 0
@@ -97,10 +97,10 @@ class Edit:
                     if (j - i) * 0.01 >= min_pause and i > 0: sil.append((i * 0.01 + keep, j * 0.01 - keep))
                     i = j
                 else: i += 1
-        segs = []; s0 = max(0.0, words[0][1] - 0.12)
+        segs = []; s0 = max(0.0, words[0][1] - 0.12) if words else 0.0
         for a_, b_ in sil:
             if a_ > s0 + 0.2: segs.append((s0, a_)); s0 = b_
-        end = min(dur_src - 0.02, words[-1][1] + 0.9)
+        end = min(dur_src - 0.02, words[-1][1] + 0.9) if words else dur_src - 0.02
         segs.append((s0, end))
         for ra, rb in sorted(remove):                       # trechos marcados como corte no briefing (tempo do bruto)
             out_ = []
@@ -121,7 +121,7 @@ class Edit:
             self.WORDS.append(dict(w=w, s=s, e=e, os=self.src2out(s), oe=self.src2out(e)))
         self.panels, self.sfx, self.hook_items, self.brolls = [], [], [], []
         self.fx = FX()                                         # efeitos visuais dos blocos fx (scripts/fx.py)
-        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
+        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.textos = []; self.escuros = []; self.escuro = 0.0; self.logo = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
         self.anchor_y = anchor_y
         self._face_track()
     # ---------------- tempo
@@ -333,6 +333,77 @@ class Edit:
         m = cv2.resize(c1 + c2, (W, H))[..., None] * a
         fr[:] = 1 - (1 - fr) * (1 - m * np.array(col, np.float32))
 
+    # ---------------- Reels Dinâmico: texto na tela com animação suave (escrever, escala, opacidade, posição)
+    def escurecer(self, t0, t1, k=0.4):
+        if k > 0: self.escuros.append((t0, t1, k))
+    def texto_tela(self, t0, t1, txt, anim='opacidade', saida='opacidade', y=760, align='centro', px=72, peso=800, fonte='titulo',
+                   cor=None, sombra=0.45, fundo=False):
+        """y = topo do bloco (px na tela 1080x1920). Entrada ~0,7 s com cauda longa; saída 0,4 s acelerando; parado entre as duas."""
+        mk = (lambda s: MONT(int(peso), s)) if fonte == 'titulo' else (lambda s: INTER({400: 'Medium', 500: 'Medium', 600: 'SemiBold', 700: 'Bold', 800: 'Bold', 900: 'Black'}.get(int(peso), 'Bold'), s))
+        f = mk(int(px)); col = tuple(cor or P['text']); lines = []
+        for para in str(txt).split('\n'):                        # quebra em ~86% da largura
+            cur = ''
+            for w in para.split():
+                tst = (cur + ' ' + w).strip()
+                if cur and f.getlength(tst) > 0.86 * W: lines.append(cur); cur = w
+                else: cur = tst
+            lines.append(cur)
+        lh = int(px * 1.18); widths = [f.getlength(l) for l in lines]
+        def xs(i): return {'esquerda': 70, 'direita': W - 70 - widths[i]}.get(align, (W - widths[i]) / 2)
+        self.textos.append(dict(t0=t0, t1=t1, lines=lines, f=f, col=col, y=y, lh=lh, xs=[xs(i) for i in range(len(lines))], anim=anim, saida=saida,
+                                sombra=max(0.0, float(sombra)), fundo=fundo, cache={}, n=sum(len(l) for l in lines), wmax=max(widths or [0])))
+    def _tx_sprite(self, T, n):
+        if n in T['cache']: return T['cache'][n]
+        pad = 40; w = int(T['wmax'] + 2 * pad + 140); h = int(T['lh'] * len(T['lines']) + 2 * pad)
+        im = Image.new('RGBA', (W, h), (0, 0, 0, 0)); d = ImageDraw.Draw(im); left = n
+        for i, ln in enumerate(T['lines']):
+            s = ln[:max(0, left)]; left -= len(ln)
+            if s: d.text((T['xs'][i], pad + i * T['lh']), s, font=T['f'], fill=T['col'])
+        if T['sombra'] > 0:
+            a = im.split()[3]; sh = Image.new('RGBA', im.size, (8, 6, 5, 0))
+            sh.putalpha(a.filter(ImageFilter.GaussianBlur(10)).point(lambda v: int(min(255, v * T['sombra'] * 1.6))))
+            sh = ImageChops.offset(sh, 0, 6); sh.alpha_composite(im); im = sh
+        spr = to_np(im); T['cache'][n] = spr
+        if len(T['cache']) > 400: T['cache'].pop(next(iter(T['cache'])))
+        return spr
+    def draw_textos(self, fr, t):
+        for T in self.textos:
+            if t < T['t0'] or t > T['t1']: continue
+            a_in = min(1.0, (t - T['t0']) / 0.7); a_out = max(0.0, (t - (T['t1'] - 0.4)) / 0.4)
+            ei, eo_ = ease_out(a_in), ease(a_out); op = 1.0; sc = 1.0; dx = dy = 0.0; n = T['n']
+            an = T['anim']
+            if an == 'escrever':
+                n = min(T['n'], int((t - T['t0']) / min(0.045, 1.8 / max(1, T['n'])) + 1)); op = min(1.0, (t - T['t0']) / 0.15)
+            elif an == 'escala': sc = 0.86 + 0.14 * ei; op = ei
+            elif an == 'subir': dy = (1 - ei) * 46; op = ei
+            elif an == 'descer': dy = -(1 - ei) * 46; op = ei
+            elif an == 'esquerda': dx = -(1 - ei) * 60; op = ei
+            elif an == 'direita': dx = (1 - ei) * 60; op = ei
+            else: op = ei
+            sa = T['saida']
+            if a_out > 0:
+                op *= 1 - eo_
+                if sa == 'escala': sc *= 1 - 0.08 * eo_
+                elif sa == 'subir': dy -= 30 * eo_
+                elif sa == 'descer': dy += 30 * eo_
+            spr = self._tx_sprite(T, n); h = spr.shape[0]
+            if T['fundo']:
+                hh = int(T['lh'] * len(T['lines']) + 60); bw = int(T['wmax'] + 70); bx0 = min(T['xs']) - 35
+                im = Image.new('RGBA', (bw, hh), (0, 0, 0, 0)); ImageDraw.Draw(im).rounded_rectangle([0, 0, bw - 1, hh - 1], 26, fill=tuple(P['glass']) + (140,))
+                over(fr, to_np(im), bx0 + dx, T['y'] - 30 + dy, op)
+            over(fr, spr, dx, T['y'] - 40 + dy, op, sc, W / 2 + dx, T['y'] + h / 2 - 40 + dy)
+    def set_logo(self, path, pos='sup_dir', tam=0.16, op=0.9):
+        """logomarca do cliente: canto (sup_esq|sup_dir|inf_esq|inf_dir|centro_inf), largura em fração da tela."""
+        im = Image.open(path).convert('RGBA'); w = max(40, int(W * tam)); im = im.resize((w, max(1, int(im.height * w / im.width))), Image.LANCZOS)
+        m = 60; ys = {'sup': 190, 'inf': 1560 - im.height}       # fora da barra do topo e acima da legenda do post
+        k = pos.split('_') if '_' in pos else ['inf', 'centro']
+        x = {'esq': m, 'dir': W - m - w, 'centro': (W - w) // 2}.get(k[1], W - m - w)
+        self.logo = (to_np(im), x, ys.get(k[0], 190), max(0.05, min(1.0, op)))
+    def draw_logo(self, fr, t):
+        spr, x, y, op = self.logo; a = op * ease_out(min(1.0, t / 0.6))
+        if self.ec0 is not None and t >= self.ec0: a *= 1 - ease((t - self.ec0) / 0.3)   # o cartão final já traz o nome
+        over(fr, spr, x, y, a)
+
     # ---------------- legenda
     NOEND = {'de', 'do', 'da', 'dos', 'das', 'a', 'as', 'o', 'os', 'e', 'no', 'na', 'nos', 'nas', 'que', 'um', 'uma', 'em', 'com', 'para', 'pra', 'pro',
              'se', 'sua', 'suas', 'seu', 'seus', 'é', 'até', 'mais', 'essa', 'esse', 'cada', 'ao', 'aos', 'por', 'pelo', 'pela', 'me', 'te', 'nossa', 'nosso'}
@@ -430,10 +501,14 @@ class Edit:
         if fx and fx.items: fr[:] = fx.under(fr, t)
         for b0, b1, k in self.bg_blurs:          # desfoque de fundo como camada (atrás dos grafismos)
             if b0 <= t <= b1: fr[:] = self._blur_mix(fr, ease_out((t - b0) / 0.4) * (1 - ease((t - (b1 - 0.3)) / 0.3)), k)
+        k_esc = self.escuro + sum(k * ease_out((t - a) / 0.4) * (1 - ease((t - (b - 0.35)) / 0.35)) for a, b, k in self.escuros if a <= t <= b)
+        if k_esc > 0: fr *= 1 - 0.6 * min(1.0, k_esc)            # sombra geral: escurece o vídeo atrás dos textos (100% = 60% mais escuro)
         if t < self.hook_end + 0.25: self.draw_hook(fr, t)
         for p in self.panels:
             if p is not self.ec: p.draw(fr, t)
+        self.draw_textos(fr, t)
         self.draw_caps(fr, t)
+        if self.logo is not None: self.draw_logo(fr, t)
         if self.ec0 is not None and t >= self.ec0:
             if self.ec_blur > 0: fr[:] = self._blur_mix(fr, ease_out((t - self.ec0) / 0.4), self.ec_blur)   # 0,5 = o desfoque padrão de antes
             self.ec.draw(fr, t)
