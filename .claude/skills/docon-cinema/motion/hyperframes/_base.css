@@ -1,0 +1,9 @@
+/* DocOn · base dos modelos Hyperframes (fundo transparente, 1080x1920). Cores e fontes vêm do estilo do cliente (motion.py). */
+@font-face { font-family: "DocOnTitulo"; src: url("assets/titulo.ttf"); font-weight: 100 900; }
+@font-face { font-family: "DocOnTexto"; src: url("assets/texto.ttf"); font-weight: 100 900; }
+:root { --glass: #34241e; --texto: #f8f3ea; --destaque: #f2d6a6; --acento: #e9c48c; --sombra: .45;
+  --f-titulo: "DocOnTitulo", "Montserrat", sans-serif; --f-texto: "DocOnTexto", "Inter", sans-serif; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1080px; height: 1920px; overflow: hidden; background: transparent; }
+#root { position: relative; width: 1080px; height: 1920px; }
+.sh { text-shadow: 0 6px 22px rgba(0, 0, 0, var(--sombra)); }

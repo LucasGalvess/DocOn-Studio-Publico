@@ -185,7 +185,8 @@ textarea.dropon{outline:2px dashed var(--accent);outline-offset:2px}
 .stpill[data-s="alteração pedida"]{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
 .stpill[data-s="aprovado"]{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,var(--line))}
 /* efeitos ao vivo na prévia */
-.phone.pick{cursor:crosshair}.g-tx{position:absolute;left:6.5cqw;right:6.5cqw;white-space:normal;transform-origin:50% 50%;overflow-wrap:anywhere}.g-tx.box{background:color-mix(in srgb,var(--v-glass) 55%,transparent);border-radius:2.4cqw;padding:2.2cqw 3cqw}
+.phone.pick{cursor:crosshair}.g-motion{position:absolute;left:6.5cqw;right:6.5cqw;outline:.3cqw dashed rgba(156,143,214,.8);outline-offset:1cqw;border-radius:2cqw}.g-motion-tag{position:absolute;right:0;top:-4.2cqw;font:600 2.2cqw Figtree,sans-serif;color:#fff;background:#6f62b5;padding:.4cqw 1.2cqw;border-radius:1cqw}
+.g-tx{position:absolute;left:6.5cqw;right:6.5cqw;white-space:normal;transform-origin:50% 50%;overflow-wrap:anywhere}.g-tx.box{background:color-mix(in srgb,var(--v-glass) 55%,transparent);border-radius:2.4cqw;padding:2.2cqw 3cqw}
 .ovl.somb .g-tx,.ovl.somb .g-lt,.ovl.somb .g-panel,.ovl.somb .g-cap,.ovl.somb .g-hook{text-shadow:0 .55cqw 1.8cqw rgba(0,0,0,var(--tsh,.5))}
 .zseg{position:absolute;inset:0;pointer-events:none;z-index:6}.zseg i{position:absolute;background:repeating-linear-gradient(135deg,rgba(255,80,80,.28) 0 6px,rgba(255,80,80,.12) 6px 12px);outline:1px dashed rgba(255,120,120,.9)}.zseg .zt{left:0;right:0;top:0;height:8.75%}.zseg .zb{left:0;right:0;bottom:0;height:18.75%}.zseg .zr{right:0;width:12%;top:52%;bottom:18.75%}.zseg span{position:absolute;left:8px;top:9.5%;font:700 10px Figtree,sans-serif;color:#ffb3b3;text-shadow:0 1px 2px #000}.phone video{transform-origin:50% 45%;will-change:transform,filter}
 .fxl{position:absolute;inset:0;pointer-events:none}
@@ -440,6 +441,7 @@ body.resizing.h{cursor:row-resize}
 /* ======================= modelo ======================= */
 const TRACKS = [
   {k:'gancho', n:'Gancho', c:'var(--t-hook)', d:'Primeira frase em tipografia grande'},
+  {k:'motion', n:'Motion (Hyperframes · Remotion)', c:'#9C8FD6', d:'Animação de motion graphics renderizada pelo editor: título cinético, número animado, lista, assinatura'},
   {k:'texto', n:'Textos na tela', c:'#D9A38F', d:'Texto simples animado (Reels Dinâmico): escrevendo, escala, opacidade ou posição'},
   {k:'painel', n:'Painéis', c:'var(--t-panel)', d:'Cartões de vidro com dados e ícones'},
   {k:'nome', n:'Nomes', c:'var(--t-name)', d:'Lower third (nome e função)'},
@@ -558,6 +560,7 @@ function defaultBlock(tipo, t) {
   if (tipo === 'cta') Object.assign(b, {kicker: '', titulo: '', subtitulo: '', botao: '', rodape: '', icone: 'sparkle', ate_o_fim: true});
   if (tipo === 'fx') { Object.assign(b, {efeito: 'zoom', intensidade: 'média'}); b.fim = +(t + FXN.zoom.dur).toFixed(2); }
   if (tipo === 'som') Object.assign(b, {banco_id: '', nome: '', volume: 'discreto'});
+  if (tipo === 'motion') Object.assign(b, {motor: 'hyperframes', modelo: 'titulo_cinetico', variaveis: {titulo: '', destaque: ''}});
   if (tipo === 'texto') Object.assign(b, {texto: '', animacao: 'escrever', saida: 'opacidade', fonte: 'titulo', peso: 800, cor: 'text'});
   if (tipo === 'broll') b.banco_id = '';
   return b;
@@ -1084,6 +1087,11 @@ function renderInsp() {
     <div class="items">${b.itens.map((it, i) => `<div class="item"><select aria-label="Ícone" data-ii="${i}" data-ik="icone">${icOpts(it.icone)}</select><input aria-label="Texto" data-ii="${i}" data-ik="texto" value="${esc(it.texto)}" placeholder="Texto"><button class="x" type="button" data-irm="${i}" aria-label="Remover item">×</button><input class="gat" aria-label="Gatilho do item" data-ii="${i}" data-ik="gatilho" value="${esc(it.gatilho)}" placeholder="gatilho: palavra falada"></div>`).join('')}</div>
     <button class="btn sm" type="button" id="addItem">Adicionar item</button>`;
   if (b.tipo === 'nome') body = fld('b_nome', 'Nome', b.nome, 'text', 'data-k="nome"') + fld('b_sub', 'Subtítulo', b.subtitulo, 'text', 'data-k="subtitulo"');
+  if (b.tipo === 'motion') { const mm = MOTION_MODELOS[b.modelo] || MOTION_MODELOS.titulo_cinetico; const v = b.variaveis || (b.variaveis = {});
+    body = `<div class="row2"><div class="f"><label for="b_mmo">Modelo</label><select id="b_mmo">${Object.entries(MOTION_MODELOS).map(([k, m]) => `<option value="${k}" ${k === b.modelo ? 'selected' : ''}>${m.n}</option>`).join('')}</select></div>
+      <div class="f"><label for="b_mmt">Motor</label><select id="b_mmt"><option value="hyperframes" ${b.motor !== 'remotion' ? 'selected' : ''}>Hyperframes (HTML)</option>${mm.remotion ? `<option value="remotion" ${b.motor === 'remotion' ? 'selected' : ''}>Remotion (React)</option>` : ''}</select></div></div>
+      ${mm.campos.map(([k, n]) => k === 'itens' ? `<div class="f"><label for="b_mv_${k}">${n}</label><textarea id="b_mv_${k}" rows="3" data-mv="${k}">${esc((Array.isArray(v.itens) ? v.itens : []).join('\n'))}</textarea></div>` : `<div class="f"><label for="b_mv_${k}">${n}</label><input id="b_mv_${k}" data-mv="${k}" value="${esc(v[k] ?? '')}"></div>`).join('')}
+      <p class="hint">Animação de motion graphics com as cores e fontes do estilo. A prévia aqui é simplificada: o editor (skill) renderiza a animação de verdade com Hyperframes ou Remotion na versão final. A exportação pelo navegador não inclui este bloco.</p>`; }
   if (b.tipo === 'texto') body = `<div class="f"><label for="b_txt">Texto (Enter quebra a linha)</label><textarea id="b_txt" rows="3" data-k="texto" placeholder="Um dia na rotina da clínica">${esc(b.texto)}</textarea></div>
     <div class="row2"><div class="f"><label for="b_anim">Entrada</label><select id="b_anim" data-k="animacao">${TX_ANIM.map(([k, n]) => `<option value="${k}" ${k === (b.animacao || 'escrever') ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     <div class="f"><label for="b_sai">Saída</label><select id="b_sai" data-k="saida">${TX_SAIDA.map(([k, n]) => `<option value="${k}" ${k === (b.saida || 'opacidade') ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
@@ -1128,6 +1136,12 @@ function renderInsp() {
   el.querySelectorAll('[data-irm]').forEach((e) => e.addEventListener('click', () => { b.itens.splice(+e.dataset.irm, 1); touch(); renderInsp(); renderStage(); }));
   const ai = document.getElementById('addItem'); if (ai) ai.onclick = () => { b.itens.push({icone: 'check', texto: '', gatilho: ''}); touch(); renderInsp(); renderStage(); };
   document.getElementById('b_go').onclick = () => seek(b.inicio);
+  if (b.tipo === 'motion') {
+    const mo = document.getElementById('b_mmo'), mt = document.getElementById('b_mmt');
+    mo.onchange = () => { b.modelo = mo.value; if (!MOTION_MODELOS[b.modelo].remotion) b.motor = 'hyperframes'; touch('p', S.cur, 'Modelo de motion'); renderInsp(); renderStage(); renderTL(); };
+    mt.onchange = () => { b.motor = mt.value; touch('p', S.cur, 'Motor de motion'); renderStage(); };
+    el.querySelectorAll('[data-mv]').forEach((e) => e.addEventListener('input', () => { const k = e.dataset.mv; b.variaveis = b.variaveis || {}; b.variaveis[k] = k === 'itens' ? e.value.split('\n').map((x) => x.trim()).filter(Boolean) : k === 'valor' ? (numOk(e.value.replace(',', '.')) ? +e.value.replace(',', '.') : e.value) : e.value; touch(); renderStage(); renderTL(); }));
+  }
   const pk = document.getElementById('b_pick'); if (pk) pk.onclick = () => { S.pickFoco = S.pickFoco === b.id ? null : b.id; document.getElementById('phone').classList.toggle('pick', !!S.pickFoco); if (S.pickFoco && (S.t < b.inicio + 0.5 || S.t >= b.fim)) seek(b.inicio + Math.min(1.2, (b.fim - b.inicio) / 2)); renderInsp(); };
   for (const [id, k, lo, hi] of [['b_esc', 'escala', 40, 160], ['b_tpx', 'texto_px', 12, 240]]) { const inp = document.getElementById(id); if (!inp) continue;
     inp.addEventListener('input', () => { const v = inp.value; if (numOk(v)) b[k] = Math.min(hi, Math.max(lo, Math.round(+v))); else delete b[k]; touch(); renderStage(); });
@@ -1188,6 +1202,23 @@ const numOk = (v) => v !== '' && v != null && Number.isFinite(+v) && +v > 0;
 /* sombras do estilo (o projeto pode sobrepor em p.sombras): texto = sombra atrás de todo texto; geral = escurece o vídeo */
 function sombrasOf(p) { const t = tplOf(p); const sm = {...(t?.sombras || {}), ...(p?.sombras || {})}; const n = (v) => numOk(v) ? Math.min(100, Math.max(0, +v)) / 100 : 0; return {texto: n(sm.texto), geral: n(sm.geral)}; }
 const ehDinamico = (p) => (p?.formato || tplOf(p)?.formato) === 'dinamico';
+/* modelos de motion graphics (mesma lista do scripts/motion.py). O Studio mostra uma prévia simplificada; o render real é do editor. */
+const MOTION_MODELOS = {
+  assinatura: {n: 'Assinatura (nome + função)', campos: [['nome', 'Nome'], ['subtitulo', 'Função']], remotion: false},
+  titulo_cinetico: {n: 'Título cinético', campos: [['titulo', 'Título'], ['destaque', 'Palavra em destaque']], remotion: true},
+  numero: {n: 'Número animado', campos: [['valor', 'Valor (ex.: 87 ou 3,5)'], ['prefixo', 'Antes (ex.: R$ )'], ['sufixo', 'Depois (ex.: %)'], ['rotulo', 'Rótulo']], remotion: true},
+  lista: {n: 'Lista com checks', campos: [['kicker', 'Kicker'], ['itens', 'Itens (um por linha)']], remotion: false},
+};
+function motionPrev(b, p, st) {
+  const v = b.variaveis || {}, m = b.modelo || 'titulo_cinetico';
+  const y = numOk(b.pos_y) ? +b.pos_y : {assinatura: 67, titulo_cinetico: 38, numero: 36, lista: 50}[m] || 40;
+  let inner = '';
+  if (m === 'assinatura') inner = `<div class="g-lt" style="position:relative;top:0;left:0"><b>${esc(v.nome || 'Nome')}</b><span>${esc(v.subtitulo || 'Função')}</span></div>`;
+  else if (m === 'numero') inner = `<div class="g-panel" style="position:relative;left:0;width:auto;text-align:center"><div style="font:900 15cqw/1 var(--f-title,'Montserrat');color:var(--v-key)">${esc((v.prefixo || '') + (v.valor ?? 0) + (v.sufixo || ''))}</div><div style="font:600 4cqw var(--f-text);color:var(--v-text)">${esc(v.rotulo || '')}</div></div>`;
+  else if (m === 'lista') inner = `<div class="g-panel" style="position:relative;left:0;width:auto"><span class="g-kick">${esc(v.kicker || 'KICKER')}</span>${(Array.isArray(v.itens) ? v.itens : []).map((t) => `<div class="g-item">${icon('check')}<span>${esc(t)}</span></div>`).join('')}</div>`;
+  else inner = `<div style="text-align:center;font:800 8.9cqw/1.08 var(--f-title,'Montserrat');color:var(--v-text);text-shadow:0 .6cqw 2cqw rgba(0,0,0,.45)">${esc(v.titulo || 'Título')}</div>`;
+  return `<div class="g-motion" data-bid="${b.id}" style="top:${y}%;opacity:${f2(st ? st.op : 1)}">${inner}<span class="g-motion-tag">Motion · ${esc(b.motor === 'remotion' ? 'Remotion' : 'Hyperframes')} · prévia simplificada</span></div>`;
+}
 const TX_ANIM = [['escrever', 'Escrevendo (letra a letra)'], ['escala', 'Escala suave'], ['opacidade', 'Opacidade (aparece)'], ['subir', 'Sobe e aparece'], ['descer', 'Desce e aparece'], ['esquerda', 'Vem da esquerda'], ['direita', 'Vem da direita']];
 const TX_SAIDA = [['opacidade', 'Some (opacidade)'], ['escala', 'Encolhe e some'], ['subir', 'Sobe e some'], ['descer', 'Desce e some']];
 /* estado da animação do texto no instante t: entrada ~0,7 s com cauda longa, parado, saída 0,4 s (igual ao core.py draw_textos) */
@@ -1247,6 +1278,7 @@ function blockHTML(b, p, t) {
     else inner += `${b.titulo ? `<p class="g-title" data-ed="titulo">${esc(b.titulo)}</p>` : ''}${its.map((i, j) => it('g-item', j, `${icon(i.icone)}<span data-ed="itens.${j}.texto">${esc(i.texto)}</span>`)).join('')}`;
     return `<div class="g-panel" data-bid="${b.id}" style="--ts:${f2(tsOf(b))};transform-origin:50% 0;scale:${f2(esOf(b))};translate:${f2(ladoShift(b) * 87)}cqw 0;top:${topPct(b)}%;opacity:${f2(e.k)};transform:translateY(${f2((1 - e.a) * 5 - (1 - e.z) * 3)}cqw) scale(${f2(0.94 + 0.06 * e.a)});filter:blur(${f2((1 - e.a) * 1.2)}cqw)">${inner}</div>`;
   }
+  if (b.tipo === 'motion') return motionPrev(b, p, t == null ? null : {op: Math.min(eo((t - b.inicio) / 0.5), eo((b.fim - t) / 0.3))});
   if (b.tipo === 'texto') { const st = t == null ? {op: 1, sc: 1, dx: 0, dy: 0, n: String(b.texto || '').length} : txState(b, t); const ld = ladoOf(b) || 'centro'; const px = numOk(b.texto_px) ? +b.texto_px : 72;
     const full = String(b.texto || 'Texto na tela'), txt = full.slice(0, t == null ? undefined : st.n), rest = full.slice(txt.length);   // o resto fica invisível: as linhas não mudam de lugar enquanto escreve
     return `<div class="g-tx${b.fundo ? ' box' : ''}" data-bid="${b.id}" data-ed="texto" style="top:${topPct(b)}%;text-align:${ld === 'esquerda' ? 'left' : ld === 'direita' ? 'right' : 'center'};font:${+b.peso || 800} ${f2(px / 10.8)}cqw/1.18 ${b.fonte === 'texto' ? 'var(--f-text,"Figtree")' : 'var(--f-title,"Montserrat")'},sans-serif;color:${txCor(b, p)};opacity:${f2(st.op)};transform:translate(${f2(st.dx)}cqw,${f2(st.dy)}%) scale(${f2(st.sc)})">${esc(txt).replace(/\n/g, '<br>')}${rest ? `<span style="opacity:0">${esc(rest).replace(/\n/g, '<br>')}</span>` : ''}</div>`; }
@@ -1457,7 +1489,7 @@ function renderTL() {
 }
 function label(b) {
   return b.tipo === 'gancho' ? (b.palavra_chave ? b.palavra_chave.toUpperCase() : b.frase || 'Gancho') : b.tipo === 'painel' ? (b.kicker || b.titulo || 'Painel') : b.tipo === 'nome' ? (b.nome || 'Nome') :
-    b.tipo === 'texto' ? (String(b.texto || 'Texto').split('\n')[0].slice(0, 40)) : b.tipo === 'broll' ? (b.arquivo || b.busca || 'B-roll') : b.tipo === 'som' ? (b.nome || 'Efeito') : b.tipo === 'destaque' ? (b.palavras || 'Destaque') : b.tipo === 'corte' ? 'Cortar · ' + b.motivo : b.tipo === 'fx' ? (FXN[b.efeito]?.n || 'Efeito') : (b.botao || b.titulo || 'CTA');
+    b.tipo === 'motion' ? ('Motion · ' + (MOTION_MODELOS[b.modelo]?.n || b.modelo)) : b.tipo === 'texto' ? (String(b.texto || 'Texto').split('\n')[0].slice(0, 40)) : b.tipo === 'broll' ? (b.arquivo || b.busca || 'B-roll') : b.tipo === 'som' ? (b.nome || 'Efeito') : b.tipo === 'destaque' ? (b.palavras || 'Destaque') : b.tipo === 'corte' ? 'Cortar · ' + b.motivo : b.tipo === 'fx' ? (FXN[b.efeito]?.n || 'Efeito') : (b.botao || b.titulo || 'CTA');
 }
 function placePH(follow) {
   const l = document.getElementById('phl'); if (!l) return; const x = LABW + S.t * pxPerSec(); l.style.transform = `translateX(${x}px)`;
@@ -1845,6 +1877,7 @@ Padrão DocOn Cinema: gancho tipográfico com palavra-chave gigante; um painel d
 PODCAST: quando o formato for "podcast" (conversa a dois), o vídeo é a montagem dos takes na ordem de "podcast.takes" (o bruto aberto já é o vídeo montado pela skill). Abra com a PERGUNTA do take 1 como gancho tipográfico (frase curta, palavra-chave forte), assinatura (bloco nome) de cada locutor na primeira vez que ele fala, painéis só com o que o especialista disse (2 a 4 itens com gatilho), um destaque por take, legenda sempre ligada, transição curta entre takes (fx flash ou whip, discreta) e CTA final sem inventar @ ou dado. Nunca coloque texto sobre os rostos.
 ZOOM / CÂMERA (fx efeito "camera"): use quando pedirem zoom, aproximar, focar em quem fala, ou quando o bruto for um plano aberto com duas pessoas. Nos quadros, ache onde está o rosto de cada um (foco_x e foco_y em % do quadro do bruto, sem zoom). Pela legenda_tempos, separe quem fala quando (pergunta e resposta) e crie um bloco camera por fala, colados (fim de um = início do próximo): assim a câmera desliza de um rosto para o outro, com movimento suave nos dois sentidos. Zoom de 1,5 a 2,0 (acima de 2,2 a imagem perde nitidez), transicao de 0,6 a 0,9 s. Troque o foco só entre frases, nunca no meio de uma palavra. Depois confira nos quadros se painéis e nomes não cobrem o rosto no quadro já aproximado.
 REELS DINÂMICO (formato "dinamico"): vídeo sem fala, a pessoa fazendo algo da rotina, e a história contada por blocos "texto" (Textos na tela), sem legenda e sem gancho falado. Cada texto é curto (até ~8 palavras, 1-2 linhas), entra com animação suave (animacao: escrever | escala | opacidade | subir | descer | esquerda | direita) e sai mais curto (saida: opacidade | escala | subir | descer). Dê 0,5 s + 0,3 s por palavra de leitura (no "escrever", some 0,045 s por letra). Um texto por vez, em sequência, trocando quando a ação na imagem muda. Varie a entrada ao longo do vídeo, sem repetir a mesma em todos. Posicione longe do rosto e das mãos (pos_y; pos_x esquerda/centro/direita). Use trilha. Se o vídeo for claro, ligue a sombra geral (fx "escurecer", escuro_pct 25-45) nos trechos com texto e mantenha a sombra dos textos.
+MOTION GRAPHICS (bloco "motion"): animações de qualidade de estúdio renderizadas pelo editor com Hyperframes (HTML + GSAP) ou Remotion (React): título cinético, número animado (dado, estatística, preço), lista com checks e assinatura. Use para o momento-chave do vídeo (um dado forte, a frase-tese, um passo a passo), no máximo 1 a 3 por vídeo, sem repetir o mesmo modelo seguido. Prefira o motor hyperframes; use remotion só quando a equipe pedir. Só com dados ditos ou informados: nunca invente número. A prévia do Studio é simplificada; avise que o render final mostra a animação completa.
 SOMBRAS: o estilo pode ter sombra dos textos e sombra geral (escurece o vídeo). Para um trecho, use o fx "escurecer" com escuro_pct.
 IDENTIDADE DO CLIENTE: quando o projeto trouxer "identidade" (logo, paleta, fontes, materiais de exemplo e notas), siga essa identidade: cores e fontes dela, o tom dos materiais e a logo no canto combinado. Não invente cor, fonte ou elemento fora dela.
 LADO (pos_x) de nomes e painéis: "esquerda", "centro" ou "direita". Vazio = padrão DocOn (nome à esquerda, painel na largura toda). Quando o rosto de quem fala estiver de um lado do quadro, ponha a assinatura e o painel do lado oposto (rosto à direita → esquerda; rosto à esquerda → direita), com pos_y abaixo do queixo. Confira nos quadros depois.
@@ -1854,7 +1887,7 @@ ${memText()}`;
 function applyChange(fn, label) { const p = cur(); const h = hOf(S.cur); if (h) settle(h, S.cur); const r = fn(p); if (S.dirMudou && S.sel) S.dirMudou.add(S.sel); touch('p', S.cur, 'Diretor: ' + label); if (h) settle(h, S.cur); renderTL(); renderStage(); if (S.rightTab === 'insp') renderInsp();
   const b = S.sel && p.blocos.find((x) => x.id === S.sel); if (b && !PL.playing) { seek(Math.min(b.fim - 0.05, b.inicio + Math.min(1.2, (b.fim - b.inicio) * 0.6))); flashBlock(b.id); } return r; }
 const TOOLS = () => [
-  {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx|texto. Campos extras conforme o tipo (texto: texto (\n quebra linha), animacao escrever|escala|opacidade|subir|descer|esquerda|direita, saida opacidade|escala|subir|descer, pos_y %, pos_x esquerda|centro|direita, texto_px (padrão 72), peso 400-900, fonte titulo|texto, cor text|key|icon|grad2|#hex, sombra %, fundo true/false; fx efeito escurecer: escuro_pct 5-100; fx: efeito, intensidade suave|média|forte; fx efeito camera = zoom em um ponto: zoom 1-3 (padrão 1.6), foco_x e foco_y em % do quadro do bruto (onde está o rosto de quem fala, veja nos quadros), transicao em s do movimento (padrão 0.7); painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
+  {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx|texto|motion. Campos extras conforme o tipo (motion: motor hyperframes|remotion, modelo assinatura|titulo_cinetico|numero|lista (remotion só titulo_cinetico e numero), variaveis {nome,subtitulo | titulo,destaque | valor,prefixo,sufixo,rotulo | kicker,itens[]}, pos_y %; texto: texto (\n quebra linha), animacao escrever|escala|opacidade|subir|descer|esquerda|direita, saida opacidade|escala|subir|descer, pos_y %, pos_x esquerda|centro|direita, texto_px (padrão 72), peso 400-900, fonte titulo|texto, cor text|key|icon|grad2|#hex, sombra %, fundo true/false; fx efeito escurecer: escuro_pct 5-100; fx: efeito, intensidade suave|média|forte; fx efeito camera = zoom em um ponto: zoom 1-3 (padrão 1.6), foco_x e foco_y em % do quadro do bruto (onde está o rosto de quem fala, veja nos quadros), transicao em s do movimento (padrão 0.7); painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
     inputSchema: {type: 'object', properties: {tipo: {type: 'string'}, inicio: {type: 'number'}, fim: {type: 'number'}, gatilho: {type: 'string'}, campos: {type: 'object'}}, required: ['tipo', 'inicio', 'fim']},
     execute: (a) => applyChange((p) => { const b = defaultBlock(String(a.tipo), +a.inicio || 0); b.fim = Math.max(b.inicio + 0.5, +a.fim || b.inicio + 3); b.gatilho = String(a.gatilho || ''); Object.assign(b, cleanFields(a.campos)); p.blocos.push(b); S.sel = b.id; return {id: b.id}; }, 'criar')},
   {name: 'editar_bloco', description: 'Altera campos de um bloco existente pelo id (inclui inicio, fim, gatilho, kicker, titulo, itens, frase, palavra_chave, icone, nome, subtitulo, botao, pos_y...). pos_y = altura na tela em % do topo onde o bloco começa (gancho, painel, nome, cta); escala = % do tamanho total do bloco (40-160, 100 = padrão); desfoque_fundo (true/false: desfoca o vídeo atrás do bloco; na CTA vem ligado) e desfoque_pct (5-100); texto_px = px do texto principal numa tela de 1080 (padrão: painel 45, cta 80, gancho 82, nome 50); null volta ao padrão. pos_x = lado na tela para nome, painel e texto: esquerda|centro|direita (painel de lado fica com 72% da largura); use o lado oposto ao rosto de quem fala. Retorna o bloco atualizado.',
@@ -2104,6 +2137,7 @@ function narrationFor(b) {
   if (b.tipo === 'corte') return `Este trecho sai do vídeo: ${b.motivo}.`;
   if (b.tipo === 'destaque') return `Na legenda, destaco ${b.palavras}.`;
   if (b.tipo === 'som') return `Efeito sonoro: ${b.nome || 'efeito'}, para marcar a entrada.`;
+  if (b.tipo === 'motion') return `Animação ${(MOTION_MODELOS[b.modelo]?.n || '').toLowerCase()} renderizada pelo editor.`;
   if (b.tipo === 'texto') return `Texto na tela: ${String(b.texto || '').replace(/\n/g, ' ')}.`;
   if (b.tipo === 'fx') return `Efeito ${(FXN[b.efeito]?.n || 'visual').toLowerCase()}: ${(FXN[b.efeito]?.d || '').toLowerCase()}.`;
   if (b.tipo === 'cta') return `Fechamos com o cartão final: “${(b.titulo || '').replace(/\n/g, ' ')}”, botão “${b.botao || ''}”, até o último quadro.`;
@@ -3600,7 +3634,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.04-a';
+const STUDIO_VERSAO = '2026.11.05-a';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

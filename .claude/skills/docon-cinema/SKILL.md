@@ -247,6 +247,33 @@ Use quando o projeto tiver `formato: "podcast"` (estilo "Podcast · conversa a d
 - **Regra:** o gráfico vai do lado oposto ao rosto de quem fala. Rosto à direita: nome e painel à esquerda, e vice-versa. Combine com `pos_y` abaixo do queixo e confira nos quadros.
 - **Pipeline:** `run_brief.py` lê `pos_x` (`lado()`), e `core.lower_third(..., align=)` alinha a assinatura. A prévia do Studio (`ladoOf`/`ladoShift`) e a exportação usam a mesma conta.
 
+## Motion graphics (Hyperframes e Remotion)
+
+Animações de estúdio renderizadas de verdade e sobrepostas ao vídeo (PNG com transparência, 1080x1920, 30 fps):
+- **Hyperframes:** HTML + GSAP, da HeyGen, Apache 2.0. É o motor padrão.
+- **Remotion:** React.
+  - **Licença:** grátis para pessoa física, ONG e empresa de até 3 funcionários. Acima disso exige a licença de empresa (remotion.pro). Confirme com a DocOn antes de usar em trabalho de cliente.
+
+- **Bloco `motion`** (Studio: trilha "Motion", com prévia simplificada):
+  - `motor`: `hyperframes` ou `remotion`;
+  - `modelo`;
+  - `variaveis`;
+  - `pos_y` (% do topo).
+  - O `run_brief.py` renderiza com `scripts/motion.py` (com cache por conteúdo) e compõe com `core.motion`, depois dos textos e antes da legenda.
+- **Modelos** (`python3 scripts/motion.py listar`), em `motion/hyperframes/<modelo>/index.html` e `motion/remotion/src/index.jsx`:
+  - `assinatura`: nome e função;
+  - `titulo_cinetico`: palavra por palavra, do desfoque ao nítido, com a palavra de destaque em mola. Existe também no Remotion;
+  - `numero`: contador até o valor, com prefixo, sufixo e rótulo. Existe também no Remotion;
+  - `lista`: kicker e itens com check em sequência.
+- **Cores e fontes do estilo:** saem da paleta (`glass`, `text`, `key`, `icon`) e das fontes. Qualquer fonte do Google é baixada por `fontes.py` e embutida como `assets/titulo.ttf` e `assets/texto.ttf`.
+- **Composição própria:** uma pasta Hyperframes com `index.html` seguindo o contrato do Hyperframes:
+  - `class="clip"`, `data-start`/`data-duration` e uma timeline GSAP pausada em `window.__timelines["main"]`;
+  - nada de `Date.now()` nem de laço infinito;
+  - `{{DUR}}`, `{{campo}}` e `{{campo_json}}` são trocados pelo `motion.py`.
+  - Passe o caminho da pasta como `modelo`. Referência: `npx hyperframes docs` em `~/.docon/motion`.
+- **Uso:** de 1 a 3 por vídeo, no momento-chave (dado forte, frase-tese, passo a passo). Não repita o mesmo modelo em seguida e só use dados ditos ou informados.
+- **Instalação:** `setup.sh` instala `hyperframes` e `gsap` em `~/.docon/motion`. Para o Remotion, rode `DOCON_REMOTION=1 bash scripts/setup.sh`.
+
 ## Ofício de movimento e revisão (aprendido do HyperFrames)
 
 Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos quadro a quadro nos filmes deles, adaptados ao reels DocOn.
@@ -310,6 +337,16 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 - **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
   - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.
+- **Motion graphics no ambiente fechado:**
+  - O Chrome do render não alcança o CDN do GSAP, por isso a composição usa uma cópia local (`assets/gsap.min.js`, copiada pelo `motion.py`).
+  - No Remotion, o ProRes saiu sem canal de transparência. Os dois motores agora geram sequência PNG com transparência.
+  - O id de composição do Remotion não aceita `_`: use `-`.
+  - No Remotion, use o `chrome-headless-shell` de `/opt/pw-browsers` (`--chrome-mode=headless-shell`).
+- **Remover um elemento de uma animação gerada por IA (o "L" sobre o logo "P"):**
+  - Separe as fases (luz, transição, letras finais) e faça uma máscara para cada uma: na luz, os pixels acesos enquanto o feixe desenha o elemento; nas letras escuras, o traço do elemento menos uma faixa justa na peça que fica.
+  - Acompanhe o zoom da câmera com ECC, do último quadro para trás.
+  - Preencha com um fundo limpo (inpaint com todos os traços removidos) para nada escuro vazar.
+  - Proteja o caminho do traço que continua e confira quadro a quadro.
 - **Vídeo sem fala quebrava o pipeline:** os cortes e o gancho supunham palavras na transcrição.
   - **Agora:** `Edit(sem_fala=True)` usa o vídeo inteiro, e o gancho e a legenda são pulados quando não há palavras.
 - **"ws is not defined" ao exportar:** um comentário `//` colocado no meio de uma linha de código do Studio anulou o resto da linha (`const ws = ...`, na legenda). Toda exportação com legenda falhava.

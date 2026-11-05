@@ -190,6 +190,14 @@ for b in blocks:
     if tp == 'fx' and b.get('efeito') == 'camera': tp = 'camera'   # Zoom / câmera do Studio
     if tp == 'fx' and b.get('efeito') == 'escurecer':              # sombra geral num trecho
         t1 = min(max(out_of(b['fim']), t0 + 0.3), ed.TOTAL); k = _pct(b.get('escuro_pct'), 0.4); ed.escurecer(t0, t1, k); plan.append(f'escurecer fundo {t0:.2f}-{t1:.2f} {round(k * 100)}%'); continue
+    if tp == 'motion':                                             # motion graphics: modelo Hyperframes ou Remotion (scripts/motion.py)
+        t1 = min(max(out_of(b['fim']), t0 + 0.6), ed.TOTAL)
+        try:
+            import motion as _mo
+            pasta = _mo.render(b.get('modelo') or 'titulo_cinetico', None, b.get('motor') or None, t1 - t0, b.get('variaveis') or {}, ST, b.get('pos_y'))
+            ed.motion(t0, t1, pasta); plan.append(f'motion {t0:.2f}-{t1:.2f} {b.get("motor") or "hyperframes"}:{b.get("modelo")}')
+        except SystemExit as e: plan.append(f'AVISO motion {b.get("modelo")} não renderizou: {str(e)[:200]}')
+        continue
     if tp == 'texto':                                              # texto na tela (Reels Dinâmico e qualquer estilo)
         t1 = min(max(out_of(b['fim']), t0 + 0.8), ed.TOTAL)
         try: px = float(b.get('texto_px') or 72)

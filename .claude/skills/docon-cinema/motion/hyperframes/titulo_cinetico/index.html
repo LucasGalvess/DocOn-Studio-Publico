@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="pt-BR" data-resolution="portrait"><head><meta charset="UTF-8"><meta name="viewport" content="width=1080, height=1920">
+<script src="assets/gsap.min.js"></script><link rel="stylesheet" href="assets/base.css"><style>/*{{CSS}}*/
+#t { position: absolute; left: 80px; right: 80px; top: calc(var(--y, 38) * 1%); text-align: center; font: 800 96px/1.08 var(--f-titulo); color: var(--texto); text-wrap: balance; }
+#t .w { display: inline-block; margin: 0 .12em; }
+#t .w.k { color: var(--destaque); }
+</style></head><body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="{{DUR}}" data-width="1080" data-height="1920">
+  <div id="t" class="clip sh" data-start="0" data-duration="{{DUR}}" data-track-index="0">{{titulo}}</div>
+</div>
+<script>
+const D = {{DUR}}, KW = ({{destaque_json}} || '').toLowerCase().split(/[,\s]+/).filter(Boolean);
+const el = document.getElementById('t'); el.innerHTML = el.textContent.trim().split(/\s+/).map((w) => `<span class="w${KW.includes(w.toLowerCase().replace(/[.,!?:;]/g, '')) ? ' k' : ''}">${w}</span>`).join(' ');
+const tl = gsap.timeline({ paused: true });
+tl.fromTo('#t .w', { opacity: 0, filter: 'blur(8px)', y: 14 }, { opacity: 1, filter: 'blur(0px)', y: 0, duration: 0.35, ease: 'expo.out', stagger: 0.08 }, 0.05);
+tl.fromTo('#t .w.k', { scale: 0.82 }, { scale: 1, duration: 0.5, ease: 'back.out(1.6)' }, 0.25);
+tl.to('#t .w', { opacity: 0, filter: 'blur(6px)', duration: 0.22, ease: 'power2.in', stagger: 0.03 }, D - 0.4);
+window.__timelines['main'] = tl; tl.seek(0);
+</script></body></html>

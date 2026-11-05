@@ -29,3 +29,4 @@ Regras de conduta:
 - Nomes (lower thirds) e painéis têm `pos_x`: esquerda, centro ou direita. Ponha do lado oposto ao rosto de quem fala, com `pos_y` abaixo do queixo, e confira nos quadros da prévia.
 - Reels Dinâmico (`formato: "dinamico"`): sem fala, a história vai em blocos `texto` com animação suave, sem legenda e com trilha. Use a sombra dos textos e escureça o fundo nos trechos claros.
 - Identidade do cliente (`projeto.identidade` e `projeto.logo`): baixe a logo para `WORK/banco/<asset_id>.png` e siga a paleta, as fontes, as notas e os materiais de exemplo. Não invente nada fora dela.
+- Motion graphics: blocos `motion` com Hyperframes (padrão) ou Remotion, renderizados por `scripts/motion.py`. Modelos: assinatura, título cinético, número e lista. Use de 1 a 3 por vídeo, no momento-chave, com as cores e fontes do estilo. Remotion só se a licença da DocOn permitir (grátis até 3 funcionários).

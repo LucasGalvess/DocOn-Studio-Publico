@@ -121,7 +121,7 @@ class Edit:
             self.WORDS.append(dict(w=w, s=s, e=e, os=self.src2out(s), oe=self.src2out(e)))
         self.panels, self.sfx, self.hook_items, self.brolls = [], [], [], []
         self.fx = FX()                                         # efeitos visuais dos blocos fx (scripts/fx.py)
-        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.textos = []; self.escuros = []; self.escuro = 0.0; self.logo = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
+        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.textos = []; self.motions = []; self.escuros = []; self.escuro = 0.0; self.logo = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
         self.anchor_y = anchor_y
         self._face_track()
     # ---------------- tempo
@@ -392,6 +392,21 @@ class Edit:
                 im = Image.new('RGBA', (bw, hh), (0, 0, 0, 0)); ImageDraw.Draw(im).rounded_rectangle([0, 0, bw - 1, hh - 1], 26, fill=tuple(P['glass']) + (140,))
                 over(fr, to_np(im), bx0 + dx, T['y'] - 30 + dy, op)
             over(fr, spr, dx, T['y'] - 40 + dy, op, sc, W / 2 + dx, T['y'] + h / 2 - 40 + dy)
+    # ---------------- motion graphics (Hyperframes / Remotion): sequência PNG com transparência, 30 fps, 1080x1920
+    def motion(self, t0, t1, pasta):
+        import glob as _g
+        fs = sorted(_g.glob(os.path.join(pasta, '*.png')))
+        if fs: self.motions.append(dict(t0=t0, t1=t1, fs=fs, k=-1, spr=None))
+    def draw_motions(self, fr, t):
+        for M in self.motions:
+            if t < M['t0'] or t > M['t1']: continue
+            k = min(len(M['fs']) - 1, int((t - M['t0']) * 30))
+            if k != M['k']:
+                im = cv2.imread(M['fs'][k], cv2.IMREAD_UNCHANGED)
+                if im is None: continue
+                if im.shape[1] != W or im.shape[0] != H: im = cv2.resize(im, (W, H), interpolation=cv2.INTER_AREA)
+                M['spr'] = cv2.cvtColor(im, cv2.COLOR_BGRA2RGBA).astype(np.float32) / 255; M['k'] = k
+            over(fr, M['spr'], 0, 0, 1.0)
     def set_logo(self, path, pos='sup_dir', tam=0.16, op=0.9):
         """logomarca do cliente: canto (sup_esq|sup_dir|inf_esq|inf_dir|centro_inf), largura em fração da tela."""
         im = Image.open(path).convert('RGBA'); w = max(40, int(W * tam)); im = im.resize((w, max(1, int(im.height * w / im.width))), Image.LANCZOS)
@@ -507,6 +522,7 @@ class Edit:
         for p in self.panels:
             if p is not self.ec: p.draw(fr, t)
         self.draw_textos(fr, t)
+        self.draw_motions(fr, t)
         self.draw_caps(fr, t)
         if self.logo is not None: self.draw_logo(fr, t)
         if self.ec0 is not None and t >= self.ec0:

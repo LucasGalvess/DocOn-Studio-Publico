@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR" data-resolution="portrait"><head><meta charset="UTF-8"><meta name="viewport" content="width=1080, height=1920">
+<script src="assets/gsap.min.js"></script><link rel="stylesheet" href="assets/base.css"><style>/*{{CSS}}*/
+#box { position: absolute; left: 90px; right: 90px; top: calc(var(--y, 36) * 1%); padding: 44px 40px; border-radius: 40px; text-align: center; background: color-mix(in srgb, var(--glass) 66%, transparent); }
+#n { font: 900 190px/1 var(--f-titulo); color: var(--destaque); font-variant-numeric: tabular-nums; }
+#l { margin-top: 18px; font: 600 44px/1.2 var(--f-texto); color: var(--texto); }
+</style></head><body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="{{DUR}}" data-width="1080" data-height="1920">
+  <div id="box" class="clip" data-start="0" data-duration="{{DUR}}" data-track-index="0"><div id="n" class="sh">0</div><div id="l">{{rotulo}}</div></div>
+</div>
+<script>
+const D = {{DUR}}, ALVO = Number({{valor_json}}) || 0, PRE = {{prefixo_json}} || '', SUF = {{sufixo_json}} || '', DEC = (String({{valor_json}}).split(/[.,]/)[1] || '').length;
+const o = { v: 0 }, n = document.getElementById('n'); const fmt = (x) => PRE + x.toLocaleString('pt-BR', { minimumFractionDigits: DEC, maximumFractionDigits: DEC }) + SUF;
+n.textContent = fmt(0);
+const tl = gsap.timeline({ paused: true });
+tl.fromTo('#box', { opacity: 0, y: 40, scale: 0.96 }, { opacity: 1, y: 0, scale: 1, duration: 0.6, ease: 'expo.out' }, 0);
+tl.to(o, { v: ALVO, duration: Math.min(1.6, D * 0.45), ease: 'power3.out', onUpdate: () => { n.textContent = fmt(o.v); } }, 0.2);
+tl.fromTo('#l', { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' }, 0.45);
+tl.to('#box', { opacity: 0, y: -20, duration: 0.3, ease: 'power3.in' }, D - 0.32);
+window.__timelines['main'] = tl; tl.seek(0);
+</script></body></html>

@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR" data-resolution="portrait"><head><meta charset="UTF-8"><meta name="viewport" content="width=1080, height=1920">
+<script src="assets/gsap.min.js"></script><link rel="stylesheet" href="assets/base.css"><style>/*{{CSS}}*/
+#card { position: absolute; left: 70px; top: calc(var(--y, 67.2) * 1%); padding: 30px 56px 30px 62px; border-radius: 34px; background: color-mix(in srgb, var(--glass) 72%, transparent); }
+#bar { position: absolute; left: 34px; top: 32px; bottom: 32px; width: 6px; border-radius: 3px; background: var(--acento); transform-origin: 50% 0; }
+#nome { font: 700 50px/1.1 var(--f-texto); color: var(--destaque); white-space: nowrap; }
+#sub { margin-top: 10px; font: 500 34px/1.2 var(--f-texto); color: var(--texto); white-space: nowrap; }
+</style></head><body>
+<div id="root" data-composition-id="main" data-start="0" data-duration="{{DUR}}" data-width="1080" data-height="1920">
+  <div id="card" class="clip" data-start="0" data-duration="{{DUR}}" data-track-index="0"><div id="bar"></div><div id="nome">{{nome}}</div><div id="sub">{{subtitulo}}</div></div>
+</div>
+<script>
+const D = {{DUR}}, tl = gsap.timeline({ paused: true });
+tl.fromTo('#card', { clipPath: 'inset(0 100% 0 0 round 34px)', x: -30 }, { clipPath: 'inset(0 0% 0 0 round 34px)', x: 0, duration: 0.7, ease: 'expo.out' }, 0);
+tl.fromTo('#bar', { scaleY: 0 }, { scaleY: 1, duration: 0.5, ease: 'power4.out' }, 0.1);
+tl.fromTo('#nome', { opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0px)', duration: 0.2, ease: 'power4.out' }, 0.15);
+tl.fromTo('#sub', { opacity: 0, filter: 'blur(6px)' }, { opacity: 1, filter: 'blur(0px)', duration: 0.2, ease: 'power4.out' }, 0.27);
+tl.to('#card', { opacity: 0, x: -20, duration: 0.3, ease: 'power3.in' }, D - 0.32);
+window.__timelines['main'] = tl; tl.seek(0);
+</script></body></html>
