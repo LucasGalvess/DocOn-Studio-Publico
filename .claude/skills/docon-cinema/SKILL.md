@@ -251,8 +251,7 @@ Use quando o projeto tiver `formato: "podcast"` (estilo "Podcast · conversa a d
 
 Animações de estúdio renderizadas de verdade e sobrepostas ao vídeo (PNG com transparência, 1080x1920, 30 fps):
 - **Hyperframes:** HTML + GSAP, da HeyGen, Apache 2.0. É o motor padrão.
-- **Remotion:** React.
-  - **Licença:** grátis para pessoa física, ONG e empresa de até 3 funcionários. Acima disso exige a licença de empresa (remotion.pro). Confirme com a DocOn antes de usar em trabalho de cliente.
+- **Remotion:** React. Liberado para a DocOn pela licença gratuita: empresa com 1 funcionário, confirmado em 06/11/2026; a licença gratuita vale até 3 funcionários. Se a equipe passar de 3, é preciso a licença de empresa (remotion.pro).
 
 - **Bloco `motion`** (Studio: trilha "Motion", com prévia simplificada):
   - `motor`: `hyperframes` ou `remotion`;
@@ -272,7 +271,8 @@ Animações de estúdio renderizadas de verdade e sobrepostas ao vídeo (PNG com
   - `{{DUR}}`, `{{campo}}` e `{{campo_json}}` são trocados pelo `motion.py`.
   - Passe o caminho da pasta como `modelo`. Referência: `npx hyperframes docs` em `~/.docon/motion`.
 - **Uso:** de 1 a 3 por vídeo, no momento-chave (dado forte, frase-tese, passo a passo). Não repita o mesmo modelo em seguida e só use dados ditos ou informados.
-- **Instalação:** `setup.sh` instala `hyperframes` e `gsap` em `~/.docon/motion`. Para o Remotion, rode `DOCON_REMOTION=1 bash scripts/setup.sh`.
+- **Instalação:** `setup.sh` instala `hyperframes`, `gsap` e `remotion` em `~/.docon/motion`. Para pular o Remotion, rode `DOCON_REMOTION=0`.
+- **Escolha do motor:** Hyperframes para os quatro modelos e composições HTML; Remotion para animações com física de mola e composições React. Os dois saem com a mesma qualidade e transparência.
 
 ## Ofício de movimento e revisão (aprendido do HyperFrames)
 

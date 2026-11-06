@@ -10,9 +10,9 @@ uso:
   MODELO = nome de um modelo (assinatura, titulo_cinetico, numero, lista) ou o caminho de uma pasta Hyperframes
            com index.html (composição própria, seguindo o contrato do Hyperframes).
 
-Instalação (setup.sh): ~/.docon/motion/node_modules com hyperframes + gsap; Remotion só com DOCON_REMOTION=1.
-Licenças: Hyperframes é Apache 2.0. Remotion é gratuito para pessoa física, ONG e empresa de até 3 funcionários;
-acima disso exige a licença de empresa (remotion.pro). Confira antes de usar o motor remotion em trabalho de cliente.
+Instalação (setup.sh): ~/.docon/motion/node_modules com hyperframes + gsap + remotion (DOCON_REMOTION=0 pula o Remotion).
+Licenças: Hyperframes é Apache 2.0. Remotion: a DocOn usa a licença gratuita (empresa com 1 funcionário, confirmado em
+06/11/2026; a gratuita vale até 3 funcionários). Se a equipe passar de 3, é preciso a licença de empresa (remotion.pro).
 """
 import hashlib, html, json, os, re, shutil, subprocess, sys, glob
 
@@ -89,7 +89,7 @@ def render(modelo, saida=None, motor=None, dur=3.0, vars_=None, estilo=None, y=N
         if r.returncode != 0: sys.exit('hyperframes falhou:\n' + (r.stdout + r.stderr)[-2500:])
     elif motor == 'remotion':
         if modelo not in REMOTION: sys.exit(f'modelo {modelo} não existe no motor remotion (tem: {", ".join(sorted(REMOTION))})')
-        if not os.path.isdir(os.path.join(HOME, 'node_modules', '@remotion', 'cli')): sys.exit('Remotion não instalado: rode DOCON_REMOTION=1 bash scripts/setup.sh')
+        if not os.path.isdir(os.path.join(HOME, 'node_modules', '@remotion', 'cli')): sys.exit('Remotion não instalado: rode bash scripts/setup.sh')
         proj = os.path.join(HOME, 'remotion'); shutil.rmtree(proj, ignore_errors=True); shutil.copytree(os.path.join(MOT, 'remotion'), proj)
         os.makedirs(os.path.join(proj, 'public'), exist_ok=True); _fontes(estilo, os.path.join(proj, 'public'))
         props = {**vars_, **cores, 'duracao': dur, **({'y': float(y)} if y not in (None, '') else {})}

@@ -29,13 +29,13 @@ if [ ! -f Montserrat-800.ttf ]; then
 fi
 # os scripts procuram as fontes em scripts/fonts → link
 [ -e "$SCR/fonts" ] || ln -s $D/fonts "$SCR/fonts"
-# motion graphics: Hyperframes (HTML + GSAP, Apache 2.0) sempre; Remotion (React) só com DOCON_REMOTION=1 (licença: grátis até 3 funcionários)
+# motion graphics: Hyperframes (HTML + GSAP, Apache 2.0) e Remotion (React; DocOn na licença gratuita: 1 funcionário, limite 3). DOCON_REMOTION=0 pula o Remotion
 M=$HOME/.docon/motion; mkdir -p $M
 [ -f $M/package.json ] || echo '{"name":"docon-motion","private":true}' > $M/package.json
 if [ ! -x $M/node_modules/.bin/hyperframes ] && command -v npm >/dev/null; then
   (cd $M && npm i --no-audit --no-fund hyperframes@0.9.17 gsap@3.15.0 >/dev/null 2>&1) || echo "aviso: não instalei o hyperframes (sem npm/rede)"
 fi
-if [ "${DOCON_REMOTION:-0}" = "1" ] && [ ! -x $M/node_modules/.bin/remotion ]; then
+if [ "${DOCON_REMOTION:-1}" = "1" ] && [ ! -x $M/node_modules/.bin/remotion ]; then
   (cd $M && npm i --no-audit --no-fund remotion@4.0.541 @remotion/cli@4.0.541 react@18.3.1 react-dom@18.3.1 >/dev/null 2>&1) || echo "aviso: não instalei o remotion"
 fi
 echo "DocOn Cinema pronto: modelos em $D/models, fontes em $D/fonts"
