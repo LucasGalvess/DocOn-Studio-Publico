@@ -50,6 +50,23 @@ O texto chega como "[Artifact comment sent to Claude]" e começa com `[DocOn Stu
    - **Busca online / Gerar com IA** ("Busque mídia online: buscas/<id>…" ou "Gere com IA (Magnific): buscas/<id>…"): leia `buscas/<id>` (`q`, `midia`, `fontes` ou `prompt`); rode `python3 .claude/skills/docon-cinema/scripts/buscar_midia.py buscar "<q>" --tipo <midia> --fontes <fontes> --n 8 --saida <pasta>` (ou `… gerar "<prompt>" --saida <pasta>`); converta áudio para MP4 só de áudio (o armazenamento não aceita MP3); suba os arquivos com `Artifact` `asset:true` (até 25 por chamada); grave em `buscas/<id>`: `itens` = [{asset_id, tipo, titulo, fonte, autor, licenca, pagina, duracao, origem, prompt}] e `status: "pronto"` (ou `erro` com o motivo: chave ausente, host bloqueado). Não grave no banco: quem aprova é a equipe, no Studio. Chaves no ambiente: MAGNIFIC_API_KEY, PEXELS_API_KEY, PIXABAY_API_KEY, FREESOUND_API_KEY (Openverse sem chave); os hosts precisam estar liberados na rede do ambiente.
    - **Mensagem com anexos:** uma mensagem pode terminar com `[Anexos desta mensagem, em projetos/<pid>.anexos: <id> "<nome>" (tipo, asset <id> | arquivo só no computador…)]`. Esses arquivos foram enviados JUNTO com o pedido, e "este arquivo" ou "esta foto" se refere a eles. Baixe-os antes de responder.
    - **Anexos do projeto:** a equipe anexa imagens, vídeos, áudios e documentos em Direção › Anexos (`projetos/<pid>.anexos`). Quando o pedido citar anexos ("usa a foto que anexei", "segue o roteiro do PDF"), leia `anexos[].texto` dos documentos e baixe imagens e vídeos com `Artifact` `read` + `path: <asset_id>`. Para pôr um anexo no vídeo, crie um bloco `broll` com `anexo: <id>`, `arquivo: <nome>` e `local` copiado do anexo (assim o Studio mostra o original do computador). Anexo sem `asset_id` existe só no computador de quem anexou: diga isso e peça o arquivo.
+   - **Animação** ("Gere a ANIMAÇÃO do projeto <pid> (espaço de Animação)…"):
+     1. Leia `projetos/<pid>`. O que vale:
+        - `anim`: `pedido`, `fmt` (9:16, 1:1, 4:5 ou 16:9), `dur`, `fundo` {tipo: cor, gradiente ou transparente} e `motor` (auto, hyperframes ou remotion);
+        - os blocos da timeline, que servem de referência;
+        - a identidade do cliente em `clientes/<cliente>.identidade` (logo, paleta, fontes, notas, materiais).
+        Baixe a logo (`Artifact` `read` + `path` = asset id).
+     2. Siga a skill `docon-cinema`, seção "Espaço de Animação":
+        - crie a composição sob medida para o pedido (Hyperframes por padrão; Remotion quando o pedido pedir física de mola ou React);
+        - prepare com `motion.py preparar` e renderize o MP4 com `motion.py video`;
+        - com fundo transparente, renderize também o MOV com `--formato mov`;
+        - confira os quadros antes de subir.
+     3. Suba o vídeo com `Artifact` `asset:true` no Studio (até 20 MB; acima disso, reduza a taxa de bits).
+     4. Grave com `update` + `if_version`:
+        - `projetos/<pid>.anim.renders` += {asset_id, alpha_asset_id?, dur, motor, rotulo, pedido, t};
+        - `anim.status` = "Pronta: <rótulo>".
+        O projeto passa a usar a animação como vídeo base quando a equipe clicar em "Usar no projeto". Não grave `bruto` sem a equipe pedir.
+     5. Responda no canal com o que foi feito e o que ajustar.
    - **Voz da DocOn** ("Gere a narração … narracoes/<projeto>"): leia o documento com `ArtifactData` `get` (salve com `out_dir`), rode `python3 .claude/skills/docon-cinema/scripts/narracao.py <doc.json> <pasta>`, converta cada MP3 em MP4 só de áudio (`ffmpeg -i x.mp3 -c:a aac x.mp4`, o banco não aceita MP3), suba com `Artifact` `asset:true` (até 25 por chamada) e grave `itens.<id> = {texto, base, asset_id}` e `status: "pronto"` com `update` + `if_version`. O perfil está em `config/voz.perfil`.
 3. **Responder no Studio.** `set` em `canal/<cid>/msgs/m-<epoch>-claude` = `{de: "claude", texto: "<resposta curta, humana, em pt-BR, ≤ 1500 caracteres>", t, em_resposta: "<mid>"}`.
 4. **Responder no comentário.** `ArtifactComments` `reply` no `thread_id` do comentário com a mesma resposta (ou um resumo de 1 linha), para ela ficar visível também nos comentários do claude.ai.

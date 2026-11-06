@@ -274,6 +274,30 @@ Animações de estúdio renderizadas de verdade e sobrepostas ao vídeo (PNG com
 - **Instalação:** `setup.sh` instala `hyperframes`, `gsap` e `remotion` em `~/.docon/motion`. Para pular o Remotion, rode `DOCON_REMOTION=0`.
 - **Escolha do motor:** Hyperframes para os quatro modelos e composições HTML; Remotion para animações com física de mola e composições React. Os dois saem com a mesma qualidade e transparência.
 
+## Espaço de Animação (projeto sem vídeo: logo animado, vinheta, abertura)
+
+- **No Studio:** é um projeto com `formato: "animacao"` e `anim = {fmt: 9:16|1:1|4:5|16:9, dur, fundo {tipo, cor, cor2}, pedido, motor, renders[]}`.
+  - Os modelos de logo da trilha Motion já animam na prévia e na exportação do próprio Studio: `logo_revelar`, `logo_brilho` e `logo_mascara`, com `variaveis {logo, slogan, tam}`.
+  - O sob medida vem do pedido em texto ("Gerar com a skill").
+- **Como gerar o sob medida:**
+  1. **Leia o pedido como direção de arte.** Transforme o pedido em uma sequência de momentos, com tempo e movimento de cada um, usando os critérios de "Ofício de movimento".
+  2. **Prepare a pasta:** `python3 scripts/motion.py preparar PASTA --estilo estilo.json --logo logo.png`. Ele copia o GSAP, a base DocOn, as fontes do estilo, as cores (`assets/cores.css`, com `--glass`, `--texto`, `--destaque` e `--acento`) e a logo (`assets/logo.png`).
+  3. **Escreva `PASTA/index.html`** no contrato do Hyperframes:
+     - `data-width` e `data-height` do formato;
+     - `data-duration`;
+     - `class="clip"` em cada elemento;
+     - uma timeline GSAP pausada em `window.__timelines['main']`.
+     - Logo em SVG com traço: use `stroke-dasharray` para o "desenhar".
+     - Fundo transparente: nenhum elemento de fundo.
+  4. **Renderize:** `python3 scripts/motion.py video PASTA saida.mp4` e, para transparência, `--formato mov` (ProRes 4444).
+     - No Remotion: `python3 scripts/motion.py remotion-video ENTRADA.jsx COMP saida.mp4 [--alpha]`, com a pasta da entrada contendo o React.
+  5. **Confira os quadros** (início, meio e fim) e suba para o Studio (protocolo da skill `abrir-docon-studio`).
+- **Regras:**
+  - siga a identidade do cliente; nada de cor ou fonte fora dela;
+  - deixe o logo parado e legível pelo menos 1 s no fim;
+  - mantenha a duração pedida;
+  - use som só se pedirem.
+
 ## Ofício de movimento e revisão (aprendido do HyperFrames)
 
 Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos quadro a quadro nos filmes deles, adaptados ao reels DocOn.

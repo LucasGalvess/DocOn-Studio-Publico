@@ -186,7 +186,8 @@ textarea.dropon{outline:2px dashed var(--accent);outline-offset:2px}
 .stpill[data-s="alteração pedida"]{color:var(--bad);border-color:color-mix(in srgb,var(--bad) 50%,var(--line))}
 .stpill[data-s="aprovado"]{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 50%,var(--line))}
 /* efeitos ao vivo na prévia */
-.phone.pick{cursor:crosshair}.g-motion{position:absolute;left:6.5cqw;right:6.5cqw;outline:.3cqw dashed rgba(156,143,214,.8);outline-offset:1cqw;border-radius:2cqw}.g-motion-tag{position:absolute;right:0;top:-4.2cqw;font:600 2.2cqw Figtree,sans-serif;color:#fff;background:#6f62b5;padding:.4cqw 1.2cqw;border-radius:1cqw}
+.phone.pick{cursor:crosshair}.g-logoa{position:absolute;left:0;right:0;transform:translateY(-50%)}
+.g-motion{position:absolute;left:6.5cqw;right:6.5cqw;outline:.3cqw dashed rgba(156,143,214,.8);outline-offset:1cqw;border-radius:2cqw}.g-motion-tag{position:absolute;right:0;top:-4.2cqw;font:600 2.2cqw Figtree,sans-serif;color:#fff;background:#6f62b5;padding:.4cqw 1.2cqw;border-radius:1cqw}
 .g-tx{position:absolute;left:6.5cqw;right:6.5cqw;white-space:normal;transform-origin:50% 50%;overflow-wrap:anywhere}.g-tx.box{background:color-mix(in srgb,var(--v-glass) 55%,transparent);border-radius:2.4cqw;padding:2.2cqw 3cqw}
 .ovl.somb .g-tx,.ovl.somb .g-lt,.ovl.somb .g-panel,.ovl.somb .g-cap,.ovl.somb .g-hook{text-shadow:0 .55cqw 1.8cqw rgba(0,0,0,var(--tsh,.5))}
 .zseg{position:absolute;inset:0;pointer-events:none;z-index:6}.zseg i{position:absolute;background:repeating-linear-gradient(135deg,rgba(255,80,80,.28) 0 6px,rgba(255,80,80,.12) 6px 12px);outline:1px dashed rgba(255,120,120,.9)}.zseg .zt{left:0;right:0;top:0;height:8.75%}.zseg .zb{left:0;right:0;bottom:0;height:18.75%}.zseg .zr{right:0;width:12%;top:52%;bottom:18.75%}.zseg span{position:absolute;left:8px;top:9.5%;font:700 10px Figtree,sans-serif;color:#ffb3b3;text-shadow:0 1px 2px #000}.phone video{transform-origin:50% 45%;will-change:transform,filter}
@@ -643,6 +644,7 @@ function renderProj() {
     <div class="f"><label for="p_kw">Palavras-chave da legenda (vírgula)</label><textarea id="p_kw" rows="2" placeholder="osteoartrite, qualidade de vida, 1x ao mês">${esc(p.legenda.palavras_chave)}</textarea></div>
     <div class="f"><label for="p_tr">Trilha do banco</label><select id="p_tr"><option value="">(gerada pelo editor)</option>${Object.entries(S.bank).filter(([, v]) => v.tipo === 'trilha').map(([id, v]) => `<option value="${id}" ${id === p.musica.banco_id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
     ${p.formato === 'podcast' ? podcastHTML(p) : ''}
+    ${ehAnim(p) ? animHTML(p) : ''}
     ${identHTML(p)}
     ${capaHTML(p)}
     ${feedHTML(p)}
@@ -664,7 +666,7 @@ function renderProj() {
   el.querySelectorAll('[data-vap]').forEach((b) => b.onclick = async () => { const v = p.versoes.find((x) => x.asset_id === b.dataset.vap); try { const tk = await sendForApproval(p, v); openShare(tk); } catch (e) { toast('Não foi possível criar o link (sem permissão de escrita)'); } });
   document.getElementById('addFile').onclick = () => { p.arquivos.push({nome: '', papel: 'broll', obs: ''}); touch(); renderProj(); };
   document.getElementById('delProj').onclick = () => openDeleteProject(S.cur);
-  wireCapa(p); wireFeed(p); wirePodcast(p); wireIdent(p);
+  wireCapa(p); wireFeed(p); wirePodcast(p); wireIdent(p); wireAnim(p);
 }
 /* ======================= formato podcast (conversa a dois) =======================
    p.locutores = [{nome, papel}] (quem pergunta e quem responde; assinatura de cada um na 1ª vez que fala)
@@ -1091,8 +1093,10 @@ function renderInsp() {
   if (b.tipo === 'motion') { const mm = MOTION_MODELOS[b.modelo] || MOTION_MODELOS.titulo_cinetico; const v = b.variaveis || (b.variaveis = {});
     body = `<div class="row2"><div class="f"><label for="b_mmo">Modelo</label><select id="b_mmo">${Object.entries(MOTION_MODELOS).map(([k, m]) => `<option value="${k}" ${k === b.modelo ? 'selected' : ''}>${m.n}</option>`).join('')}</select></div>
       <div class="f"><label for="b_mmt">Motor</label><select id="b_mmt"><option value="hyperframes" ${b.motor !== 'remotion' ? 'selected' : ''}>Hyperframes (HTML)</option>${mm.remotion ? `<option value="remotion" ${b.motor === 'remotion' ? 'selected' : ''}>Remotion (React)</option>` : ''}</select></div></div>
-      ${mm.campos.map(([k, n]) => k === 'itens' ? `<div class="f"><label for="b_mv_${k}">${n}</label><textarea id="b_mv_${k}" rows="3" data-mv="${k}">${esc((Array.isArray(v.itens) ? v.itens : []).join('\n'))}</textarea></div>` : `<div class="f"><label for="b_mv_${k}">${n}</label><input id="b_mv_${k}" data-mv="${k}" value="${esc(v[k] ?? '')}"></div>`).join('')}
-      <p class="hint">Animação de motion graphics com as cores e fontes do estilo. A prévia aqui é simplificada: o editor (skill) renderiza a animação de verdade com Hyperframes ou Remotion na versão final. A exportação pelo navegador não inclui este bloco.</p>`; }
+      ${mm.campos.map(([k, n]) => k === 'logo' ? `<div class="f"><span class="lbl" style="font-size:12px;font-weight:600;color:var(--muted)">${n}</span><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="width:96px;height:48px;border-radius:8px;background:repeating-conic-gradient(#3a3533 0 25%,#2a2624 0 50%) 0 0/12px 12px;display:grid;place-items:center">${logoSrcB(b, p) ? `<img src="${esc(logoSrcB(b, p))}" alt="Logo" style="max-width:90px;max-height:44px;object-fit:contain">` : '<span class="hint">sem logo</span>'}</span><button class="btn sm" type="button" id="b_mlogoB">Enviar logo</button><input id="b_mlogoF" type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" hidden>${identDe(p)?.logo_asset ? '<button class="btn sm ghost" type="button" id="b_mlogoI">Usar a logo da identidade</button>' : ''}</div><span class="hint">PNG com fundo transparente fica melhor. Sem logo escolhida, usa a da identidade do cliente.</span></div>`
+        : k === 'tam' ? `<div class="f"><label for="b_mv_tam">${n}</label><input id="b_mv_tam" type="number" min="10" max="95" step="1" data-mv="tam" value="${numOk(v.tam) ? +v.tam : 60}"></div>`
+        : k === 'itens' ? `<div class="f"><label for="b_mv_${k}">${n}</label><textarea id="b_mv_${k}" rows="3" data-mv="${k}">${esc((Array.isArray(v.itens) ? v.itens : []).join('\n'))}</textarea></div>` : `<div class="f"><label for="b_mv_${k}">${n}</label><input id="b_mv_${k}" data-mv="${k}" value="${esc(v[k] ?? '')}"></div>`).join('')}
+      ${mm.logo ? '<p class="hint">Modelo de logo: a prévia e a exportação do Studio já mostram a animação de verdade. A skill também renderiza com fundo transparente (MOV ProRes 4444).</p>' : ''}<p class="hint" ${mm.logo ? 'hidden' : ''}>Animação de motion graphics com as cores e fontes do estilo. A prévia aqui é simplificada: o editor (skill) renderiza a animação de verdade com Hyperframes ou Remotion na versão final. A exportação pelo navegador não inclui este bloco.</p>`; }
   if (b.tipo === 'texto') body = `<div class="f"><label for="b_txt">Texto (Enter quebra a linha)</label><textarea id="b_txt" rows="3" data-k="texto" placeholder="Um dia na rotina da clínica">${esc(b.texto)}</textarea></div>
     <div class="row2"><div class="f"><label for="b_anim">Entrada</label><select id="b_anim" data-k="animacao">${TX_ANIM.map(([k, n]) => `<option value="${k}" ${k === (b.animacao || 'escrever') ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     <div class="f"><label for="b_sai">Saída</label><select id="b_sai" data-k="saida">${TX_SAIDA.map(([k, n]) => `<option value="${k}" ${k === (b.saida || 'opacidade') ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
@@ -1141,7 +1145,11 @@ function renderInsp() {
     const mo = document.getElementById('b_mmo'), mt = document.getElementById('b_mmt');
     mo.onchange = () => { b.modelo = mo.value; if (!MOTION_MODELOS[b.modelo].remotion) b.motor = 'hyperframes'; touch('p', S.cur, 'Modelo de motion'); renderInsp(); renderStage(); renderTL(); };
     mt.onchange = () => { b.motor = mt.value; touch('p', S.cur, 'Motor de motion'); renderStage(); };
-    el.querySelectorAll('[data-mv]').forEach((e) => e.addEventListener('input', () => { const k = e.dataset.mv; b.variaveis = b.variaveis || {}; b.variaveis[k] = k === 'itens' ? e.value.split('\n').map((x) => x.trim()).filter(Boolean) : k === 'valor' ? (numOk(e.value.replace(',', '.')) ? +e.value.replace(',', '.') : e.value) : e.value; touch(); renderStage(); renderTL(); }));
+    const lb = document.getElementById('b_mlogoB'), lf = document.getElementById('b_mlogoF'), li = document.getElementById('b_mlogoI');
+    if (lb) lb.onclick = () => lf.click();
+    if (lf) lf.onchange = async () => { const f = lf.files[0]; if (!f || !assetsApi) { if (!assetsApi) toast('Sem armazenamento de arquivos nesta página'); return; } try { toast('Enviando a logo…'); const r = await assetsApi.upload(await logoPng(f), {type: 'image/png'}); b.variaveis = {...(b.variaveis || {}), logo: r.id}; touch('p', S.cur, 'Logo da animação'); renderInsp(); renderStage(); } catch (e) { toast('Não consegui enviar: ' + (e.message || e)); } };
+    if (li) li.onclick = () => { b.variaveis = {...(b.variaveis || {}), logo: identDe(p).logo_asset}; touch('p', S.cur, 'Logo da identidade'); renderInsp(); renderStage(); };
+    el.querySelectorAll('[data-mv]').forEach((e) => e.addEventListener('input', () => { const k = e.dataset.mv; b.variaveis = b.variaveis || {}; b.variaveis[k] = k === 'itens' ? e.value.split('\n').map((x) => x.trim()).filter(Boolean) : k === 'tam' ? (numOk(e.value) ? +e.value : 60) : k === 'valor' ? (numOk(e.value.replace(',', '.')) ? +e.value.replace(',', '.') : e.value) : e.value; touch(); renderStage(); renderTL(); }));
   }
   const pk = document.getElementById('b_pick'); if (pk) pk.onclick = () => { S.pickFoco = S.pickFoco === b.id ? null : b.id; document.getElementById('phone').classList.toggle('pick', !!S.pickFoco); if (S.pickFoco && (S.t < b.inicio + 0.5 || S.t >= b.fim)) seek(b.inicio + Math.min(1.2, (b.fim - b.inicio) / 2)); renderInsp(); };
   for (const [id, k, lo, hi] of [['b_esc', 'escala', 40, 160], ['b_tpx', 'texto_px', 12, 240]]) { const inp = document.getElementById(id); if (!inp) continue;
@@ -1203,14 +1211,117 @@ const numOk = (v) => v !== '' && v != null && Number.isFinite(+v) && +v > 0;
 /* sombras do estilo (o projeto pode sobrepor em p.sombras): texto = sombra atrás de todo texto; geral = escurece o vídeo */
 function sombrasOf(p) { const t = tplOf(p); const sm = {...(t?.sombras || {}), ...(p?.sombras || {})}; const n = (v) => numOk(v) ? Math.min(100, Math.max(0, +v)) / 100 : 0; return {texto: n(sm.texto), geral: n(sm.geral)}; }
 const ehDinamico = (p) => (p?.formato || tplOf(p)?.formato) === 'dinamico';
+/* ======================= ESPAÇO DE ANIMAÇÃO (projeto sem vídeo: logo animado, vinheta, abertura) =======================
+   formato "animacao": p.anim = {fmt: '9:16'|'1:1'|'4:5'|'16:9', dur, fundo: {tipo: 'cor'|'gradiente'|'transparente', cor, cor2}}.
+   A prévia e a exportação do Studio desenham os modelos de logo de verdade; a skill renderiza também com fundo transparente. */
+const ANIM_FMT = {'9:16': [1080, 1920, 'Vertical 9:16 (Reels, Stories)'], '1:1': [1080, 1080, 'Quadrado 1:1 (feed)'], '4:5': [1080, 1350, 'Retrato 4:5 (feed)'], '16:9': [1920, 1080, 'Horizontal 16:9 (YouTube, apresentação)']};
+const ehAnim = (p) => p?.formato === 'animacao';
+const animSemVideo = (p) => ehAnim(p) && !p?.bruto?.asset_id && !p?.bruto_local;     // animação ainda sem render da skill: o Studio desenha o fundo e os logos
+function animDims(p) { const f = ANIM_FMT[p?.anim?.fmt] || ANIM_FMT['9:16']; return [f[0], f[1]]; }
+function animFundo(p) { const fu = p?.anim?.fundo || {}; const pl = {...PAL_DEF, ...(tplOf(p)?.paleta || {})}; return {tipo: fu.tipo || 'cor', cor: fu.cor || pl.glass, cor2: fu.cor2 || pl.grad2}; }
+function animFundoCss(p) { const f = animFundo(p); return f.tipo === 'transparente' ? 'repeating-conic-gradient(#3a3533 0 25%,#2a2624 0 50%) 0 0/22px 22px' : f.tipo === 'gradiente' ? `linear-gradient(160deg,${f.cor},${f.cor2})` : f.cor; }
+function animStage(p) {      // palco no formato da animação, sem vídeo
+  const ph = document.getElementById('phone'), vid = document.getElementById('vid'), plh = document.getElementById('ph');
+  if (!animSemVideo(p)) { if (ph.dataset.anim && !ehAnim(p)) { ph.style.aspectRatio = ''; ph.style.background = ''; ph.style.height = ''; ph.style.width = ''; delete ph.dataset.anim; } if (ehAnim(p)) { const [w2, h2] = animDims(p); ph.dataset.anim = '1'; ph.style.aspectRatio = `${w2}/${h2}`; ph.style.background = '#000'; if (w2 > h2) { ph.style.height = 'auto'; ph.style.width = '100%'; } } return; }
+  const [w, h] = animDims(p); ph.dataset.anim = '1'; ph.style.aspectRatio = `${w}/${h}`; ph.style.background = animFundoCss(p);
+  if (w > h) { ph.style.height = 'auto'; ph.style.width = '100%'; } else { ph.style.height = ''; ph.style.width = ''; }
+  vid.hidden = true; plh.hidden = true;
+}
+/* modelos de logo: estado no instante t (o mesmo na prévia e na exportação) */
+function logoEstado(b, t) {
+  const L = t - b.inicio, D = Math.max(0.5, b.fim - b.inicio); const sai = 1 - (x => x * x * (3 - 2 * x))(cl((t - (b.fim - 0.45)) / 0.45));
+  const o = {op: 1, sc: 1, blur: 0, brilho: -1, revela: 1, slogan: cl((L - 0.75) / 0.55), sdy: 0};
+  o.sdy = (1 - eo(o.slogan)) * 2.4; o.slogan = eo(o.slogan) * sai;
+  if (b.modelo === 'logo_revelar') { const a = eo(L / 0.95); o.sc = 0.82 + 0.18 * a; o.blur = (1 - a) * 14; o.op = a * sai; }
+  else if (b.modelo === 'logo_brilho') { const a = eo(L / 0.6); o.op = a * sai; o.sc = 0.95 + 0.05 * eo(L / 1.0); o.brilho = cl((L - 0.55) / Math.min(1.1, D * 0.4)); }
+  else { o.revela = eo(cl((L - 0.1) / 1.25)); o.op = sai; o.brilho = o.revela < 1 ? -2 : -1; }
+  return o;
+}
+async function criarAnimacao(d) {
+  const t = S.templates[WZ.estilo]; const id = 'p-' + uid(); const p = newProject(t);
+  Object.assign(p, {titulo: d.titulo || 'Animação', formato: 'animacao', direcionamentos: d.aPedido || '', anim: {fmt: d.aFmt, dur: d.aDur, fundo: {tipo: d.aFundo}, pedido: d.aPedido || '', motor: 'auto'}});
+  Object.assign(p.profissional, {nome: d.nome}); p.legenda.estilo = 'nenhuma';
+  S.projects[id] = p; S.cur = id; S.sel = null; S.styleEdit = null;
+  let logo = null;
+  if (d.aLogo && assetsApi) { try { toast('Enviando a logo…'); logo = (await assetsApi.upload(await logoPng(d.aLogo), {type: 'image/png'})).id; } catch (e) { toast('Não consegui enviar a logo: ' + (e.message || e)); } }
+  if (d.aModelo) { const b = defaultBlock('motion', 0.2); Object.assign(b, {modelo: d.aModelo, motor: 'hyperframes', fim: +Math.max(1, d.aDur - 0.1).toFixed(2), variaveis: {tam: 60, slogan: '', ...(logo ? {logo} : {})}}); p.blocos.push(b); S.sel = b.id; }
+  touch('p', id, 'Criar animação'); document.getElementById('modalRoot').innerHTML = ''; S.media.proj = null; loadProjectMedia(); renderAll(); document.getElementById('tabProj')?.click();
+  if (d.aEnviar && (d.aPedido || '').trim()) {
+    const ok = await askSession(`Gere a ANIMAÇÃO do projeto ${id} (espaço de Animação): leia projetos/${id}.anim (pedido, formato ${d.aFmt}, ${d.aDur} s, fundo ${d.aFundo}), a identidade do cliente${logo ? ' e a logo enviada (asset ' + logo + ')' : ''}. Crie a composição sob medida (Hyperframes ou Remotion), renderize, suba o MP4${d.aFundo === 'transparente' ? ' e o MOV com transparência' : ''} e registre em projetos/${id}.anim.renders. Pedido: ${d.aPedido}`, 'Pedido enviado: a skill vai gerar a animação');
+    p.anim.status = ok ? 'Pedido enviado. A animação aparece aqui quando a skill terminar.' : 'Pedido não enviado: ' + (S.askErr || 'sem sessão ligada') + '. Use “Gerar com a skill” depois.'; touch('p', id, 'Pedir animação'); renderProj();
+  }
+}
+function animHTML(p) {
+  const a = p.anim || {}; const fu = animFundo(p); const rs = (a.renders || []).slice().reverse();
+  return `<div class="card" id="animCard"><b>Animação</b>
+    <div class="row2"><div class="f"><label for="anFmt">Formato da tela</label><select id="anFmt">${Object.entries(ANIM_FMT).map(([k, v]) => `<option value="${k}" ${k === (a.fmt || '9:16') ? 'selected' : ''}>${v[2]}</option>`).join('')}</select></div>
+    <div class="f"><label for="anDur">Duração (s)</label><input id="anDur" type="number" min="1" max="60" step="0.5" value="${+a.dur || 6}"></div></div>
+    <div class="row2"><div class="f"><label for="anFu">Fundo</label><select id="anFu">${[['cor', 'Cor sólida'], ['gradiente', 'Degradê'], ['transparente', 'Transparente (para sobrepor)']].map(([k, n]) => `<option value="${k}" ${k === fu.tipo ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    <div class="f"><label for="anMot">Motor</label><select id="anMot">${[['auto', 'A skill escolhe'], ['hyperframes', 'Hyperframes (HTML + GSAP)'], ['remotion', 'Remotion (React)']].map(([k, n]) => `<option value="${k}" ${k === (a.motor || 'auto') ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>
+    <div class="row2" ${fu.tipo === 'transparente' ? 'hidden' : ''}><div class="f"><label for="anC1_hex">Cor</label>${corCampo('anC1', fu.cor)}</div><div class="f" ${fu.tipo === 'gradiente' ? '' : 'hidden'}><label for="anC2_hex">Segunda cor</label>${corCampo('anC2', fu.cor2)}</div></div>
+    <div class="f"><label for="anPed">Como você quer a animação</label><textarea id="anPed" rows="5" placeholder="Ex.: o logo se desenha em traço dourado, como uma assinatura; depois as letras preenchem com a cor da marca, um brilho passa da esquerda para a direita e o slogan sobe suave embaixo. Clima elegante, 6 segundos.">${esc(a.pedido || '')}</textarea></div>
+    <p class="hint">A skill cria a animação sob medida com Hyperframes ou Remotion, nas cores, fontes e logo da identidade do cliente, e devolve o vídeo aqui. Os modelos de logo da trilha Motion servem como ponto de partida ou referência.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><button class="btn pri" type="button" id="anGo">Gerar com a skill</button>${p.bruto?.asset_id ? '<button class="btn sm ghost" type="button" id="anVolta">Voltar à prévia dos modelos</button>' : ''}<span class="hint" id="anSt" role="status">${a.status ? esc(a.status) : ''}</span></div>
+    ${rs.length ? `<p class="h">Animações geradas</p><div style="display:grid;gap:6px">${rs.map((r, i) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13px">${esc(r.rotulo || 'Versão ' + (rs.length - i))}</b><span class="hint">${r.motor ? esc(r.motor) + ' · ' : ''}${new Date(r.t || 0).toLocaleString('pt-BR', {dateStyle: 'short', timeStyle: 'short'})}</span><a class="btn sm ghost" href="/_blob/${esc(r.asset_id)}" download="animacao_${esc(slug(p.titulo || 'docon'))}.mp4">MP4</a>${r.alpha_asset_id ? `<a class="btn sm ghost" href="/_blob/${esc(r.alpha_asset_id)}" download="animacao_${esc(slug(p.titulo || 'docon'))}_transparente.mov">MOV transparente</a>` : ''}<button class="btn sm" type="button" data-anuse="${esc(r.asset_id)}">Usar no projeto</button></div>`).join('')}</div>` : ''}</div>`;
+}
+function wireAnim(p) {
+  const $ = (id) => document.getElementById(id); if (!$('animCard')) return; const pid = S.cur;
+  const set = (fn, rot) => { p.anim = p.anim || {}; fn(p.anim); touch('p', pid, rot); renderTL(); renderStage(); };
+  $('anFmt').onchange = () => set((a) => a.fmt = $('anFmt').value, 'Formato da animação');
+  $('anDur').onchange = () => set((a) => a.dur = Math.min(60, Math.max(1, +$('anDur').value || 6)), 'Duração da animação');
+  $('anFu').onchange = () => { set((a) => a.fundo = {...animFundo(p), tipo: $('anFu').value}, 'Fundo da animação'); renderProj(); };
+  $('anMot').onchange = () => set((a) => a.motor = $('anMot').value, 'Motor da animação');
+  for (const [id, k] of [['anC1', 'cor'], ['anC2', 'cor2']]) { const e = $(id); if (e) e.addEventListener('input', () => { const h = hexNorm(e.value); if (h) { p.anim = p.anim || {}; p.anim.fundo = {...animFundo(p), [k]: h}; touch(); renderStage(); } }); }
+  $('anPed').addEventListener('input', () => { p.anim = p.anim || {}; p.anim.pedido = $('anPed').value; touch(); });
+  $('anPed').addEventListener('change', () => touch('p', pid, 'Pedido da animação'));
+  $('anGo').onclick = async () => { const a = p.anim || {}; if (!(a.pedido || '').trim()) { toast('Escreva como você quer a animação'); $('anPed').focus(); return; }
+    $('anSt').textContent = 'Enviando o pedido para a skill…';
+    const ok = await askSession(`Gere a ANIMAÇÃO do projeto ${pid} (espaço de Animação): leia projetos/${pid}.anim (pedido, formato ${a.fmt || '9:16'}, ${+a.dur || 6} s, fundo ${animFundo(p).tipo}, motor ${a.motor || 'auto'}), a identidade do cliente e os blocos da timeline. Crie a composição sob medida (Hyperframes ou Remotion), renderize, suba o MP4${animFundo(p).tipo === 'transparente' ? ' e o MOV com transparência' : ''} e registre em projetos/${pid}.anim.renders. Pedido: ${a.pedido}`, 'Pedido enviado: a skill vai gerar a animação');
+    p.anim = {...(p.anim || {}), status: ok ? 'Pedido enviado em ' + new Date().toLocaleTimeString('pt-BR', {timeStyle: 'short'}) + '. A animação aparece aqui quando a skill terminar.' : 'Não enviado: ' + (S.askErr || 'sem sessão ligada')}; touch('p', pid, 'Pedir animação'); renderProj(); };
+  const volta = $('anVolta'); if (volta) volta.onclick = () => { delete p.bruto; touch('p', pid, 'Voltar à prévia dos modelos'); S.media.proj = null; loadProjectMedia(); renderAll(); };
+  document.querySelectorAll('[data-anuse]').forEach((b) => b.onclick = () => { const r = (p.anim.renders || []).find((x) => x.asset_id === b.dataset.anuse); if (!r) return; p.bruto = {asset_id: r.asset_id, dur: r.dur || +p.anim.dur || 6, nome: 'animacao.mp4', salvo: Date.now()}; touch('p', pid, 'Usar animação gerada'); S.media.proj = null; loadProjectMedia(); renderAll(); toast('Animação gerada em uso: dá para pôr textos, sons e aprovar por cima'); });
+}
+function logoSrcB(b, p) { const id = b.variaveis?.logo || identDe(p)?.logo_asset; return id ? '/_blob/' + id : ''; }
+function logoPrevHTML(b, p, t) {
+  const st = t == null ? {op: 1, sc: 1, blur: 0, brilho: -1, revela: 1, slogan: 1, sdy: 0} : logoEstado(b, t); const v = b.variaveis || {}; const src = logoSrcB(b, p);
+  const tam = numOk(v.tam) ? Math.min(95, Math.max(10, +v.tam)) : 60; const y = numOk(b.pos_y) ? +b.pos_y : 50;
+  const img = src ? `<img src="${esc(src)}" alt="" style="width:100%;display:block;filter:blur(${f2(st.blur / 10)}cqw)">` : `<div style="aspect-ratio:3/1;border:.3cqw dashed rgba(255,255,255,.5);border-radius:2cqw;display:grid;place-items:center;font:600 3cqw Figtree,sans-serif;color:#fff">Logo do cliente</div>`;
+  const shine = st.brilho >= 0 && st.brilho <= 1 && src ? `<div style="position:absolute;inset:0;-webkit-mask:url('${esc(src)}') center/100% 100% no-repeat;mask:url('${esc(src)}') center/100% 100% no-repeat;background:linear-gradient(105deg,transparent ${f2(st.brilho * 160 - 45)}%,rgba(255,255,255,.85) ${f2(st.brilho * 160 - 30)}%,transparent ${f2(st.brilho * 160 - 15)}%)"></div>` : '';
+  const edge = st.brilho === -2 ? `<div style="position:absolute;top:-6%;bottom:-6%;left:${f2(st.revela * 100)}%;width:.8cqw;margin-left:-.4cqw;background:linear-gradient(transparent,var(--v-icon),transparent);box-shadow:0 0 3cqw var(--v-icon);opacity:${f2(Math.sin(Math.PI * st.revela))}"></div>` : '';
+  return `<div class="g-logoa" data-bid="${b.id}" style="top:${y}%;opacity:${f2(st.op)}"><div style="position:relative;width:${tam}%;margin:0 auto;transform:scale(${f2(st.sc)});clip-path:inset(-10% ${f2((1 - st.revela) * 100)}% -10% 0)">${img}${shine}</div>${edge ? `<div style="position:absolute;inset:0;width:${tam}%;margin:0 auto">${edge}</div>` : ''}
+    ${v.slogan ? `<div style="margin-top:3cqw;text-align:center;font:600 ${ANIM_SLOGAN}cqw/1.2 var(--f-text,'Inter'),sans-serif;color:var(--v-text);letter-spacing:.04em;opacity:${f2(st.slogan)};transform:translateY(${f2(st.sdy)}cqw)">${esc(v.slogan)}</div>` : ''}</div>`;
+}
+const ANIM_SLOGAN = 4.4;
+function drawLogoAnim(c, b, p, t, W, H) {        // exportação (canvas): mesmo desenho da prévia
+  const st = logoEstado(b, t); if (st.op <= 0.003) return; const v = b.variaveis || {}; const src = logoSrcB(b, p); const u = W / 100;
+  const tam = (numOk(v.tam) ? Math.min(95, Math.max(10, +v.tam)) : 60) / 100 * W; const y = (numOk(b.pos_y) ? +b.pos_y : 50) / 100 * H;
+  const im = src ? logoImg(src.replace('/_blob/', '')) : null; const ok = im && im.complete && im.naturalWidth;
+  const lw = tam, lh = ok ? lw * im.naturalHeight / im.naturalWidth : lw / 3; const x0 = (W - lw) / 2, y0 = y - lh / 2 - (v.slogan ? 3 * u : 0);
+  c.save(); c.globalAlpha = st.op;
+  if (ok) {
+    const oc = document.createElement('canvas'); oc.width = Math.ceil(lw); oc.height = Math.ceil(lh); const ox = oc.getContext('2d'); ox.drawImage(im, 0, 0, lw, lh);
+    if (st.brilho >= 0 && st.brilho <= 1) { ox.globalCompositeOperation = 'source-atop'; const gx = (st.brilho * 1.6 - 0.3) * lw; const g = ox.createLinearGradient(gx - 0.15 * lw, 0, gx + 0.15 * lw, lh * 0.3); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,.85)'); g.addColorStop(1, 'rgba(255,255,255,0)'); ox.fillStyle = g; ox.fillRect(0, 0, lw, lh); }
+    c.translate(W / 2, y0 + lh / 2); c.scale(st.sc, st.sc); c.translate(-W / 2, -(y0 + lh / 2));
+    if (st.blur > 0.2) c.filter = `blur(${(st.blur / 10 * u).toFixed(1)}px)`;
+    c.beginPath(); c.rect(x0 - lw * 0.1, y0 - lh * 0.1, lw * 1.2 * st.revela - lw * 0.1 * (1 - st.revela), lh * 1.2); c.clip();
+    c.drawImage(oc, x0, y0); c.filter = 'none';
+  }
+  c.restore();
+  if (st.brilho === -2 && ok) { c.save(); c.globalAlpha = Math.sin(Math.PI * st.revela) * st.op; const ex = x0 + st.revela * lw; const pl = {...PAL_DEF, ...(tplOf(p)?.paleta || {})}; const g = c.createLinearGradient(0, y0 - lh * 0.06, 0, y0 + lh * 1.06); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.5, pl.icon); g.addColorStop(1, 'rgba(0,0,0,0)'); c.shadowColor = pl.icon; c.shadowBlur = 3 * u; c.fillStyle = g; c.fillRect(ex - 0.4 * u, y0 - lh * 0.06, 0.8 * u, lh * 1.12); c.restore(); }
+  if (v.slogan && st.slogan > 0.01) { const pl = {...PAL_DEF, ...(tplOf(p)?.paleta || {})}; c.save(); c.globalAlpha = st.slogan; c.fillStyle = pl.text; c.textAlign = 'center'; c.font = `600 ${ANIM_SLOGAN * u}px "${tplOf(p)?.fontes?.texto || 'Inter'}", Inter, sans-serif`; c.fillText(v.slogan, W / 2, y0 + lh + 3 * u + ANIM_SLOGAN * u + st.sdy * u); c.restore(); }
+}
 /* modelos de motion graphics (mesma lista do scripts/motion.py). O Studio mostra uma prévia simplificada; o render real é do editor. */
 const MOTION_MODELOS = {
   assinatura: {n: 'Assinatura (nome + função)', campos: [['nome', 'Nome'], ['subtitulo', 'Função']], remotion: false},
   titulo_cinetico: {n: 'Título cinético', campos: [['titulo', 'Título'], ['destaque', 'Palavra em destaque']], remotion: true},
   numero: {n: 'Número animado', campos: [['valor', 'Valor (ex.: 87 ou 3,5)'], ['prefixo', 'Antes (ex.: R$ )'], ['sufixo', 'Depois (ex.: %)'], ['rotulo', 'Rótulo']], remotion: true},
   lista: {n: 'Lista com checks', campos: [['kicker', 'Kicker'], ['itens', 'Itens (um por linha)']], remotion: false},
+  logo_revelar: {n: 'Logo · revelado (desfoque e escala)', campos: [['logo', 'Logo'], ['slogan', 'Frase abaixo (opcional)'], ['tam', 'Largura do logo (%)']], remotion: false, logo: true},
+  logo_brilho: {n: 'Logo · com brilho', campos: [['logo', 'Logo'], ['slogan', 'Frase abaixo (opcional)'], ['tam', 'Largura do logo (%)']], remotion: false, logo: true},
+  logo_mascara: {n: 'Logo · surgindo (máscara com luz)', campos: [['logo', 'Logo'], ['slogan', 'Frase abaixo (opcional)'], ['tam', 'Largura do logo (%)']], remotion: false, logo: true},
 };
-function motionPrev(b, p, st) {
+function motionPrev(b, p, st, t) {
+  if (MOTION_MODELOS[b.modelo]?.logo) return logoPrevHTML(b, p, t);
   const v = b.variaveis || {}, m = b.modelo || 'titulo_cinetico';
   const y = numOk(b.pos_y) ? +b.pos_y : {assinatura: 67, titulo_cinetico: 38, numero: 36, lista: 50}[m] || 40;
   let inner = '';
@@ -1279,7 +1390,7 @@ function blockHTML(b, p, t) {
     else inner += `${b.titulo ? `<p class="g-title" data-ed="titulo">${esc(b.titulo)}</p>` : ''}${its.map((i, j) => it('g-item', j, `${icon(i.icone)}<span data-ed="itens.${j}.texto">${esc(i.texto)}</span>`)).join('')}`;
     return `<div class="g-panel" data-bid="${b.id}" style="--ts:${f2(tsOf(b))};transform-origin:50% 0;scale:${f2(esOf(b))};translate:${f2(ladoShift(b) * 87)}cqw 0;top:${topPct(b)}%;opacity:${f2(e.k)};transform:translateY(${f2((1 - e.a) * 5 - (1 - e.z) * 3)}cqw) scale(${f2(0.94 + 0.06 * e.a)});filter:blur(${f2((1 - e.a) * 1.2)}cqw)">${inner}</div>`;
   }
-  if (b.tipo === 'motion') return motionPrev(b, p, t == null ? null : {op: Math.min(eo((t - b.inicio) / 0.5), eo((b.fim - t) / 0.3))});
+  if (b.tipo === 'motion') return motionPrev(b, p, t == null ? null : {op: Math.min(eo((t - b.inicio) / 0.5), eo((b.fim - t) / 0.3))}, t);
   if (b.tipo === 'texto') { const st = t == null ? {op: 1, sc: 1, dx: 0, dy: 0, n: String(b.texto || '').length} : txState(b, t); const ld = ladoOf(b) || 'centro'; const px = numOk(b.texto_px) ? +b.texto_px : 72;
     const full = String(b.texto || 'Texto na tela'), txt = full.slice(0, t == null ? undefined : st.n), rest = full.slice(txt.length);   // o resto fica invisível: as linhas não mudam de lugar enquanto escreve
     return `<div class="g-tx${b.fundo ? ' box' : ''}" data-bid="${b.id}" data-ed="texto" style="top:${topPct(b)}%;text-align:${ld === 'esquerda' ? 'left' : ld === 'direita' ? 'right' : 'center'};font:${+b.peso || 800} ${f2(px / 10.8)}cqw/1.18 ${b.fonte === 'texto' ? 'var(--f-text,"Figtree")' : 'var(--f-title,"Montserrat")'},sans-serif;color:${txCor(b, p)};opacity:${f2(st.op)};transform:translate(${f2(st.dx)}cqw,${f2(st.dy)}%) scale(${f2(st.sc)})">${esc(txt).replace(/\n/g, '<br>')}${rest ? `<span style="opacity:0">${esc(rest).replace(/\n/g, '<br>')}</span>` : ''}</div>`; }
@@ -1371,7 +1482,7 @@ function applyLook(p, t) {
 function airDur(p) { const dur = projDur(p); const cuts = p.blocos.filter((b) => b.tipo === 'corte').map((b) => [Math.max(0, b.inicio), Math.min(dur, b.fim)]).sort((a, b) => a[0] - b[0]); let s = 0, end = 0; for (const [a, b] of cuts) { const a2 = Math.max(a, end); if (b > a2) { s += b - a2; end = b; } } return dur - s; }
 function renderStage() {
   if (S.editing) return;
-  applyPalette(); const p = cur(); const ov = document.getElementById('ovl');
+  applyPalette(); const p = cur(); const ov = document.getElementById('ovl'); animStage(p);
   document.getElementById('tc').textContent = fmt(S.t);
   if (!p) { ov.innerHTML = ''; applyLook(null); document.getElementById('durHint').textContent = ''; return; }
   const dur = projDur(p); const ad = airDur(p);
@@ -1398,6 +1509,7 @@ function styleMini(el, t) {
 /* o projeto termina onde o vídeo termina: sem tempo fixo e sem tela preta no fim */
 function projDur(p = cur()) {
   if (!p) return 0;
+  if (animSemVideo(p)) return Math.max(1, +p.anim?.dur || 6);
   if (S.videoDur) return S.videoDur;
   if (p.dur_origem === 'arquivo' && p.duracao_bruto) return +p.duracao_bruto;
   return Math.max(5, p.blocos.reduce((m, b) => Math.max(m, +b.fim || 0), 0));
@@ -1614,7 +1726,7 @@ function buildBrief() {
   const bl = [...p.blocos].sort((a, b) => a.inicio - b.inicio).map((b) => { const c = {...b}; delete c.id; delete c.local; if (c.anexo) { const a = (p.anexos || []).find((x) => x.id === c.anexo); if (a?.asset_id) c.anexo_asset_id = a.asset_id; } return c; });
   return {docon_briefing: 1, gerado_em: new Date().toISOString(), projeto: {titulo: p.titulo, tema: p.tema, formato: p.formato, ...(p.formato === 'podcast' ? {locutores: p.locutores || [], takes: p.takes || []} : {}), duracao_alvo: p.duracao_alvo, duracao_bruto: projDur(p), duracao_no_ar: +airDur(p).toFixed(2),
     profissional: p.profissional, arquivos: p.arquivos.filter((a) => a.nome), direcionamentos: p.direcionamentos, legenda: p.legenda, musica: p.musica,
-    ...(p.logo?.ativo ? {logo: p.logo} : {}), ...(p.sombras ? {sombras: p.sombras} : {}), ...(identDe(p) ? {identidade: identResumo(p, 6000)} : {})},
+    ...(p.logo?.ativo ? {logo: p.logo} : {}), ...(p.sombras ? {sombras: p.sombras} : {}), ...(ehAnim(p) ? {animacao: {...p.anim, dimensoes: animDims(p)}} : {}), ...(identDe(p) ? {identidade: identResumo(p, 6000)} : {})},
     estilo: t ? JSON.parse(JSON.stringify(t)) : null, blocos: bl,
     banco: Object.fromEntries([...bl.map((b) => b.banco_id), p.musica.banco_id].filter((id) => id && S.bank[id]).map((id) => [id, S.bank[id]])),
     studio: {projeto_id: S.cur}};
@@ -1876,7 +1988,7 @@ function compactProject() {
   return JSON.stringify({titulo: p.titulo, tema: p.tema, formato: p.formato, profissional: p.profissional, legenda: p.legenda, musica: {ativa: p.musica.ativa, clima: p.musica.clima, volume: p.musica.volume, trilha: p.musica.arquivo || ''},
     direcionamentos: p.direcionamentos, estilo: t ? {nome: t.nome, regras: t.regras} : null, duracao_bruto: projDur(p), duracao_no_ar: +airDur(p).toFixed(2),
     blocos: [...p.blocos].sort((a, b) => a.inicio - b.inicio).map((b) => { const c = {...b}; if (c.itens) c.itens = c.itens.map((i) => [i.icone, i.texto, i.gatilho]); return c; }),
-    anexos: anexosParaDiretor(p), ...(identDe(p) ? {identidade: identResumo(p, 3000)} : {}), ...(p.logo?.ativo ? {logo: p.logo} : {}), ...(p.formato === 'podcast' ? {podcast: {locutores: p.locutores || [], takes: p.takes || []}} : {}),
+    anexos: anexosParaDiretor(p), ...(ehAnim(p) ? {animacao: {...p.anim, renders: undefined, dimensoes: animDims(p)}} : {}), ...(identDe(p) ? {identidade: identResumo(p, 3000)} : {}), ...(p.logo?.ativo ? {logo: p.logo} : {}), ...(p.formato === 'podcast' ? {podcast: {locutores: p.locutores || [], takes: p.takes || []}} : {}),
     transcricao: (p.transcricao?.texto || '').slice(0, 6000),
     legenda_tempos: (() => { const ls = capLines(p); if (!ls) return null; let n = 0; const out = [];
       for (const l of ls) { const t = l.map((w) => w.w).join(' '); n += t.length + 20; if (n > 14000) break; out.push([+l[0].s.toFixed(2), +l[l.length - 1].e.toFixed(2), t]); } return out; })()});
@@ -1892,6 +2004,7 @@ Padrão DocOn Cinema: gancho tipográfico com palavra-chave gigante; um painel d
 PODCAST: quando o formato for "podcast" (conversa a dois), o vídeo é a montagem dos takes na ordem de "podcast.takes" (o bruto aberto já é o vídeo montado pela skill). Abra com a PERGUNTA do take 1 como gancho tipográfico (frase curta, palavra-chave forte), assinatura (bloco nome) de cada locutor na primeira vez que ele fala, painéis só com o que o especialista disse (2 a 4 itens com gatilho), um destaque por take, legenda sempre ligada, transição curta entre takes (fx flash ou whip, discreta) e CTA final sem inventar @ ou dado. Nunca coloque texto sobre os rostos.
 ZOOM / CÂMERA (fx efeito "camera"): use quando pedirem zoom, aproximar, focar em quem fala, ou quando o bruto for um plano aberto com duas pessoas. Nos quadros, ache onde está o rosto de cada um (foco_x e foco_y em % do quadro do bruto, sem zoom). Pela legenda_tempos, separe quem fala quando (pergunta e resposta) e crie um bloco camera por fala, colados (fim de um = início do próximo): assim a câmera desliza de um rosto para o outro, com movimento suave nos dois sentidos. Zoom de 1,5 a 2,0 (acima de 2,2 a imagem perde nitidez), transicao de 0,6 a 0,9 s. Troque o foco só entre frases, nunca no meio de uma palavra. Depois confira nos quadros se painéis e nomes não cobrem o rosto no quadro já aproximado.
 REELS DINÂMICO (formato "dinamico"): vídeo sem fala, a pessoa fazendo algo da rotina, e a história contada por blocos "texto" (Textos na tela), sem legenda e sem gancho falado. Cada texto é curto (até ~8 palavras, 1-2 linhas), entra com animação suave (animacao: escrever | escala | opacidade | subir | descer | esquerda | direita) e sai mais curto (saida: opacidade | escala | subir | descer). Dê 0,5 s + 0,3 s por palavra de leitura (no "escrever", some 0,045 s por letra). Um texto por vez, em sequência, trocando quando a ação na imagem muda. Varie a entrada ao longo do vídeo, sem repetir a mesma em todos. Posicione longe do rosto e das mãos (pos_y; pos_x esquerda/centro/direita). Use trilha. Se o vídeo for claro, ligue a sombra geral (fx "escurecer", escuro_pct 25-45) nos trechos com texto e mantenha a sombra dos textos.
+ANIMAÇÃO (formato "animacao", espaço de Animação): projeto sem vídeo bruto (logo animado, vinheta, abertura), em p.anim {fmt, dur, fundo, pedido, motor}. Monte com blocos motion de logo (logo_revelar, logo_brilho, logo_mascara: variaveis {logo (asset), slogan, tam %}), textos na tela, efeitos e sons, sem legenda e sem gancho falado. Para algo sob medida (o logo se desenhando, partículas, transições próprias), oriente a equipe a escrever o pedido em Projeto › Animação e clicar em "Gerar com a skill": a skill cria a composição em Hyperframes ou Remotion e devolve o vídeo. Siga a identidade do cliente.
 MOTION GRAPHICS (bloco "motion"): animações de qualidade de estúdio renderizadas pelo editor com Hyperframes (HTML + GSAP) ou Remotion (React): título cinético, número animado (dado, estatística, preço), lista com checks e assinatura. Use para o momento-chave do vídeo (um dado forte, a frase-tese, um passo a passo), no máximo 1 a 3 por vídeo, sem repetir o mesmo modelo seguido. Os dois motores estão liberados (a DocOn usa a licença gratuita do Remotion): hyperframes para assinatura e lista e como padrão; remotion para título cinético e número quando quiser o movimento de mola do React. Só com dados ditos ou informados: nunca invente número. A prévia do Studio é simplificada; avise que o render final mostra a animação completa.
 SOMBRAS: o estilo pode ter sombra dos textos e sombra geral (escurece o vídeo). Para um trecho, use o fx "escurecer" com escuro_pct.
 IDENTIDADE DO CLIENTE: quando o projeto trouxer "identidade" (logo, paleta, fontes, materiais de exemplo e notas), siga essa identidade: cores e fontes dela, o tom dos materiais e a logo no canto combinado. Não invente cor, fonte ou elemento fora dela.
@@ -1902,7 +2015,7 @@ ${memText()}`;
 function applyChange(fn, label) { const p = cur(); const h = hOf(S.cur); if (h) settle(h, S.cur); const r = fn(p); if (S.dirMudou && S.sel) S.dirMudou.add(S.sel); touch('p', S.cur, 'Diretor: ' + label); if (h) settle(h, S.cur); renderTL(); renderStage(); if (S.rightTab === 'insp') renderInsp();
   const b = S.sel && p.blocos.find((x) => x.id === S.sel); if (b && !PL.playing) { seek(Math.min(b.fim - 0.05, b.inicio + Math.min(1.2, (b.fim - b.inicio) * 0.6))); flashBlock(b.id); } return r; }
 const TOOLS = () => [
-  {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx|texto|motion. Campos extras conforme o tipo (motion: motor hyperframes|remotion, modelo assinatura|titulo_cinetico|numero|lista (remotion só titulo_cinetico e numero), variaveis {nome,subtitulo | titulo,destaque | valor,prefixo,sufixo,rotulo | kicker,itens[]}, pos_y %; texto: texto (\n quebra linha), animacao escrever|escala|opacidade|subir|descer|esquerda|direita, saida opacidade|escala|subir|descer, pos_y %, pos_x esquerda|centro|direita, texto_px (padrão 72), peso 400-900, fonte titulo|texto, cor text|key|icon|grad2|#hex, sombra %, fundo true/false; fx efeito escurecer: escuro_pct 5-100; fx: efeito, intensidade suave|média|forte; fx efeito camera = zoom em um ponto: zoom 1-3 (padrão 1.6), foco_x e foco_y em % do quadro do bruto (onde está o rosto de quem fala, veja nos quadros), transicao em s do movimento (padrão 0.7); painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
+  {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx|texto|motion. Campos extras conforme o tipo (motion: motor hyperframes|remotion, modelo assinatura|titulo_cinetico|numero|lista|logo_revelar|logo_brilho|logo_mascara (logo: variaveis {logo asset, slogan, tam %}) (remotion só titulo_cinetico e numero), variaveis {nome,subtitulo | titulo,destaque | valor,prefixo,sufixo,rotulo | kicker,itens[]}, pos_y %; texto: texto (\n quebra linha), animacao escrever|escala|opacidade|subir|descer|esquerda|direita, saida opacidade|escala|subir|descer, pos_y %, pos_x esquerda|centro|direita, texto_px (padrão 72), peso 400-900, fonte titulo|texto, cor text|key|icon|grad2|#hex, sombra %, fundo true/false; fx efeito escurecer: escuro_pct 5-100; fx: efeito, intensidade suave|média|forte; fx efeito camera = zoom em um ponto: zoom 1-3 (padrão 1.6), foco_x e foco_y em % do quadro do bruto (onde está o rosto de quem fala, veja nos quadros), transicao em s do movimento (padrão 0.7); painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
     inputSchema: {type: 'object', properties: {tipo: {type: 'string'}, inicio: {type: 'number'}, fim: {type: 'number'}, gatilho: {type: 'string'}, campos: {type: 'object'}}, required: ['tipo', 'inicio', 'fim']},
     execute: (a) => applyChange((p) => { const b = defaultBlock(String(a.tipo), +a.inicio || 0); b.fim = Math.max(b.inicio + 0.5, +a.fim || b.inicio + 3); b.gatilho = String(a.gatilho || ''); Object.assign(b, cleanFields(a.campos)); p.blocos.push(b); S.sel = b.id; return {id: b.id}; }, 'criar')},
   {name: 'editar_bloco', description: 'Altera campos de um bloco existente pelo id (inclui inicio, fim, gatilho, kicker, titulo, itens, frase, palavra_chave, icone, nome, subtitulo, botao, pos_y...). pos_y = altura na tela em % do topo onde o bloco começa (gancho, painel, nome, cta); escala = % do tamanho total do bloco (40-160, 100 = padrão); desfoque_fundo (true/false: desfoca o vídeo atrás do bloco; na CTA vem ligado) e desfoque_pct (5-100); texto_px = px do texto principal numa tela de 1080 (padrão: painel 45, cta 80, gancho 82, nome 50); null volta ao padrão. pos_x = lado na tela para nome, painel e texto: esquerda|centro|direita (painel de lado fica com 72% da largura); use o lado oposto ao rosto de quem fala. Retorna o bloco atualizado.',
@@ -2835,7 +2948,12 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
   delete c.fillText; const smb = sombrasOf(p).texto;     // sombra de texto do estilo em todo texto que ainda não tem sombra
   if (smb > 0) { const ft0 = CanvasRenderingContext2D.prototype.fillText; c.fillText = function (...a) { if (this.shadowBlur > 0) return ft0.apply(this, a); this.save(); this.shadowColor = `rgba(0,0,0,${(0.25 + 0.6 * smb).toFixed(2)})`; this.shadowBlur = 1.8 * u; this.shadowOffsetY = 0.55 * u; ft0.apply(this, a); this.restore(); }; }
   c.setTransform(1, 0, 0, 1, 0, 0); c.filter = 'none'; c.globalAlpha = 1; c.fillStyle = '#000'; c.fillRect(0, 0, W, H);
+  if (animSemVideo(p)) {                               // animação sem render: fundo da animação em vez do vídeo
+    const fu = animFundo(p); if (fu.tipo === 'gradiente') { const g = c.createLinearGradient(0, 0, W * 0.34, H); g.addColorStop(0, fu.cor); g.addColorStop(1, fu.cor2); c.fillStyle = g; } else c.fillStyle = fu.cor; c.fillRect(0, 0, W, H);
+    if (o.esc > 0) { c.save(); c.globalAlpha = 0.6 * o.esc; c.fillStyle = '#000'; c.fillRect(0, 0, W, H); c.restore(); }
+  }
   // vídeo bruto (cobre 9:16) com câmera, efeitos e look
+  if (!animSemVideo(p)) {
   const vw = src.videoWidth || W, vh = src.videoHeight || H, s0 = Math.max(W / vw, H / vh);
   c.save(); c.translate(W / 2 + o.tx / 100 * W, H * 0.45 + o.ty / 100 * H); c.scale(o.sc, o.sc); c.translate(-W / 2, -H * 0.45);
   c.filter = `blur(${(o.blur * k).toFixed(1)}px) brightness(${o.bright}) saturate(${o.sat}) contrast(${o.con}) grayscale(${o.gray}) sepia(${o.sep})`;
@@ -2844,6 +2962,8 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
   const vig = (a, inner, outer) => { const g = c.createRadialGradient(W / 2, H * 0.45, Math.min(W, H) * inner, W / 2, H * 0.45, Math.hypot(W, H) * outer); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${a})`); c.fillStyle = g; c.fillRect(0, 0, W, H); };
   vig(0.23, 0.45, 0.62);
   if (o.esc > 0) { c.save(); c.globalAlpha = 0.6 * o.esc; c.fillStyle = '#000'; c.fillRect(0, 0, W, H); c.restore(); }   // sombra geral (escurecer o fundo)
+  }
+  for (const b of p.blocos) if (b.tipo === 'motion' && MOTION_MODELOS[b.modelo]?.logo && t >= b.inicio && t <= b.fim) drawLogoAnim(c, b, p, t, W, H);   // logos animados (prévia = exportação)
   for (const b of p.blocos) {
     if (b.tipo !== 'fx' || t < b.inicio || t > b.fim) continue;
     const I = {suave: 0.6, 'média': 1, forte: 1.5}[b.intensidade] || 1; const x = cl((t - b.inicio) / Math.max(0.05, b.fim - b.inicio)); const bell = Math.sin(Math.PI * x); const fade = Math.min(eo((t - b.inicio) / 0.2), eo((b.fim - t) / 0.2));
@@ -2986,7 +3106,7 @@ const EXP = {cancel: false, busy: false};
 /* vídeo final (ou cópia de trabalho do bruto, rawOnly) como MP4 H.264: devolve o Blob */
 async function renderMp4(p, o, say = () => {}, bar = () => {}) {
   const map = o.rawOnly ? {segs: [[0, S.videoDur]], total: S.videoDur, src: (x) => x, out: (x) => x} : cutMap(p);
-  if (!S.media.src || !S.videoDur) throw new Error('bruto');
+  if (!animSemVideo(p) && (!S.media.src || !S.videoDur)) throw new Error('bruto');
   say('Mixando o áudio…'); const ab = o.ab || (o.rawOnly ? await rawAudio() : await mixExport(p, map));
   if (!('VideoEncoder' in window) || !('AudioEncoder' in window)) throw new Error('webcodecs');
   const W = o.W, H = o.H, FPS = 30;
@@ -3018,12 +3138,13 @@ async function renderMp4(p, o, say = () => {}, bar = () => {}) {
   const pl = {...PAL_DEF, ...(tpl?.paleta || {})}; const icons = [...new Set(p.blocos.flatMap((b) => (b.itens || []).map((i) => i.icone)))].map((k) => iconImg(k, pl.icon)); await Promise.all(icons.map((i) => i.decode().catch(() => {})));
   if (p.logo?.ativo && p.logo.asset_id) await logoImg(p.logo.asset_id).decode().catch(() => {});
   const mediaEls = {}; for (const b of p.blocos.filter((x) => x.tipo === 'broll')) { const m = mediaSrc(b); if (m && !mediaEls[m.url]) mediaEls[m.url] = await mediaLoad(m.url, m.tipo); }
-  const src = await mediaLoad(S.media.src, 'video'); if (!src) throw new Error('bruto');
+  const src = animSemVideo(p) ? null : await mediaLoad(S.media.src, 'video'); if (!src && !animSemVideo(p)) throw new Error('bruto');
+  for (const b of p.blocos) { const ls = b.tipo === 'motion' && MOTION_MODELOS[b.modelo]?.logo ? logoSrcB(b, p) : ''; if (ls) await logoImg(ls.replace('/_blob/', '')).decode().catch(() => {}); }
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d', {willReadFrequently: false});
   const N = Math.max(1, Math.round(map.total * FPS)); const t0 = performance.now();
   for (let n = 0; n < N; n++) {
     if (EXP.cancel) throw new Error('cancelado'); if (fail) throw fail;
-    const t = map.src(n / FPS); await seekEl(src, t); if (o.rawOnly) { const vw = src.videoWidth, vh = src.videoHeight, s0 = Math.max(W / vw, H / vh); c.drawImage(src, (W - vw * s0) / 2, (H - vh * s0) / 2, vw * s0, vh * s0); } else await drawExportFrame(c, p, t, src, W, H, mediaEls);
+    const t = map.src(n / FPS); if (src) await seekEl(src, t); if (o.rawOnly) { const vw = src.videoWidth, vh = src.videoHeight, s0 = Math.max(W / vw, H / vh); c.drawImage(src, (W - vw * s0) / 2, (H - vh * s0) / 2, vw * s0, vh * s0); } else await drawExportFrame(c, p, t, src, W, H, mediaEls);
     const vf = new VideoFrame(cv, {timestamp: Math.round(n * 1e6 / FPS), duration: Math.round(1e6 / FPS)}); venc.encode(vf, {keyFrame: n % 60 === 0}); vf.close();
     while (venc.encodeQueueSize > 6) await new Promise((r) => setTimeout(r, 4));
     if (n % 5 === 0) { const el = (performance.now() - t0) / 1000, rest = el / (n + 1) * (N - n - 1); bar(n / N); say(`Renderizando quadro ${n + 1} de ${N} · faltam ~${Math.ceil(rest)} s`); }
@@ -3044,15 +3165,16 @@ async function rawAudio() {     // áudio do bruto (arquivo local ou cópia salv
 }
 async function exportVideo(fmt, q, say, bar) {
   const p = cur(); const base = slug(p.titulo || 'docon') + '_final';
-  if (!S.media.src || !S.videoDur) throw new Error('bruto');
+  if (!animSemVideo(p) && (!S.media.src || !S.videoDur)) throw new Error('bruto');
   if (fmt === 'wav' || fmt === 'mp3') { say('Mixando o áudio…'); const ab = await mixExport(p, cutMap(p)); if (fmt === 'wav') return saveFile(base + '.wav', wavOf(ab)); say('Codificando MP3…'); return saveFile(base + '.mp3', await mp3Of(ab)); }
-  const mp4 = await renderMp4(p, q === 'rapida' ? {W: 720, H: 1280, bitrate: 5e6} : {W: 1080, H: 1920, bitrate: 12e6}, say, bar);
+  const [aw, ah] = ehAnim(p) ? animDims(p) : [1080, 1920]; const kq = q === 'rapida' ? 2 / 3 : 1;
+  const mp4 = await renderMp4(p, {W: Math.round(aw * kq / 2) * 2, H: Math.round(ah * kq / 2) * 2, bitrate: q === 'rapida' ? 5e6 : 12e6}, say, bar);
   say(`Pronto: ${(mp4.size / 1048576).toFixed(1)} MB. Confirme o download.`);
   return saveFile(base + (fmt === 'mov' ? '.mov' : '.mp4'), fmt === 'mov' ? await toMov(mp4) : mp4);
 }
 function openExportFinal() {
   const p = cur(); if (!p) { toast('Abra um projeto'); return; }
-  const map = cutMap(p); const temBruto = !!S.media.src && !!S.videoDur && !S.viewOnly; const vs = (p.versoes || []).filter((v) => v.asset_id);
+  const map = cutMap(p); const temBruto = animSemVideo(p) || (!!S.media.src && !!S.videoDur && !S.viewOnly); const vs = (p.versoes || []).filter((v) => v.asset_id);
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="xT"><h3 id="xT">Exportar vídeo</h3>
     <p class="hint">Gera o arquivo pronto, como no Premiere ou no CapCut: o vídeo bruto com os cortes, efeitos, painéis, legenda, sons e trilha, do jeito que aparece em “Como vai ficar”. Tudo é feito neste computador; nada é enviado.</p>
     ${stOf(p) !== 'aprovado' ? `<p class="hint">Status: <span class="stpill" data-s="${stOf(p)}">${stOf(p)}</span>. A exportação é livre; a aprovação do cliente é opcional.</p>` : ''}
@@ -3195,15 +3317,21 @@ async function recordDictation(alvo) {
 /* ======================= passo a passo: projeto → estilo → vídeo → workspace ======================= */
 const WZ = {step: 1, modo: 'novo', estilo: null, dados: {}};
 function openWizard(start) {
-  if (start) Object.assign(WZ, {step: 1, modo: 'novo', estilo: Object.values(S.templates).sort((a, b) => (a.ordem || 0) - (b.ordem || 0))[0]?.id || null, dados: {titulo: '', nome: '', subtitulo: '', formato: 'talking_head', direcionamentos: '', transcricao: '', arquivo: null}, novoEstilo: null});
-  const steps = ['Projeto', 'Estilo', 'Vídeo e direção']; const d = WZ.dados;
+  if (start) Object.assign(WZ, {step: 1, modo: 'novo', estilo: Object.values(S.templates).sort((a, b) => (a.ordem || 0) - (b.ordem || 0))[0]?.id || null, dados: {titulo: '', nome: '', subtitulo: '', formato: 'talking_head', direcionamentos: '', transcricao: '', arquivo: null, aFmt: '9:16', aDur: 6, aFundo: 'cor', aModelo: 'logo_revelar', aPedido: '', aLogo: null, aEnviar: true}, novoEstilo: null});
+  const steps = WZ.modo === 'animacao' ? ['Animação', 'Estilo', 'Como animar'] : ['Projeto', 'Estilo', 'Vídeo e direção']; const d = WZ.dados;
   const head = `<div style="display:flex;gap:6px;flex-wrap:wrap">${steps.map((n, i) => `<span class="chip" aria-pressed="${WZ.step === i + 1}" style="${WZ.step > i + 1 ? 'color:var(--ok)' : ''}">${i + 1}. ${n}</span>`).join('')}</div>`;
   let body = '';
   if (WZ.step === 1) {
     const ps = Object.entries(S.projects).sort((a, b) => (b[1].atualizado || 0) - (a[1].atualizado || 0));
     body = `<div class="row2"><button class="card ${WZ.modo === 'novo' ? 'on' : ''}" type="button" data-wm="novo" style="text-align:left;cursor:pointer"><h4>Projeto novo</h4><p>Um vídeo novo do zero, com estilo e direção.</p></button>
-      <button class="card ${WZ.modo === 'ajuste' ? 'on' : ''}" type="button" data-wm="ajuste" style="text-align:left;cursor:pointer"><h4>Ajustar um projeto</h4><p>Continuar ou ajustar um vídeo que já existe.</p></button></div>
-      ${WZ.modo === 'ajuste' ? `<div class="f"><label for="wzBusca">Qual projeto?</label><input id="wzBusca" placeholder="Buscar pelo título"></div><div class="checks" id="wzLista" style="max-height:260px;overflow:auto">${ps.map(([id, p]) => `<div style="display:flex;gap:6px;margin-bottom:6px" data-wrow="${id}"><button class="card" type="button" data-wp="${id}" style="text-align:left;cursor:pointer;flex:1"><b>${esc(p.titulo || 'Sem título')}</b><span class="hint">${esc(p.profissional?.nome || '')} · ${esc(stOf(p))} · ${when(p.atualizado)}</span></button><button class="btn sm ghost" type="button" data-wdel="${id}" title="Excluir este projeto" aria-label="Excluir ${esc(p.titulo || 'projeto')}" style="color:var(--bad)">Excluir</button></div>`).join('') || '<p class="hint">Nenhum projeto ainda.</p>'}</div>`
+      <button class="card ${WZ.modo === 'ajuste' ? 'on' : ''}" type="button" data-wm="ajuste" style="text-align:left;cursor:pointer"><h4>Ajustar um projeto</h4><p>Continuar ou ajustar um vídeo que já existe.</p></button>
+      <button class="card ${WZ.modo === 'animacao' ? 'on' : ''}" type="button" data-wm="animacao" style="text-align:left;cursor:pointer"><h4>Animação</h4><p>Logo animado, vinheta ou abertura, sem vídeo. Você descreve e a skill cria.</p></button></div>
+      ${WZ.modo === 'animacao' ? `<div class="f"><label for="wzT">Nome da animação</label><input id="wzT" value="${esc(d.titulo)}" placeholder="Ex.: Logo animado · Dra. …"></div>
+           <div class="f"><label for="wzN">Cliente (profissional ou clínica)</label><input id="wzN" value="${esc(d.nome)}" placeholder="Dra. …"></div>
+           <div class="row2"><div class="f"><label for="wzAF">Formato da tela</label><select id="wzAF">${Object.entries(ANIM_FMT).map(([k, v]) => `<option value="${k}" ${k === d.aFmt ? 'selected' : ''}>${v[2]}</option>`).join('')}</select></div>
+           <div class="f"><label for="wzAD">Duração (s)</label><input id="wzAD" type="number" min="1" max="60" step="0.5" value="${d.aDur}"></div></div>
+           <div class="f"><label for="wzAFu">Fundo</label><select id="wzAFu">${[['cor', 'Cor sólida do estilo'], ['gradiente', 'Degradê do estilo'], ['transparente', 'Transparente (para sobrepor em vídeos)']].map(([k, n]) => `<option value="${k}" ${k === d.aFundo ? 'selected' : ''}>${n}</option>`).join('')}</select></div>`
+      : WZ.modo === 'ajuste' ? `<div class="f"><label for="wzBusca">Qual projeto?</label><input id="wzBusca" placeholder="Buscar pelo título"></div><div class="checks" id="wzLista" style="max-height:260px;overflow:auto">${ps.map(([id, p]) => `<div style="display:flex;gap:6px;margin-bottom:6px" data-wrow="${id}"><button class="card" type="button" data-wp="${id}" style="text-align:left;cursor:pointer;flex:1"><b>${esc(p.titulo || 'Sem título')}</b><span class="hint">${esc(p.profissional?.nome || '')} · ${esc(stOf(p))} · ${when(p.atualizado)}</span></button><button class="btn sm ghost" type="button" data-wdel="${id}" title="Excluir este projeto" aria-label="Excluir ${esc(p.titulo || 'projeto')}" style="color:var(--bad)">Excluir</button></div>`).join('') || '<p class="hint">Nenhum projeto ainda.</p>'}</div>`
         : `<div class="f"><label for="wzT">Título do vídeo</label><input id="wzT" value="${esc(d.titulo)}" placeholder="Ex.: Verão Leve · contorno corporal"></div>
            <div class="row2"><div class="f"><label for="wzN">Profissional (como aparece no vídeo)</label><input id="wzN" value="${esc(d.nome)}" placeholder="Dra. …"></div><div class="f"><label for="wzS">Especialidade / subtítulo</label><input id="wzS" value="${esc(d.subtitulo)}" placeholder="Médica dermatologista"></div></div>
            <div class="f"><label for="wzF">Formato</label><select id="wzF"><option value="talking_head" ${d.formato === 'talking_head' ? 'selected' : ''}>Falando para a câmera</option><option value="vlog" ${d.formato === 'vlog' ? 'selected' : ''}>Vlog narrado</option><option value="misto" ${d.formato === 'misto' ? 'selected' : ''}>Misto</option><option value="podcast" ${d.formato === 'podcast' ? 'selected' : ''}>Podcast (conversa a dois)</option><option value="dinamico" ${d.formato === 'dinamico' ? 'selected' : ''}>Reels Dinâmico (textos, sem fala)</option></select></div>`}`;
@@ -3220,6 +3348,13 @@ function openWizard(start) {
       : `<p class="hint">Escolha o estilo do vídeo. O estilo traz as cores, fontes, legenda, trilha e efeitos de cada cliente.</p>
       <div class="bank" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${list.map((t) => `<button class="bi ${WZ.estilo === t.id ? 'on' : ''}" type="button" data-ws="${t.id}" style="text-align:left;cursor:pointer;${WZ.estilo === t.id ? 'border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)' : ''}"><div class="th" style="aspect-ratio:9/12"><div class="stylemini" data-wmini="${t.id}" style="width:100%"></div></div><div class="meta"><b>${esc(t.nome)}</b><span>${esc((t.descricao || '').slice(0, 70))}</span></div></button>`).join('')}
       <button class="bi" type="button" id="wsNovo" style="cursor:pointer;display:grid;place-items:center;min-height:180px;border-style:dashed"><div class="meta" style="text-align:center"><b>+ Novo estilo</b><span>Cores, fontes e regras de um cliente novo</span></div></button></div>`;
+  } else if (WZ.modo === 'animacao') {
+    const k = slug(d.nome || ''); const temLogo = !!S.clientes[k]?.identidade?.logo_asset;
+    body = `<div class="f"><label for="wzAPed">Como você quer a animação</label><textarea id="wzAPed" rows="5" placeholder="Ex.: o logo se desenha em traço dourado, como uma assinatura; depois preenche com a cor da marca, um brilho passa por cima e o slogan sobe suave embaixo. Elegante, sem exagero.">${esc(d.aPedido)}</textarea></div>
+      <div class="row2"><div class="f"><label for="wzAM">Começar com um modelo pronto (prévia imediata)</label><select id="wzAM">${[['logo_revelar', 'Logo revelado (desfoque e escala)'], ['logo_brilho', 'Logo com brilho'], ['logo_mascara', 'Logo surgindo (máscara com luz)'], ['', 'Nenhum: só o pedido para a skill']].map(([v, n]) => `<option value="${v}" ${v === d.aModelo ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+      <div class="f"><label for="wzAL">Logo ${temLogo ? '(a da identidade do cliente já será usada)' : '(PNG transparente ou SVG)'}</label><input id="wzAL" type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg"></div></div>
+      <label class="chk"><input type="checkbox" id="wzAE" ${d.aEnviar ? 'checked' : ''}> Enviar o pedido para a skill gerar a animação sob medida (Hyperframes ou Remotion)</label>
+      <p class="hint">O modelo pronto aparece na hora na prévia e já pode ser exportado. A versão sob medida chega no projeto quando a skill terminar, em Projeto › Animação.</p>`;
   } else {
     body = `<div class="f"><label for="wzVid">Vídeo bruto (fica só no seu computador)</label><input id="wzVid" type="file" accept="video/*"></div>${d.arquivo ? `<p class="hint">Selecionado: ${esc(d.arquivo.name)}</p>` : ''}
       <div class="f"><label for="wzDir">O que deve ser feito (direção)</label><textarea id="wzDir" rows="4" placeholder="Ex.: gancho forte com “resultado”, painel com os 3 benefícios, nome da doutora na apresentação, CTA para agendar. Tom acolhedor.">${esc(d.direcionamentos)}</textarea></div>
@@ -3227,10 +3362,12 @@ function openWizard(start) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm" type="button" id="wzTrImp">Importar arquivo</button><input id="wzTrFile" type="file" accept="${TR_ACCEPT}" hidden><span class="hint">${d.trData ? 'Importado: ' + esc(d.trData.fonte) + (d.trData.palavras ? ' · legenda sincronizada' : '') : 'TXT, DOCX, PDF, SRT, VTT, JSON…'}</span></div>
       <p class="hint">Ao abrir o workspace, o diretor (Claude) monta a primeira versão da timeline a partir da direção e da fala. Você ajusta depois, falando ou à mão.</p>`;
   }
-  const canNext = WZ.step === 1 ? WZ.modo === 'novo' : WZ.step === 2 ? !!(WZ.estilo || WZ.novoEstilo) : true;
-  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wzT0" style="width:min(720px,100%)"><h3 id="wzT0">${WZ.step === 1 ? 'Vamos começar' : WZ.step === 2 ? 'Estilo do vídeo' : 'Vídeo e direção'}</h3>${head}${body}
+  const canNext = WZ.step === 1 ? (WZ.modo === 'novo' || WZ.modo === 'animacao') : WZ.step === 2 ? !!(WZ.estilo || WZ.novoEstilo) : true;
+  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wzT0" style="width:min(720px,100%)"><h3 id="wzT0">${WZ.step === 1 ? 'Vamos começar' : WZ.step === 2 ? (WZ.modo === 'animacao' ? 'Estilo da animação' : 'Estilo do vídeo') : WZ.modo === 'animacao' ? 'Como animar' : 'Vídeo e direção'}</h3>${head}${body}
     <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><button class="btn ghost" type="button" id="wzX">${Object.keys(S.projects).length ? 'Cancelar' : 'Fechar'}</button><span style="display:flex;gap:8px">${WZ.step > 1 ? '<button class="btn" type="button" id="wzB">Voltar</button>' : ''}${canNext ? `<button class="btn pri" type="button" id="wzG">${WZ.step === 3 ? 'Abrir o workspace' : WZ.step === 2 && WZ.novoEstilo ? 'Salvar estilo e continuar' : 'Continuar'}</button>` : ''}</span></div></div></div>`;
-  const $ = (id) => document.getElementById(id); const keep = () => { if ($('wzT')) { d.titulo = $('wzT').value; d.nome = $('wzN').value; d.subtitulo = $('wzS').value; d.formato = $('wzF').value; } if ($('wzDir')) { d.direcionamentos = $('wzDir').value; d.transcricao = $('wzTr').value; }
+  const $ = (id) => document.getElementById(id); const keep = () => { if ($('wzT')) { d.titulo = $('wzT').value; d.nome = $('wzN').value; if ($('wzS')) d.subtitulo = $('wzS').value; if ($('wzF')) d.formato = $('wzF').value; }
+    if ($('wzAF')) { d.aFmt = $('wzAF').value; d.aDur = Math.min(60, Math.max(1, +$('wzAD').value || 6)); d.aFundo = $('wzAFu').value; }
+    if ($('wzAPed')) { d.aPedido = $('wzAPed').value; d.aModelo = $('wzAM').value; d.aEnviar = $('wzAE').checked; } if ($('wzDir')) { d.direcionamentos = $('wzDir').value; d.transcricao = $('wzTr').value; }
     const ne = WZ.novoEstilo; if (ne && $('neN')) { ne.nome = $('neN').value; ne.base = $('neB').value; for (const k of ['glass', 'icon', 'button', 'text']) ne.paleta[k] = $('ne_' + k).value; ne.fontes = {titulo: $('neFt').value, texto: $('neFx').value}; ne.legenda = $('neL').value; ne.musica = $('neM').value === '1'; ne.regras = $('neR').value; } };
   $('wzX').onclick = () => { document.getElementById('modalRoot').innerHTML = ''; };
   if ($('wzB')) $('wzB').onclick = () => { keep(); if (WZ.step === 2 && WZ.novoEstilo) WZ.novoEstilo = null; else WZ.step--; openWizard(); };
@@ -3244,6 +3381,7 @@ function openWizard(start) {
   const mini = () => { if (!$('neMini')) return; keep(); const ne = WZ.novoEstilo; const base = S.templates[ne.base]; styleMini($('neMini'), {...(base || {}), paleta: {...(base?.paleta || PAL_DEF), ...ne.paleta}, fontes: ne.fontes, legenda: {estilo: ne.legenda}}); };
   if ($('neMini')) { mini(); document.querySelectorAll('#mdl input, #mdl select').forEach((x) => x.addEventListener('input', mini)); $('neB').onchange = () => { const base = S.templates[$('neB').value]; if (base) { WZ.novoEstilo.paleta = {...PAL_DEF, ...base.paleta}; WZ.novoEstilo.fontes = {titulo: base.fontes?.titulo || 'Montserrat', texto: base.fontes?.texto || 'Inter'}; } keep(); openWizard(); }; }
   if ($('wzVid')) $('wzVid').onchange = (e) => { keep(); d.arquivo = e.target.files[0] || null; openWizard(); };
+  if ($('wzAL')) $('wzAL').onchange = (e) => { d.aLogo = e.target.files[0] || null; };
   if ($('wzTrImp')) { $('wzTrImp').onclick = () => $('wzTrFile').click(); $('wzTrFile').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; keep(); try { const r = await lerTranscricao(f); d.trData = {...r, fonte: `${r.fonte} · ${f.name}`}; d.transcricao = r.texto; } catch (x) { toast('Não consegui ler: ' + (x.message || x)); } openWizard(); }; }
   if ($('wzG')) $('wzG').onclick = async () => {
     keep();
@@ -3254,6 +3392,7 @@ function openWizard(start) {
       touch('s', id); WZ.estilo = id; WZ.novoEstilo = null; WZ.step = 3; openWizard(); return;
     }
     if (WZ.step < 3) { WZ.step++; openWizard(); return; }
+    if (WZ.modo === 'animacao') { await criarAnimacao(d); return; }
     // cria o projeto e abre o workspace
     const t = S.templates[WZ.estilo]; const id = 'p-' + uid(); const p = newProject(t);
     Object.assign(p, {titulo: d.titulo || 'Novo vídeo', formato: d.formato, direcionamentos: d.direcionamentos}); Object.assign(p.profissional, {nome: d.nome, subtitulo: d.subtitulo});
@@ -3387,7 +3526,7 @@ function setStatus(pid, st, why) { const p = S.projects[pid]; if (!p || p.status
 function openAprovFor(pid) { return Object.entries(S.aprov).filter(([, a]) => a.projeto === pid && a.status !== 'aprovado').sort((a, b) => (b[1].atualizado || 0) - (a[1].atualizado || 0))[0]?.[0] || null; }
 async function sendToApproval() {
   const p = cur(); if (!p) return; const pid = S.cur;
-  if (!S.media.src || !S.videoDur || S.viewOnly) { toast('Abra o vídeo bruto do projeto para gerar o vídeo de aprovação'); return; }
+  if (!animSemVideo(cur()) && (!S.media.src || !S.videoDur || S.viewOnly)) { toast('Abra o vídeo bruto do projeto para gerar o vídeo de aprovação'); return; }
   if (!assetsApi) { toast('Sem permissão para salvar o vídeo de aprovação'); return; }
   if (!('VideoEncoder' in window)) { toast('Use o Chrome ou o Edge para gerar o vídeo de aprovação'); return; }
   { const g = igDe(p); if ((!g.handle || !g.foto) && !p.ig_pulado && !clienteDe(p)?.ig_pulado) { const ok = await pedirInstagram(pid); if (ok === null) return; } }
@@ -3649,7 +3788,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.06-b';
+const STUDIO_VERSAO = '2026.11.06-c';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

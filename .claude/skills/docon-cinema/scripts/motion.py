@@ -5,6 +5,9 @@ para o run_brief.py sobrepor ao vídeo (bloco "motion"). Cores e fontes vêm do 
 
 uso:
   python3 motion.py listar
+  python3 motion.py preparar PASTA [--estilo estilo.json] [--logo logo.png]     # composição sob medida: GSAP, fontes, cores, logo
+  python3 motion.py video PASTA SAIDA.mp4|.mov [--formato mp4|mov]              # Hyperframes → MP4, ou MOV ProRes 4444 transparente
+  python3 motion.py remotion-video ENTRADA.jsx COMP SAIDA [--props JSON] [--alpha] [--public PASTA]
   python3 motion.py render MODELO SAIDA_DIR [--motor hyperframes|remotion] [--dur 3.0] [--vars '{"titulo": "..."}']
                          [--estilo estilo.json] [--y 40]
   MODELO = nome de um modelo (assinatura, titulo_cinetico, numero, lista) ou o caminho de uma pasta Hyperframes
@@ -107,11 +110,48 @@ def render(modelo, saida=None, motor=None, dur=3.0, vars_=None, estilo=None, y=N
     shutil.rmtree(work, ignore_errors=True)
     return out
 
+# ---------------- composições sob medida (espaço de Animação do Studio e pedidos livres)
+def preparar(pasta, estilo=None, logo=None):
+    """copia para PASTA/assets o GSAP, a base DocOn (cores e fontes do estilo) e a logo (assets/logo.png)."""
+    a = os.path.join(pasta, 'assets'); os.makedirs(a, exist_ok=True)
+    shutil.copy(_gsap(), os.path.join(a, 'gsap.min.js')); shutil.copy(os.path.join(MOT, 'hyperframes', '_base.css'), os.path.join(a, 'base.css'))
+    _fontes(estilo, a)
+    css = ':root{' + ''.join(f'--{k}:{v};' for k, v in _cores(estilo).items()) + '}'
+    open(os.path.join(a, 'cores.css'), 'w').write(css)
+    if logo and os.path.exists(logo): shutil.copy(logo, os.path.join(a, 'logo' + (os.path.splitext(logo)[1].lower() or '.png')))
+    if not os.path.exists(os.path.join(pasta, 'hyperframes.json')): json.dump({'name': 'docon-animacao'}, open(os.path.join(pasta, 'hyperframes.json'), 'w'))
+    return pasta
+
+def video(pasta, saida, formato='mp4', fps=30):
+    """renderiza uma composição Hyperframes (index.html) em MP4 (H.264) ou MOV (ProRes 4444 com transparência)."""
+    env = {**os.environ, 'HYPERFRAMES_NO_TELEMETRY': '1', 'DO_NOT_TRACK': '1', 'HYPERFRAMES_SKIP_SKILLS': '1'}
+    r = subprocess.run(['npx', '--no-install', 'hyperframes', 'render', os.path.abspath(pasta), '--format', formato, '-o', os.path.abspath(saida), '--fps', str(fps), '--quality', 'delivery', '--workers', '2', '--quiet'],
+                       cwd=HOME, env=env, capture_output=True, text=True)
+    if r.returncode != 0 or not os.path.exists(saida): sys.exit('hyperframes falhou:\n' + (r.stdout + r.stderr)[-2500:])
+    return saida
+
+def remotion_video(entrada, comp, saida, props=None, alpha=False, publico=None):
+    """renderiza uma composição Remotion própria. A pasta da ENTRADA é copiada para ~/.docon/motion (onde estão os pacotes).
+    alpha=True: MOV ProRes 4444 com transparência; senão MP4 H.264."""
+    if not os.path.isdir(os.path.join(HOME, 'node_modules', '@remotion', 'cli')): sys.exit('Remotion não instalado: rode bash scripts/setup.sh')
+    src = os.path.dirname(os.path.abspath(entrada)); proj = os.path.join(HOME, 'remotion_custom'); shutil.rmtree(proj, ignore_errors=True); shutil.copytree(src, proj)
+    cmd = ['npx', '--no-install', 'remotion', 'render', os.path.join(proj, os.path.basename(entrada)), comp, os.path.abspath(saida), '--props=' + json.dumps(props or {}, ensure_ascii=False)]
+    if publico: cmd.append('--public-dir=' + os.path.abspath(publico))
+    cmd += ['--codec=prores', '--prores-profile=4444', '--pixel-format=yuva444p10le', '--image-format=png'] if alpha else ['--codec=h264', '--crf=16']
+    if CHROME: cmd += ['--browser-executable=' + CHROME, '--chrome-mode=headless-shell']
+    r = subprocess.run(cmd, cwd=HOME, capture_output=True, text=True)
+    if r.returncode != 0: sys.exit('remotion falhou:\n' + (r.stdout + r.stderr)[-2500:])
+    return saida
+
 if __name__ == '__main__':
     a = sys.argv[1:]
     if not a or a[0] == 'listar':
         for k, m in MODELOS.items(): print(f'{k:16s} {m["motor"]:11s}{" +remotion" if k in REMOTION else "          "}  {m["desc"]} · campos: {", ".join(m["campos"])}')
         sys.exit()
+    def opt0(n, d=None): return a[a.index(n) + 1] if n in a else d
+    if a[0] == 'preparar': print(preparar(a[1], json.load(open(opt0('--estilo'))) if opt0('--estilo') else None, opt0('--logo'))); sys.exit()
+    if a[0] == 'video': print(video(a[1], a[2], opt0('--formato', 'mp4'))); sys.exit()
+    if a[0] == 'remotion-video': print(remotion_video(a[1], a[2], a[3], json.loads(opt0('--props', '{}')), '--alpha' in a, opt0('--public'))); sys.exit()
     if a[0] != 'render' or len(a) < 3: sys.exit(__doc__)
     def opt(n, d=None):
         return a[a.index(n) + 1] if n in a else d
