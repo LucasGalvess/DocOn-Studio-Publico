@@ -337,6 +337,7 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 - **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
   - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.
+- **Timeline do Studio:** a altura de cada trilha (inclusive vídeo, áudio e trilha sonora) se ajusta arrastando a borda de baixo do nome. Duplo clique volta ao padrão. A altura fica salva por pessoa, no navegador (`docon-trilhas`).
 - **Motion graphics no ambiente fechado:**
   - O Chrome do render não alcança o CDN do GSAP, por isso a composição usa uma cópia local (`assets/gsap.min.js`, copiada pelo `motion.py`).
   - No Remotion, o ProRes saiu sem canal de transparência. Os dois motores agora geram sequência PNG com transparência.

@@ -121,14 +121,15 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .tlbar .sp{flex:1}
 .tlscroll{overflow-x:auto;overflow-y:hidden;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .tlgrid{display:grid;grid-template-columns:118px 1fr;min-width:760px}
-.lab{display:flex;align-items:center;gap:7px;height:30px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line)}
+.lab{position:relative;display:flex;align-items:center;gap:7px;height:30px;font-size:12px;font-weight:600;color:var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden}
+.lab .rzh{position:absolute;left:0;right:0;bottom:-3px;height:7px;cursor:row-resize;z-index:3;touch-action:none}.lab .rzh:hover,.lab .rzh.on{background:linear-gradient(transparent 2px,var(--accent) 2px,var(--accent) 4px,transparent 4px)}
 .lab i{width:9px;height:9px;border-radius:2px}
 .lab button{margin-left:auto;background:none;border:1px solid var(--line);border-radius:5px;color:var(--muted);font-size:12px;line-height:1;padding:3px 6px}
 .lab button:hover{color:var(--fg);border-color:var(--faint)}
 .lane{position:relative;height:30px;border-bottom:1px solid var(--line);background-image:linear-gradient(to right,rgba(255,255,255,.035) 1px,transparent 1px);background-size:var(--tick) 100%}
 .ruler{position:relative;height:24px;border-bottom:1px solid var(--line);font:500 10px var(--mono);color:var(--faint);cursor:pointer;font-variant-numeric:tabular-nums}
 .ruler span{position:absolute;top:5px;transform:translateX(-50%)}
-.blk{position:absolute;top:3px;height:24px;border-radius:5px;padding:0 7px;font-size:11.5px;font-weight:600;color:#1a1412;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;cursor:grab;border:1px solid rgba(0,0,0,.25);touch-action:none;user-select:none}
+.blk{position:absolute;top:3px;height:var(--bh,24px);border-radius:5px;padding:0 7px;font-size:11.5px;font-weight:600;color:#1a1412;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;cursor:grab;border:1px solid rgba(0,0,0,.25);touch-action:none;user-select:none}
 .blk.sel{outline:2px solid #fff;outline-offset:1px}
 .blk .rz{position:absolute;right:0;top:0;bottom:0;width:8px;cursor:ew-resize}
 .blk.warn:after{content:"!";position:absolute;right:9px;font-weight:800}
@@ -441,7 +442,7 @@ body.resizing.h{cursor:row-resize}
 /* ======================= modelo ======================= */
 const TRACKS = [
   {k:'gancho', n:'Gancho', c:'var(--t-hook)', d:'Primeira frase em tipografia grande'},
-  {k:'motion', n:'Motion (Hyperframes · Remotion)', c:'#9C8FD6', d:'Animação de motion graphics renderizada pelo editor: título cinético, número animado, lista, assinatura'},
+  {k:'motion', n:'Motion', c:'#9C8FD6', d:'Motion graphics (Hyperframes ou Remotion) renderizado pelo editor: título cinético, número animado, lista, assinatura'},
   {k:'texto', n:'Textos na tela', c:'#D9A38F', d:'Texto simples animado (Reels Dinâmico): escrevendo, escala, opacidade ou posição'},
   {k:'painel', n:'Painéis', c:'var(--t-panel)', d:'Cartões de vidro com dados e ícones'},
   {k:'nome', n:'Nomes', c:'var(--t-name)', d:'Lower third (nome e função)'},
@@ -1455,6 +1456,9 @@ async function brollThumb(b) {
 /* ======================= timeline ======================= */
 const LABW = 118;
 function pxPerSec() { return +document.getElementById('zoom').value; }
+/* altura de cada trilha da timeline (por pessoa, neste navegador) */
+function trilhaAlturas() { try { return JSON.parse(localStorage.getItem('docon-trilhas') || '{}') || {}; } catch (e) { return {}; } }
+function salvarAlturas(a) { try { localStorage.setItem('docon-trilhas', JSON.stringify(a)); } catch (e) {} }
 function renderTL() {
   const g = document.getElementById('tlgrid'); const p = cur();
   if (!p) { g.innerHTML = '<div></div><div class="hint" style="padding:16px 0">Crie ou abra um projeto para montar a timeline.</div>'; return; }
@@ -1462,14 +1466,16 @@ function renderTL() {
   g.style.minWidth = (LABW + W + 24) + 'px';
   const step = pps >= 24 ? 1 : pps >= 12 ? 5 : 10;
   let ruler = ''; for (let s = 0; s <= dur; s += step) ruler += `<span style="left:${s * pps}px">${s % 60 === 0 && s ? (s / 60) + 'm' : s + 's'}</span>`;
+  const TH = trilhaAlturas(); const hh = (k, d) => Math.round(TH[k] || d); const rz = (k) => `<span class="rzh" data-rh="${k}" title="Arraste para mudar a altura desta trilha (duplo clique volta ao padrão)"></span>`;
+  const lan = (k, d) => `height:${hh(k, d)}px;--bh:${Math.max(14, hh(k, d) - 6)}px`;
   let h = `<div class="lab" style="height:24px"></div><div class="ruler" id="ruler" style="width:${W}px">${ruler}</div>`;
-  h += `<div class="lab media"><i style="background:#cfc5bb"></i>Vídeo</div><div class="lane media" data-scrub="1" style="width:${W}px"><canvas id="cvVid" data-w="${W}"></canvas>${S.media.thumbs.length ? '' : `<span class="mhint">${S.videoDur ? 'Gerando quadros…' : 'Abra o vídeo bruto para ver os quadros aqui'}</span>`}</div>`;
-  h += `<div class="lab media"><i style="background:#8CCFA9"></i>Áudio</div><div class="lane media" data-scrub="1" style="width:${W}px"><canvas id="cvAud" data-w="${W}" data-h="46"></canvas>${S.media.peaks ? '' : `<span class="mhint">${S.videoDur ? 'Lendo o áudio…' : 'Onda do áudio do bruto'}</span>`}</div>`;
+  h += `<div class="lab media" data-rl="video" style="height:${hh('video', 46)}px"><i style="background:#cfc5bb"></i>Vídeo${rz('video')}</div><div class="lane media" data-rl="video" data-scrub="1" style="width:${W}px;${lan('video', 46)}"><canvas id="cvVid" data-w="${W}"></canvas>${S.media.thumbs.length ? '' : `<span class="mhint">${S.videoDur ? 'Gerando quadros…' : 'Abra o vídeo bruto para ver os quadros aqui'}</span>`}</div>`;
+  h += `<div class="lab media" data-rl="audio" style="height:${hh('audio', 46)}px"><i style="background:#8CCFA9"></i>Áudio${rz('audio')}</div><div class="lane media" data-rl="audio" data-scrub="1" style="width:${W}px;${lan('audio', 46)}"><canvas id="cvAud" data-w="${W}" data-h="46"></canvas>${S.media.peaks ? '' : `<span class="mhint">${S.videoDur ? 'Lendo o áudio…' : 'Onda do áudio do bruto'}</span>`}</div>`;
   const mus = p.musica?.ativa ? (S.bank[p.musica.banco_id]?.nome || p.musica.arquivo || 'Trilha gerada pelo editor (' + (p.musica.clima === 'calm' ? 'calma' : 'acolhedora') + ')') : '';
-  h += `<div class="lab"><i style="background:#D7C27A"></i>Trilha</div><div class="lane" data-scrub="1" style="width:${W}px">${mus ? `<div class="blk" style="left:0;width:${W}px;background:#D7C27A;cursor:default"><canvas class="wf" id="cvMus" data-w="${W}" data-h="24"></canvas><span class="l">♪ ${esc(mus)} · ${esc(p.musica.volume || 'discreta')}</span></div>` : ''}</div>`;
+  h += `<div class="lab" data-rl="trilha" style="height:${hh('trilha', 30)}px"><i style="background:#D7C27A"></i>Trilha${rz('trilha')}</div><div class="lane" data-rl="trilha" data-scrub="1" style="width:${W}px;${lan('trilha', 30)}">${mus ? `<div class="blk" style="left:0;width:${W}px;background:#D7C27A;cursor:default"><canvas class="wf" id="cvMus" data-w="${W}" data-h="24"></canvas><span class="l">♪ ${esc(mus)} · ${esc(p.musica.volume || 'discreta')}</span></div>` : ''}</div>`;
   for (const t of TRACKS) {
     const bl = p.blocos.filter((b) => b.tipo === t.k);
-    h += `<div class="lab"><i style="background:${t.c}"></i>${t.n}<button type="button" data-add="${t.k}" aria-label="Adicionar ${t.n} no cursor">+</button></div><div class="lane" data-scrub="1" style="width:${W}px;--tick:${pps * step}px">` +
+    h += `<div class="lab" data-rl="${t.k}" style="height:${hh(t.k, 30)}px" title="${esc(t.d)}"><i style="background:${t.c}"></i>${t.n}<button type="button" data-add="${t.k}" aria-label="Adicionar ${t.n} no cursor">+</button>${rz(t.k)}</div><div class="lane" data-rl="${t.k}" data-scrub="1" style="width:${W}px;--tick:${pps * step}px;${lan(t.k, 30)}">` +
       bl.map((b) => { const warn = b.tipo !== 'corte' && b.tipo !== 'fx' && b.tipo !== 'som' && !b.gatilho && !(b.itens || []).some((i) => i.gatilho) && b.tipo !== 'cta' && b.tipo !== 'destaque'; const past = b.inicio >= dur;
         const extra = b.tipo === 'broll' ? `<span class="th" data-th="${b.id}"></span>` : b.tipo === 'som' && b.banco_id ? `<canvas class="wf" data-wf="${b.id}" data-w="${Math.max(14, (b.fim - b.inicio) * pps)}" data-h="24"></canvas>` : '';
         return `<div class="blk ${b.id === S.sel ? 'sel' : ''} ${warn ? 'warn' : ''} ${past ? 'past' : ''} ${b.rascunho ? 'rasc' : ''}" data-b="${b.id}" style="left:${b.inicio * pps}px;width:${Math.max(14, (b.fim - b.inicio) * pps)}px;background:${t.c}" title="${esc(label(b))}${warn ? ' · sem gatilho: o tempo será usado como está' : ''}${past ? ' · depois do fim do vídeo: não aparece' : ''}">${extra}<span class="l">${esc(label(b))}</span><span class="rz" data-rz="${b.id}"></span></div>`; }).join('') + `</div>`;
@@ -1481,6 +1487,15 @@ function renderTL() {
   g.querySelectorAll('[data-wf]').forEach((c) => { const b = p.blocos.find((x) => x.id === c.dataset.wf); if (b) bankPeaks(b.banco_id).then((r) => r && drawWave(c, r.peaks, r.rate, 'rgba(30,30,10,.6)')); });
   g.querySelectorAll('[data-th]').forEach((s) => { const b = p.blocos.find((x) => x.id === s.dataset.th); if (b) brollThumb(b).then((u) => { if (u) s.style.backgroundImage = `url("${u}")`; }); });
   g.querySelectorAll('[data-add]').forEach((btn) => btn.onclick = () => { const b = defaultBlock(btn.dataset.add, Math.min(S.t, Math.max(0, dur - 1))); if (btn.dataset.add === 'nome') { b.nome = p.profissional.nome; b.subtitulo = p.profissional.subtitulo; } if (b.ate_o_fim) b.fim = +dur.toFixed(2); p.blocos.push(b); S.sel = b.id; S.styleEdit = null; touch('p', S.cur, 'Adicionar ' + (TRACKS.find((t) => t.k === btn.dataset.add)?.n || 'bloco')); renderAll(); });
+  g.querySelectorAll('[data-rh]').forEach((hd) => {         // altura de cada trilha: arrastar a borda de baixo do nome
+    const k = hd.dataset.rh; const els = () => g.querySelectorAll(`[data-rl="${k}"]`);
+    hd.addEventListener('dblclick', (e) => { e.stopPropagation(); const a = trilhaAlturas(); delete a[k]; salvarAlturas(a); renderTL(); });
+    hd.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); hd.setPointerCapture(e.pointerId); hd.classList.add('on');
+      const y0 = e.clientY, h0 = els()[0].getBoundingClientRect().height; let hN = h0;
+      const mv = (ev) => { hN = Math.max(18, Math.min(160, Math.round(h0 + ev.clientY - y0))); els().forEach((el) => { el.style.height = hN + 'px'; el.style.setProperty('--bh', Math.max(14, hN - 6) + 'px'); }); };
+      const up = () => { hd.removeEventListener('pointermove', mv); hd.removeEventListener('pointerup', up); hd.classList.remove('on'); const a = trilhaAlturas(); a[k] = hN; salvarAlturas(a); renderTL(); };
+      hd.addEventListener('pointermove', mv); hd.addEventListener('pointerup', up); });
+  });
   document.getElementById('ruler').addEventListener('pointerdown', startScrub);
   document.getElementById('phh').addEventListener('pointerdown', startScrub);
   g.querySelectorAll('[data-scrub]').forEach((l) => l.addEventListener('pointerdown', (e) => { if (e.target === l || e.target.tagName === 'CANVAS' && !e.target.closest('.blk')) { deselect(); startScrub(e); } }));
@@ -3634,7 +3649,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.06-a';
+const STUDIO_VERSAO = '2026.11.06-b';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {
