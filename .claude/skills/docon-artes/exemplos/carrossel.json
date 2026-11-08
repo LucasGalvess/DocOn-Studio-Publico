@@ -1,0 +1,11 @@
+{"formato": "carrossel", "tema": "O que o tratamento clínico não resolve",
+ "fundo": {"tipo": "escuro"},
+ "assinatura": {"nome": "Dra. Exemplo", "handle": "@dra.exemplo"},
+ "referencia": {"cantos": 34, "densidade": "media", "alinhamento": "esquerda", "titulo_caixa": "normal"},
+ "slides": [
+  {"layout": "capa", "kicker": "Cirurgia plástica", "titulo": "O que o tratamento clínico não resolve", "destaque": "não resolve", "subtitulo": "E quando vale procurar um cirurgião"},
+  {"layout": "lista", "titulo": "No rosto", "itens": [{"icone": "target", "texto": "Nariz e orelha"}, {"icone": "sparkle", "texto": "Excesso de pele nas pálpebras"}, {"icone": "check", "texto": "Região cervical"}]},
+  {"layout": "comparacao", "titulo": "Na mama", "esquerda": {"titulo": "Não resolve", "texto": "Medicação, hormônio ou academia não mudam o formato da mama."}, "direita": {"titulo": "Resolve", "texto": "Intervenção cirúrgica, quando a paciente se incomoda."}},
+  {"layout": "citacao", "frase": "Se a paciente está bem, não necessita. Mas se algo incomoda, não adianta gastar com o que não vai resolver.", "autor": "Dra. Exemplo"},
+  {"layout": "cta", "titulo": "Quer entender o seu caso?", "destaque": "seu caso", "acao": "Agende sua avaliação", "texto": "Converse com calma sobre o que é possível para você."}
+ ]}

@@ -137,6 +137,28 @@ O "Diretor" dentro do Studio é o Claude rodando na própria página, na conta d
    - Se o download direto falhar, crie uma página Artifact com capability `downloads` e uma versão HEVC de ≤ 14 MB: `libx265 -b:v ~2.9M` em 2 passadas, `-tag:v hvc1`.
    - Responda em 3–5 linhas, mais o que foi deduzido e os B-rolls usados.
 
+## Referência manda; estilo é a base (desde 08/11/2026)
+
+A **referência é o ponto principal** de como o vídeo deve ficar. O estilo do Studio e a identidade do cliente são só a **base**.
+- Ordem de prioridade (a de cima vence):
+  1. o pedido escrito da equipe ou do cliente;
+  2. as referências: `projeto.referencias` (links e Pinterest), anexos marcados como referência e vídeos/artes que a equipe disse "quero assim";
+  3. a identidade do cliente;
+  4. o estilo;
+  5. os padrões desta skill.
+- O que copiar da referência:
+  - ritmo de cortes;
+  - densidade e posição dos textos;
+  - tipo de animação (suave, cinética, seca);
+  - tipografia: peso, caixa alta, serifa;
+  - cores de destaque;
+  - presença de B-roll, motion e legenda;
+  - tratamento de cor.
+- Nunca copie a imagem, a marca nem o texto de terceiros: a referência é de linguagem, não de conteúdo.
+- Sem referência: siga o estilo e a identidade e **peça referências** na entrega ("Se tiver um vídeo de referência, mande que eu aproximo").
+- Na entrega, diga em uma linha o que veio da referência e o que veio do estilo.
+- Mesma regra nas artes estáticas: skill `docon-artes`.
+
 ## Direção de arte: decisões que você toma sozinho
 
 - **Uma ideia, um painel.** Prefira dados concretos citados na fala (idade, peso, dose, frequência, nome do diagnóstico) a frases genéricas. Títulos curtos (≤ 28 caracteres); linhas de ícone ≤ 32 caracteres.
@@ -358,6 +380,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 - **Pinterest** e outros links: só referência visual no projeto (`projeto.referencias`), lida pelo diretor. A imagem é de quem publicou e nunca entra no vídeo.
 
 ## Lições aprendidas (não repita)
+
+- **08/11/2026:** a equipe decidiu que a referência manda e o estilo é só a base, em vídeos e artes. Antes, o estilo vencia e a referência era só "inspiração": o resultado saía genérico.
 
 - **Bruto que já era um reels editado:** um "bruto" veio com legenda, card de pergunta e letreiros gravados na imagem. Os nossos gráficos ficaram por cima deles.
   - **Agora:** antes de editar, olhe uma folha de quadros. Se houver texto gravado, pare e peça o arquivo sem edição.

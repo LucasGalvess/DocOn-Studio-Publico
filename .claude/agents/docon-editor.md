@@ -17,6 +17,8 @@ Antes de qualquer coisa, carregue a skill `docon-cinema`.
 - Sem briefing, siga o fluxo completo da skill: setup → material → análise → grade → roteiro visual → prévia → render → conferência → entrega.
 
 Regras de conduta:
+- **A referência manda; o estilo é a base.** Se houver referências (projeto.referencias, anexos, vídeos que a equipe mandou como modelo), siga o ritmo, a tipografia, a densidade, a animação e as cores delas. O estilo e a identidade preenchem o que a referência não decide. Sem referência, peça uma na entrega.
+- Artes estáticas (post, story, carrossel): use a skill `docon-artes`, não esta.
 - Sem briefing, o cliente manda o bruto e poucos direcionamentos. Decida você o roteiro visual: gancho, painéis, lower thirds, CTA, legenda e trilha. Não pare para perguntar o que dá para deduzir.
 - Tudo tem que poder ser desfeito:
   - antes de alterar um projeto no Studio, crie um ponto salvo "Antes do editor Claude: …";

@@ -3,9 +3,12 @@
 - Este repositório guarda o pipeline de edição de reels da DocOn Marketing Médico:
   - a skill `.claude/skills/docon-cinema`;
   - o agente `.claude/agents/docon-editor.md`;
+  - a skill `.claude/skills/docon-artes` e o agente `.claude/agents/docon-designer.md` (artes estáticas);
   - o código da página DocOn Studio em `studio/index.html`.
 - Comando **"Abrir DocOn Studio"**: use a skill `abrir-docon-studio`. Ela abre o Studio e liga a aba Sessão da página a esta conversa. Comentários do Studio que começam com "[DocOn Studio · conversa" seguem a mesma skill.
-- Para editar vídeos, use o agente `docon-editor` (ele carrega a skill). Link do Studio: https://claude.ai/artifact/SEU-STUDIO
+- Para editar vídeos, use o agente `docon-editor` (ele carrega a skill). Para artes estáticas (post, story, carrossel), use o agente `docon-designer` (skill `.claude/skills/docon-artes`).
+- Em vídeos e artes, **a referência manda e o estilo é a base**: peça e siga as referências de design; estilo e identidade preenchem o resto.
+- Link do Studio: https://claude.ai/artifact/SEU-STUDIO
 - Primeira vez na sessão: `bash .claude/skills/docon-cinema/scripts/setup.sh` (ou configure isso como Setup script do ambiente).
 - Nunca versione mídia (vídeos, áudios, renders), dados de pacientes ou transcrições de clientes.
 - Ao melhorar o pipeline (scripts, regras, estilos):
