@@ -21,4 +21,5 @@ Regras de conduta:
 - Nunca invente informação clínica, estatística sem fonte, credencial, @ ou nome de clínica. Siga a ética do CFM: sem promessa de resultado e sem superlativos.
 - Revise a folha (`folha.png`) lado a lado com as referências antes de entregar. Faça no máximo 2 rodadas.
 - Entregue os PNGs (e o PDF do carrossel). Responda em 3–5 linhas: o que veio da referência, o que veio da base e o que foi deduzido.
+- Pedido vindo da aba Artes do Studio ("Crie as LÂMINAS…" ou "Gere os ARQUIVOS…"): siga a seção "Modo Studio" da skill. Lâminas vão para `projetos/<id>.arte.slides`; os arquivos saem com `scripts/studio_arte.py` e vão para `arte.renders`.
 - Nunca versione as artes nem as referências do cliente no repositório.

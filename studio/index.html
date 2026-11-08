@@ -336,6 +336,30 @@ body.resizing{cursor:col-resize;user-select:none}
 body.resizing.h{cursor:row-resize}
 @media (max-width:1100px){.split{display:none}.work{grid-template-columns:270px minmax(0,1fr)}.insp{grid-column:1/-1;border-left:0;border-top:1px solid var(--line);max-height:none}}
 @media (max-width:720px){.app{height:auto}html,body{height:auto}.work{grid-template-columns:1fr}.side{border-right:0;border-bottom:1px solid var(--line)}.phone{height:auto;width:min(320px,100%)}.top .sel{max-width:100%;flex:1 1 100%}}
+/* espaço de Artes: sem vídeo e sem timeline */
+.artestage{display:grid;grid-template-rows:auto minmax(0,1fr) auto auto;min-height:0;padding:10px 16px 12px;gap:8px}
+.artestage[hidden]{display:none}
+.artebar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.artebar .sp{flex:1}
+.artemain{display:grid;place-items:center;min-height:0;overflow:hidden}
+.artehost{box-shadow:0 12px 40px #0008}
+.artevaza{color:var(--warn,#e3b35b);min-height:1.2em;text-align:center;margin:0}
+.artestrip{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;justify-content:center}
+.artethumb{border:2px solid transparent;border-radius:8px;padding:0;background:none;cursor:pointer;position:relative;flex:none}
+.artethumb.on{border-color:var(--accent)}
+.artethumb span{position:absolute;left:4px;top:4px;font:700 11px var(--f-ui,sans-serif);background:#000a;color:#fff;border-radius:4px;padding:1px 5px}
+.artethumb .artehost{box-shadow:none}
+.arteslides{display:flex;gap:6px;flex-wrap:wrap}
+.arterefs{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;margin:6px 0}
+.arterefs figure{position:relative;margin:0;aspect-ratio:4/5;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--raised)}
+.arterefs img{width:100%;height:100%;object-fit:cover}
+.arterefs .x{position:absolute;right:0;top:0;background:rgba(0,0,0,.6)}
+.arteadd{display:grid;place-items:center;aspect-ratio:4/5;border:1px dashed var(--line);border-radius:8px;cursor:pointer;font-size:12px;color:var(--muted)}
+.artegen{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px;margin:6px 0}
+.artegen button{padding:0;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:none;cursor:pointer}
+.artegen img{width:100%;display:block}
+body.modo-arte .tl,body.modo-arte .stagebar,body.modo-arte .phonewrap,body.modo-arte .stagefoot,body.modo-arte #tabInsp,body.modo-arte #sendAprov,body.modo-arte #exportBtn{display:none}
+body.modo-arte .stage{grid-template-rows:minmax(0,1fr)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -405,6 +429,7 @@ body.resizing.h{cursor:row-resize}
           <div class="narr" id="narr" hidden><b>DIRETOR</b><span id="narrTxt"></span></div>
         </div>
       </div>
+      <div class="artestage" id="arteStage" hidden aria-label="Prévia da arte"></div>
       <div class="stagefoot">
         <label class="btn sm" for="vidFile">Abrir vídeo bruto</label>
         <input id="vidFile" type="file" accept="video/*" hidden>
@@ -611,13 +636,14 @@ function renderTop() {
   sel.disabled = !ids.length;
   const p = cur(); const pill = document.getElementById('stPill'); const sa = document.getElementById('sendAprov'), ex = document.getElementById('exportVid');
   if (pill) { pill.hidden = !p; pill.textContent = S.savingRaw ? (S.savingRawMsg || 'salvando o bruto…') : stOf(p); pill.dataset.s = S.savingRaw ? '' : stOf(p); }
-  if (sa && p) { const ap = stOf(p) === 'aprovado'; sa.hidden = ap; sa.textContent = openAprovFor(S.cur) ? 'Reenviar para aprovação' : 'Enviar para aprovação'; sa.className = 'btn'; ex.className = 'btn pri'; ex.textContent = 'Exportar vídeo'; }
+  if (sa && p) { const ap = stOf(p) === 'aprovado'; sa.hidden = ap; sa.textContent = openAprovFor(S.cur) ? 'Reenviar para aprovação' : 'Enviar para aprovação'; sa.className = 'btn'; ex.className = 'btn pri'; ex.textContent = ehArte(p) ? 'Baixar artes' : 'Exportar vídeo'; }
 }
 
 /* ======================= render: aba Projeto ======================= */
 function fld(id, label, val, type = 'text', extra = '') { return `<div class="f"><label for="${id}">${label}</label><input id="${id}" type="${type}" value="${esc(val)}" ${extra}></div>`; }
 function renderProj() {
   const el = document.getElementById('paneProj'); const p = cur();
+  if (ehArte(p)) { el.innerHTML = arteProjHTML(p); wireArteProj(p); return; }
   if (!p) { el.innerHTML = `<div class="empty"><b>Comece um projeto</b>Crie um projeto para cada vídeo. Ele guarda a ficha do profissional, os arquivos, os direcionamentos e a timeline de elementos. Toda a equipe vê e edita.<button class="btn pri" type="button" onclick="openWizard(true)">Começar (passo a passo)</button></div>`; return; }
   const tOpts = Object.values(S.templates).map((t) => `<option value="${t.id}" ${t.id === p.estilo_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('');
   el.innerHTML = `
@@ -1482,7 +1508,7 @@ function applyLook(p, t) {
 function airDur(p) { const dur = projDur(p); const cuts = p.blocos.filter((b) => b.tipo === 'corte').map((b) => [Math.max(0, b.inicio), Math.min(dur, b.fim)]).sort((a, b) => a[0] - b[0]); let s = 0, end = 0; for (const [a, b] of cuts) { const a2 = Math.max(a, end); if (b > a2) { s += b - a2; end = b; } } return dur - s; }
 function renderStage() {
   if (S.editing) return;
-  applyPalette(); const p = cur(); const ov = document.getElementById('ovl'); animStage(p);
+  applyPalette(); const p = cur(); const ov = document.getElementById('ovl'); arteModo(p); if (ehArte(p)) { arteRedesenhar(); return; } animStage(p);
   document.getElementById('tc').textContent = fmt(S.t);
   if (!p) { ov.innerHTML = ''; applyLook(null); document.getElementById('durHint').textContent = ''; return; }
   const dur = projDur(p); const ad = airDur(p);
@@ -1572,7 +1598,7 @@ function pxPerSec() { return +document.getElementById('zoom').value; }
 function trilhaAlturas() { try { return JSON.parse(localStorage.getItem('docon-trilhas') || '{}') || {}; } catch (e) { return {}; } }
 function salvarAlturas(a) { try { localStorage.setItem('docon-trilhas', JSON.stringify(a)); } catch (e) {} }
 function renderTL() {
-  const g = document.getElementById('tlgrid'); const p = cur();
+  const g = document.getElementById('tlgrid'); const p = cur(); if (ehArte(p)) return;
   if (!p) { g.innerHTML = '<div></div><div class="hint" style="padding:16px 0">Crie ou abra um projeto para montar a timeline.</div>'; return; }
   const dur = projDur(p); fitEnds(p, dur); const pps = pxPerSec(), W = Math.ceil(dur * pps);
   g.style.minWidth = (LABW + W + 24) + 'px';
@@ -2043,7 +2069,7 @@ let chatCtl = null, chatCtx = '';
 function speak(t) { if (!document.getElementById('ttsOn')?.checked) return; sayLine(t, null, true); }
 function renderChat() {
   const el = document.getElementById('chatPane'); const ch = chatOf();
-  const p = cur();
+  const p = cur(); if (ehArte(p)) { el.innerHTML = arteDirHTML(p); wireArteDir(p); return; }
   el.innerHTML = `<div class="chat" style="grid-template-rows:auto minmax(0,1fr) auto">${p ? `<div class="brief">
       <p class="h">O que deve ser feito</p>
       <textarea id="dirIn" rows="3" placeholder="Descreva o vídeo: o gancho, o que destacar, os painéis, o tom, o CTA… O diretor aplica na prévia e na timeline.">${esc(p.direcionamentos || '')}</textarea>
@@ -3173,6 +3199,7 @@ async function exportVideo(fmt, q, say, bar) {
   return saveFile(base + (fmt === 'mov' ? '.mov' : '.mp4'), fmt === 'mov' ? await toMov(mp4) : mp4);
 }
 function openExportFinal() {
+  if (ehArte(cur())) { showTab('chat'); const g = document.querySelector('.artegen'); if (g) g.scrollIntoView({behavior: 'smooth', block: 'center'}); else toast('Ainda não há arquivos: use “Gerar PNG” na Direção'); return; }
   const p = cur(); if (!p) { toast('Abra um projeto'); return; }
   const map = cutMap(p); const temBruto = animSemVideo(p) || (!!S.media.src && !!S.videoDur && !S.viewOnly); const vs = (p.versoes || []).filter((v) => v.asset_id);
   document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="xT"><h3 id="xT">Exportar vídeo</h3>
@@ -3317,16 +3344,21 @@ async function recordDictation(alvo) {
 /* ======================= passo a passo: projeto → estilo → vídeo → workspace ======================= */
 const WZ = {step: 1, modo: 'novo', estilo: null, dados: {}};
 function openWizard(start) {
-  if (start) Object.assign(WZ, {step: 1, modo: 'novo', estilo: Object.values(S.templates).sort((a, b) => (a.ordem || 0) - (b.ordem || 0))[0]?.id || null, dados: {titulo: '', nome: '', subtitulo: '', formato: 'talking_head', direcionamentos: '', transcricao: '', arquivo: null, aFmt: '9:16', aDur: 6, aFundo: 'cor', aModelo: 'logo_revelar', aPedido: '', aLogo: null, aEnviar: true}, novoEstilo: null});
-  const steps = WZ.modo === 'animacao' ? ['Animação', 'Estilo', 'Como animar'] : ['Projeto', 'Estilo', 'Vídeo e direção']; const d = WZ.dados;
+  if (start) Object.assign(WZ, {step: 1, modo: 'novo', estilo: Object.values(S.templates).sort((a, b) => (a.ordem || 0) - (b.ordem || 0))[0]?.id || null, dados: {titulo: '', nome: '', subtitulo: '', formato: 'talking_head', direcionamentos: '', transcricao: '', arquivo: null, aFmt: '9:16', aDur: 6, aFundo: 'cor', aModelo: 'logo_revelar', aPedido: '', aLogo: null, aEnviar: true, rFmt: 'carrossel', rFundo: 'escuro', rPedido: '', rRefs: [], rEnviar: true}, novoEstilo: null});
+  const steps = WZ.modo === 'animacao' ? ['Animação', 'Estilo', 'Como animar'] : WZ.modo === 'arte' ? ['Arte', 'Estilo (base)', 'Conteúdo e referências'] : ['Projeto', 'Estilo', 'Vídeo e direção']; const d = WZ.dados;
   const head = `<div style="display:flex;gap:6px;flex-wrap:wrap">${steps.map((n, i) => `<span class="chip" aria-pressed="${WZ.step === i + 1}" style="${WZ.step > i + 1 ? 'color:var(--ok)' : ''}">${i + 1}. ${n}</span>`).join('')}</div>`;
   let body = '';
   if (WZ.step === 1) {
     const ps = Object.entries(S.projects).sort((a, b) => (b[1].atualizado || 0) - (a[1].atualizado || 0));
     body = `<div class="row2"><button class="card ${WZ.modo === 'novo' ? 'on' : ''}" type="button" data-wm="novo" style="text-align:left;cursor:pointer"><h4>Projeto novo</h4><p>Um vídeo novo do zero, com estilo e direção.</p></button>
       <button class="card ${WZ.modo === 'ajuste' ? 'on' : ''}" type="button" data-wm="ajuste" style="text-align:left;cursor:pointer"><h4>Ajustar um projeto</h4><p>Continuar ou ajustar um vídeo que já existe.</p></button>
-      <button class="card ${WZ.modo === 'animacao' ? 'on' : ''}" type="button" data-wm="animacao" style="text-align:left;cursor:pointer"><h4>Animação</h4><p>Logo animado, vinheta ou abertura, sem vídeo. Você descreve e a skill cria.</p></button></div>
-      ${WZ.modo === 'animacao' ? `<div class="f"><label for="wzT">Nome da animação</label><input id="wzT" value="${esc(d.titulo)}" placeholder="Ex.: Logo animado · Dra. …"></div>
+      <button class="card ${WZ.modo === 'animacao' ? 'on' : ''}" type="button" data-wm="animacao" style="text-align:left;cursor:pointer"><h4>Animação</h4><p>Logo animado, vinheta ou abertura, sem vídeo. Você descreve e a skill cria.</p></button>
+      <button class="card ${WZ.modo === 'arte' ? 'on' : ''}" type="button" data-wm="arte" style="text-align:left;cursor:pointer"><h4>Arte</h4><p>Post, story ou carrossel. Você manda as referências, o Claude escreve e você edita aqui.</p></button></div>
+      ${WZ.modo === 'arte' ? `<div class="f"><label for="wzT">Nome da arte</label><input id="wzT" value="${esc(d.titulo)}" placeholder="Ex.: Carrossel · tratamento clínico x cirurgia"></div>
+           <div class="f"><label for="wzN">Cliente (profissional ou clínica)</label><input id="wzN" value="${esc(d.nome)}" placeholder="Dra. …"></div>
+           <div class="row2"><div class="f"><label for="wzRF">Formato</label><select id="wzRF">${Object.entries(ArteEngine.FORMATOS).map(([k, v]) => `<option value="${k}" ${k === d.rFmt ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+           <div class="f"><label for="wzRFu">Fundo</label><select id="wzRFu">${[['escuro', 'Escuro (cor do estilo)'], ['claro', 'Claro'], ['gradiente', 'Degradê'], ['foto', 'Foto']].map(([k, n]) => `<option value="${k}" ${k === d.rFundo ? 'selected' : ''}>${n}</option>`).join('')}</select></div></div>`
+      : WZ.modo === 'animacao' ? `<div class="f"><label for="wzT">Nome da animação</label><input id="wzT" value="${esc(d.titulo)}" placeholder="Ex.: Logo animado · Dra. …"></div>
            <div class="f"><label for="wzN">Cliente (profissional ou clínica)</label><input id="wzN" value="${esc(d.nome)}" placeholder="Dra. …"></div>
            <div class="row2"><div class="f"><label for="wzAF">Formato da tela</label><select id="wzAF">${Object.entries(ANIM_FMT).map(([k, v]) => `<option value="${k}" ${k === d.aFmt ? 'selected' : ''}>${v[2]}</option>`).join('')}</select></div>
            <div class="f"><label for="wzAD">Duração (s)</label><input id="wzAD" type="number" min="1" max="60" step="0.5" value="${d.aDur}"></div></div>
@@ -3348,6 +3380,11 @@ function openWizard(start) {
       : `<p class="hint">Escolha o estilo do vídeo. O estilo traz as cores, fontes, legenda, trilha e efeitos de cada cliente.</p>
       <div class="bank" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">${list.map((t) => `<button class="bi ${WZ.estilo === t.id ? 'on' : ''}" type="button" data-ws="${t.id}" style="text-align:left;cursor:pointer;${WZ.estilo === t.id ? 'border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)' : ''}"><div class="th" style="aspect-ratio:9/12"><div class="stylemini" data-wmini="${t.id}" style="width:100%"></div></div><div class="meta"><b>${esc(t.nome)}</b><span>${esc((t.descricao || '').slice(0, 70))}</span></div></button>`).join('')}
       <button class="bi" type="button" id="wsNovo" style="cursor:pointer;display:grid;place-items:center;min-height:180px;border-style:dashed"><div class="meta" style="text-align:center"><b>+ Novo estilo</b><span>Cores, fontes e regras de um cliente novo</span></div></button></div>`;
+  } else if (WZ.modo === 'arte') {
+    body = `<div class="f"><label for="wzRP">O que a arte deve dizer</label><textarea id="wzRP" rows="5" placeholder="Ex.: carrossel sobre o que o tratamento clínico não resolve na cirurgia plástica: rosto, mama e abdômen; tom acolhedor, sem promessa; última lâmina com convite para avaliação.">${esc(d.rPedido)}</textarea></div>
+      <div class="f"><label for="wzRR">Referências de design (2 a 5 imagens: posts de que gosta, materiais da marca)</label><input id="wzRR" type="file" accept="image/png,image/jpeg,image/webp" multiple>${(d.rRefs || []).length ? `<span class="hint">${d.rRefs.length} imagem(ns) escolhida(s)</span>` : ''}</div>
+      <label class="chk"><input type="checkbox" id="wzRE" ${d.rEnviar ? 'checked' : ''}> Pedir ao Claude para escrever as lâminas seguindo as referências</label>
+      <p class="hint">A referência manda; o estilo e a identidade do cliente são a base. As lâminas-modelo aparecem na hora para você editar; as do Claude chegam quando ele terminar.</p>`;
   } else if (WZ.modo === 'animacao') {
     const k = slug(d.nome || ''); const temLogo = !!S.clientes[k]?.identidade?.logo_asset;
     body = `<div class="f"><label for="wzAPed">Como você quer a animação</label><textarea id="wzAPed" rows="5" placeholder="Ex.: o logo se desenha em traço dourado, como uma assinatura; depois preenche com a cor da marca, um brilho passa por cima e o slogan sobe suave embaixo. Elegante, sem exagero.">${esc(d.aPedido)}</textarea></div>
@@ -3362,10 +3399,11 @@ function openWizard(start) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm" type="button" id="wzTrImp">Importar arquivo</button><input id="wzTrFile" type="file" accept="${TR_ACCEPT}" hidden><span class="hint">${d.trData ? 'Importado: ' + esc(d.trData.fonte) + (d.trData.palavras ? ' · legenda sincronizada' : '') : 'TXT, DOCX, PDF, SRT, VTT, JSON…'}</span></div>
       <p class="hint">Ao abrir o workspace, o diretor (Claude) monta a primeira versão da timeline a partir da direção e da fala. Você ajusta depois, falando ou à mão.</p>`;
   }
-  const canNext = WZ.step === 1 ? (WZ.modo === 'novo' || WZ.modo === 'animacao') : WZ.step === 2 ? !!(WZ.estilo || WZ.novoEstilo) : true;
-  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wzT0" style="width:min(720px,100%)"><h3 id="wzT0">${WZ.step === 1 ? 'Vamos começar' : WZ.step === 2 ? (WZ.modo === 'animacao' ? 'Estilo da animação' : 'Estilo do vídeo') : WZ.modo === 'animacao' ? 'Como animar' : 'Vídeo e direção'}</h3>${head}${body}
+  const canNext = WZ.step === 1 ? (WZ.modo === 'novo' || WZ.modo === 'animacao' || WZ.modo === 'arte') : WZ.step === 2 ? !!(WZ.estilo || WZ.novoEstilo) : true;
+  document.getElementById('modalRoot').innerHTML = `<div class="modal" id="mdl"><div class="dlg" role="dialog" aria-modal="true" aria-labelledby="wzT0" style="width:min(720px,100%)"><h3 id="wzT0">${WZ.step === 1 ? 'Vamos começar' : WZ.step === 2 ? (WZ.modo === 'animacao' ? 'Estilo da animação' : WZ.modo === 'arte' ? 'Estilo da arte (base)' : 'Estilo do vídeo') : WZ.modo === 'animacao' ? 'Como animar' : WZ.modo === 'arte' ? 'Conteúdo e referências' : 'Vídeo e direção'}</h3>${head}${body}
     <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap"><button class="btn ghost" type="button" id="wzX">${Object.keys(S.projects).length ? 'Cancelar' : 'Fechar'}</button><span style="display:flex;gap:8px">${WZ.step > 1 ? '<button class="btn" type="button" id="wzB">Voltar</button>' : ''}${canNext ? `<button class="btn pri" type="button" id="wzG">${WZ.step === 3 ? 'Abrir o workspace' : WZ.step === 2 && WZ.novoEstilo ? 'Salvar estilo e continuar' : 'Continuar'}</button>` : ''}</span></div></div></div>`;
   const $ = (id) => document.getElementById(id); const keep = () => { if ($('wzT')) { d.titulo = $('wzT').value; d.nome = $('wzN').value; if ($('wzS')) d.subtitulo = $('wzS').value; if ($('wzF')) d.formato = $('wzF').value; }
+    if ($('wzRF')) { d.rFmt = $('wzRF').value; d.rFundo = $('wzRFu').value; } if ($('wzRP')) { d.rPedido = $('wzRP').value; d.rEnviar = $('wzRE').checked; }
     if ($('wzAF')) { d.aFmt = $('wzAF').value; d.aDur = Math.min(60, Math.max(1, +$('wzAD').value || 6)); d.aFundo = $('wzAFu').value; }
     if ($('wzAPed')) { d.aPedido = $('wzAPed').value; d.aModelo = $('wzAM').value; d.aEnviar = $('wzAE').checked; } if ($('wzDir')) { d.direcionamentos = $('wzDir').value; d.transcricao = $('wzTr').value; }
     const ne = WZ.novoEstilo; if (ne && $('neN')) { ne.nome = $('neN').value; ne.base = $('neB').value; for (const k of ['glass', 'icon', 'button', 'text']) ne.paleta[k] = $('ne_' + k).value; ne.fontes = {titulo: $('neFt').value, texto: $('neFx').value}; ne.legenda = $('neL').value; ne.musica = $('neM').value === '1'; ne.regras = $('neR').value; } };
@@ -3382,6 +3420,7 @@ function openWizard(start) {
   if ($('neMini')) { mini(); document.querySelectorAll('#mdl input, #mdl select').forEach((x) => x.addEventListener('input', mini)); $('neB').onchange = () => { const base = S.templates[$('neB').value]; if (base) { WZ.novoEstilo.paleta = {...PAL_DEF, ...base.paleta}; WZ.novoEstilo.fontes = {titulo: base.fontes?.titulo || 'Montserrat', texto: base.fontes?.texto || 'Inter'}; } keep(); openWizard(); }; }
   if ($('wzVid')) $('wzVid').onchange = (e) => { keep(); d.arquivo = e.target.files[0] || null; openWizard(); };
   if ($('wzAL')) $('wzAL').onchange = (e) => { d.aLogo = e.target.files[0] || null; };
+  if ($('wzRR')) $('wzRR').onchange = (e) => { keep(); d.rRefs = [...e.target.files].slice(0, 8); openWizard(); };
   if ($('wzTrImp')) { $('wzTrImp').onclick = () => $('wzTrFile').click(); $('wzTrFile').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; keep(); try { const r = await lerTranscricao(f); d.trData = {...r, fonte: `${r.fonte} · ${f.name}`}; d.transcricao = r.texto; } catch (x) { toast('Não consegui ler: ' + (x.message || x)); } openWizard(); }; }
   if ($('wzG')) $('wzG').onclick = async () => {
     keep();
@@ -3393,6 +3432,7 @@ function openWizard(start) {
     }
     if (WZ.step < 3) { WZ.step++; openWizard(); return; }
     if (WZ.modo === 'animacao') { await criarAnimacao(d); return; }
+    if (WZ.modo === 'arte') { await criarArte(d); return; }
     // cria o projeto e abre o workspace
     const t = S.templates[WZ.estilo]; const id = 'p-' + uid(); const p = newProject(t);
     Object.assign(p, {titulo: d.titulo || 'Novo vídeo', formato: d.formato, direcionamentos: d.direcionamentos}); Object.assign(p.profissional, {nome: d.nome, subtitulo: d.subtitulo});
@@ -3685,6 +3725,413 @@ async function renderOnline(el, ia) {
     document.getElementById('iaGo').onclick = () => { if (!ON.ia.prompt.trim()) { toast('Descreva o que gerar'); return; } const base = ON.ia.tipo === 'video' ? ON.ia.itens.find((x) => x.tipo === 'imagem') : null; if (ON.ia.tipo === 'video' && !base) { toast('Gere e escolha uma imagem primeiro: o vídeo parte dela'); return; } gerarIA(ON.ia.prompt, base ? fileUrl(base) : undefined); }; }
 }
 
+/* ARTE_ENGINE_INICIO · cópia de .claude/skills/docon-artes/scripts/arte_engine.js (não edite aqui: rode tools/sync_arte_engine.py) */
+/* DocOn Artes · motor de layout (fonte única).
+   O MESMO código desenha a prévia no DocOn Studio (aba Artes) e o PNG final da skill (render.mjs, via arte.py).
+   Depois de mudar este arquivo, rode `python3 tools/sync_arte_engine.py` para copiar para studio/index.html.
+   Sem dependências, sem DOM no momento de montar (só strings); `ajustar(raiz)` roda no navegador. */
+const ArteEngine = (() => {
+  const TAM = {post: [1080, 1350], carrossel: [1080, 1350], quadrado: [1080, 1080], story: [1080, 1920]};
+  const FORMATOS = {post: 'Post único (4:5)', quadrado: 'Quadrado (1:1)', story: 'Story (9:16)', carrossel: 'Carrossel (4:5, 2 a 10 lâminas)'};
+  const LAYOUTS = {
+    capa: {n: 'Capa', campos: ['kicker', 'titulo', 'destaque', 'subtitulo', 'foto']},
+    texto: {n: 'Texto', campos: ['kicker', 'titulo', 'destaque', 'corpo']},
+    lista: {n: 'Lista com ícones', campos: ['kicker', 'titulo', 'destaque', 'itens_icone']},
+    numero: {n: 'Número em destaque', campos: ['kicker', 'valor', 'rotulo', 'texto', 'fonte']},
+    passos: {n: 'Passos', campos: ['kicker', 'titulo', 'destaque', 'itens']},
+    comparacao: {n: 'Comparação', campos: ['kicker', 'titulo', 'destaque', 'esquerda', 'direita']},
+    citacao: {n: 'Citação', campos: ['kicker', 'frase', 'autor']},
+    cta: {n: 'Chamada final (CTA)', campos: ['kicker', 'titulo', 'destaque', 'texto', 'acao']},
+  };
+  const PAL = {glass: '#34241e', text: '#f8f3ea', key: '#f2d6a6', icon: '#e9c48c', grad1: '#f6deac', grad2: '#c99660',
+    button: '#b76e79', button_fg: '#f8f3ea', pill_bg: '#f2d6a6', pill_fg: '#34241e', border: '#e8d3b0'};
+  const ICONES = {
+    check: '<circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.4l3 3 6-6.4"/>',
+    heart: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+    calendar: '<rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+    target: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+    clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    shield: '<path d="M12 3l7 3v5.5c0 4.4-3 7.7-7 9.5-4-1.8-7-5.1-7-9.5V6z"/><path d="M9 12l2 2 4-4.5"/>',
+    leaf: '<path d="M5 19c0-8 5-13 14-14-1 9-6 14-14 14z"/><path d="M5 19l7-7"/>',
+    star: '<path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>',
+    alert: '<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17.2v.3"/>',
+    chat: '<path d="M5 6h14v9H10l-4 3v-3H5z"/>',
+    x: '<circle cx="12" cy="12" r="9.5"/><path d="M9 9l6 6M15 9l-6 6"/>',
+  };
+  const esc = (t) => String(t == null ? '' : t).replace(/[&<>"']/g, (c) => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  const icone = (n, cls = 'ic') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICONES[n] || ICONES.check}</svg>`;
+  const limpo = (o) => Object.fromEntries(Object.entries(o || {}).filter(([, v]) => v));
+  /* a REFERÊNCIA manda; identidade e estilo são a base */
+  /* na referência, "destaque" (key) e "fundo" (glass) arrastam as cores ligadas a eles, a menos que venham explícitas */
+  const expandir = (rp) => { const r = limpo(rp); const o = {...r};
+    if (r.key) for (const k of ['icon', 'grad1', 'grad2', 'pill_bg', 'border']) if (!r[k]) o[k] = r.key;
+    if (r.glass && !r.pill_fg) o.pill_fg = r.glass;
+    return o; };
+  const paleta = (estilo, ident, ref) => ({...PAL, ...limpo(estilo?.paleta), ...limpo(ident?.paleta), ...expandir(ref?.paleta)});
+  const fontes = (estilo, ident, ref) => { const f = {...limpo(estilo?.fontes), ...limpo(ident?.fontes), ...limpo(ref?.fontes)}; return {titulo: f.titulo || 'Montserrat', texto: f.texto || 'Inter'}; };
+  const reEsc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  function realce(titulo, destaque) {
+    let t = esc(titulo).replace(/\n/g, '<br>');
+    for (const d of String(destaque || '').split(',').map((x) => x.trim()).filter(Boolean)) t = t.replace(new RegExp(reEsc(esc(d)), 'i'), (m) => `<span class="grad">${m}</span>`);
+    return t;
+  }
+  function cores(p, tipo) {
+    const cm = (a, pct, b = 'transparent') => `color-mix(in srgb,${a} ${pct}%,${b})`;
+    if (tipo === 'claro') return {bg: p.text, fg: p.glass, fg2: cm(p.glass, 78), fg3: cm(p.glass, 45), card: cm(p.glass, 7, p.text), borda: cm(p.glass, 14), veu: 'none'};
+    return {bg: tipo === 'gradiente' ? `linear-gradient(160deg,${p.glass},${cm(p.glass, 70, p.grad2)})` : p.glass, fg: p.text, fg2: cm(p.text, 82), fg3: cm(p.text, 45),
+      card: cm(p.glass, 62), borda: cm(p.border, 40),
+      veu: tipo === 'foto' ? `linear-gradient(180deg,${cm(p.glass, 35)} 0%,${cm(p.glass, 55)} 45%,${cm(p.glass, 92)} 100%)` : 'none'};
+  }
+  const CSS = `
+.arte,.arte *{margin:0;padding:0;box-sizing:border-box}
+.arte{position:relative;width:var(--w);height:var(--h);overflow:hidden;padding:var(--safe-t) 84px var(--safe-b);display:flex;flex-direction:column;gap:34px;font-family:var(--fx);color:var(--fg);background:var(--bg);-webkit-font-smoothing:antialiased;text-align:left}
+.fundo{position:absolute;inset:0;z-index:0}
+.fundo img{width:100%;height:100%;object-fit:cover}
+.fundo:after{content:"";position:absolute;inset:0;background:var(--veu)}
+.arte>*:not(.fundo):not(.decor){position:relative;z-index:1}
+.kicker{align-self:flex-start;background:var(--pill_bg);color:var(--pill_fg);font:800 26px/1 var(--ft);letter-spacing:.12em;text-transform:uppercase;padding:14px 24px;border-radius:999px}
+.centro .kicker{align-self:center}
+.tit{font:800 var(--t1,92px)/1.04 var(--ft);letter-spacing:-.015em;text-wrap:balance;text-transform:var(--caixa,none)}
+.tit2{font:800 var(--t2,64px)/1.08 var(--ft);letter-spacing:-.01em;text-wrap:balance;text-transform:var(--caixa,none)}
+.grad{background:linear-gradient(100deg,var(--grad1),var(--grad2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font:500 38px/1.35 var(--fx);color:var(--fg2);text-wrap:pretty}
+.corpo{font:500 40px/1.45 var(--fx);color:var(--fg2);text-wrap:pretty}
+.corpo p+p{margin-top:24px}
+.vidro{background:var(--card);border:2px solid var(--borda);border-radius:var(--r,34px);padding:44px 48px}
+.itens{display:grid;gap:28px}
+.item{display:grid;grid-template-columns:72px 1fr;gap:26px;align-items:center;font:700 42px/1.25 var(--fx)}
+.ic{width:72px;height:72px;color:var(--icon)}
+.num{font:900 var(--tn,250px)/.95 var(--ft);letter-spacing:-.03em}
+.rotulo{font:700 46px/1.2 var(--fx)}
+.fonte{font:500 26px/1.3 var(--fx);color:var(--fg3)}
+.passos{display:grid;gap:30px}
+.passo{display:grid;grid-template-columns:90px 1fr;gap:28px;align-items:start}
+.passo b{display:grid;place-items:center;width:90px;height:90px;border-radius:50%;background:var(--key);color:var(--glass);font:800 44px/1 var(--ft)}
+.passo span{font:600 40px/1.3 var(--fx);padding-top:18px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:26px;flex:1;min-height:0}
+.col h3{font:800 44px/1.1 var(--ft);margin-bottom:18px;display:flex;gap:14px;align-items:center}
+.col h3 .ic{width:52px;height:52px}
+.col p{font:500 36px/1.4 var(--fx);color:var(--fg2)}
+.aspas{font:900 260px/.6 var(--ft);color:var(--key);height:120px}
+.frase{font:700 var(--tq,64px)/1.2 var(--ft);text-wrap:balance}
+.autor{font:600 34px/1.3 var(--fx);color:var(--fg2)}
+.botao{align-self:flex-start;background:var(--button);color:var(--button_fg);font:800 42px/1 var(--fx);padding:30px 48px;border-radius:999px}
+.centro .botao{align-self:center}
+.conteudo{flex:1;min-height:0;display:flex;flex-direction:column;gap:34px;justify-content:var(--just,center)}
+.decor{position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(60% 45% at 92% 6%,color-mix(in srgb,var(--grad2) 30%,transparent),transparent 70%),radial-gradient(50% 40% at 0% 100%,color-mix(in srgb,var(--key) 14%,transparent),transparent 70%)}
+.decor:after{content:"";position:absolute;width:760px;height:760px;right:-300px;top:-260px;border-radius:50%;border:3px solid color-mix(in srgb,var(--key) 22%,transparent)}
+.claro .decor{background:radial-gradient(60% 45% at 92% 6%,color-mix(in srgb,var(--grad2) 22%,transparent),transparent 70%)}
+.rodape{display:flex;align-items:center;gap:22px;font:600 28px/1.2 var(--fx);color:var(--fg2)}
+.rodape img{height:64px;max-width:300px;object-fit:contain}
+.rodape .nome b{display:block;color:var(--fg);font-weight:700}
+.rodape .pag{margin-left:auto;display:flex;gap:10px;align-items:center}
+.rodape .pag i{width:14px;height:14px;border-radius:50%;background:var(--fg3)}
+.rodape .pag i.on{width:40px;border-radius:8px;background:var(--key)}
+.arrasta{display:flex;gap:12px;align-items:center;font:700 30px/1 var(--fx);color:var(--key)}
+.arrasta svg{width:44px;height:44px}
+.foto{border-radius:var(--r,34px);overflow:hidden;flex:1;min-height:0}
+.foto img{width:100%;height:100%;object-fit:cover}
+.centro{text-align:center;align-items:center}
+.centro .itens,.centro .passos{text-align:left}
+`;
+  const itemTxt = (it) => (it && typeof it === 'object') ? (it.texto || '') : (it || '');
+  function corpo(s, i, n, plano, url) {
+    const L = s.layout || 'capa'; const out = []; const alin = plano.referencia?.alinhamento || 'esquerda';
+    const tit = (cls = 'tit2') => s.titulo ? `<h2 class="${cls}" data-fit="titulo">${realce(s.titulo, s.destaque)}</h2>` : '';
+    if (s.kicker) out.push(`<span class="kicker">${esc(s.kicker)}</span>`);
+    if (L === 'capa') {
+      if (s.foto) out.push(`<div class="foto"><img src="${esc(url(s.foto))}" alt=""></div>`);
+      out.push(`<h1 class="tit" data-fit="titulo" style="max-height:${s.foto ? '46%' : '62%'}">${realce(s.titulo, s.destaque)}</h1>`);
+      if (s.subtitulo) out.push(`<p class="sub" data-fit="subtitulo">${esc(s.subtitulo)}</p>`);
+      if (plano.formato === 'carrossel' && n > 1) out.push('<div class="arrasta">Arraste para o lado <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></div>');
+    } else if (L === 'texto') {
+      out.push(tit());
+      out.push('<div class="corpo" data-fit="corpo" style="flex:1;min-height:0">' + String(s.corpo || '').split('\n').filter((x) => x.trim()).map((x) => `<p>${esc(x)}</p>`).join('') + '</div>');
+    } else if (L === 'lista') {
+      out.push(tit());
+      out.push(`<div class="vidro itens" data-fit="itens">${(s.itens || []).map((it) => `<div class="item">${icone((it && it.icone) || 'check')}<span>${esc(itemTxt(it))}</span></div>`).join('')}</div>`);
+    } else if (L === 'numero') {
+      out.push(`<div class="num grad">${esc(s.valor)}</div><div class="rotulo">${esc(s.rotulo)}</div>`);
+      if (s.texto) out.push(`<p class="sub" data-fit="texto">${esc(s.texto)}</p>`);
+      if (s.fonte) out.push(`<p class="fonte">Fonte: ${esc(s.fonte)}</p>`);
+    } else if (L === 'passos') {
+      out.push(tit());
+      out.push('<div class="passos" data-fit="passos">' + (s.itens || []).map((t, k) => `<div class="passo"><b>${k + 1}</b><span>${esc(itemTxt(t))}</span></div>`).join('') + '</div>');
+    } else if (L === 'comparacao') {
+      out.push(tit()); const e = s.esquerda || {}, d = s.direita || {};
+      out.push(`<div class="cols"><div class="vidro col" data-fit="esquerda"><h3>${icone(e.icone || 'x')}${esc(e.titulo)}</h3><p>${esc(e.texto)}</p></div><div class="vidro col" data-fit="direita"><h3>${icone(d.icone || 'check')}${esc(d.titulo)}</h3><p>${esc(d.texto)}</p></div></div>`);
+    } else if (L === 'citacao') {
+      out.push('<div class="aspas">“</div>', `<p class="frase" data-fit="frase">${esc(s.frase)}</p>`);
+      if (s.autor) out.push(`<p class="autor">${esc(s.autor)}</p>`);
+    } else if (L === 'cta') {
+      out.push(`<h2 class="tit" data-fit="titulo" style="--t1:84px">${realce(s.titulo, s.destaque)}</h2>`);
+      if (s.texto) out.push(`<p class="sub" data-fit="texto">${esc(s.texto)}</p>`);
+      if (s.acao) out.push(`<span class="botao">${esc(s.acao)}</span>`);
+    } else throw new Error('layout desconhecido: ' + L);
+    return [out.filter(Boolean).join(''), alin === 'centro' || L === 'citacao' || L === 'numero'];
+  }
+  function rodape(plano, i, n, logo) {
+    const a = plano.assinatura || {};
+    const nome = (a.nome || a.handle) ? `<span class="nome"><b>${esc(a.nome)}</b>${esc([a.registro, a.handle].filter(Boolean).join(' · '))}</span>` : '';
+    const pag = n > 1 ? Array.from({length: n}, (_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('') : '';
+    return `<div class="rodape">${logo ? `<img src="${esc(logo)}" alt="">` : ''}${nome}<span class="pag">${pag}</span></div>`;
+  }
+  /* uma página: {w, h, css, html}. ctx = {estilo, ident, url(src) → endereço da imagem, logo (endereço ou ''), ft, fx (font-family CSS)} */
+  function pagina(plano, i, ctx = {}) {
+    const fmt = plano.formato || 'post'; const [W, H] = TAM[fmt] || TAM.post;
+    let slides = plano.slides || []; if (fmt !== 'carrossel') slides = slides.slice(0, 1);
+    const s = slides[i] || {}; const n = slides.length; const ref = plano.referencia || {}; const url = ctx.url || ((x) => x);
+    const p = paleta(ctx.estilo, ctx.ident, ref); const tipo = plano.fundo?.tipo || 'escuro'; const v = cores(p, tipo); const fo = fontes(ctx.estilo, ctx.ident, ref);
+    const [st, sb] = fmt === 'story' ? [250, 300] : [96, 84];            // story: fora da barra do topo e da caixa de resposta
+    const raiz = {w: W + 'px', h: H + 'px', 'safe-t': st + 'px', 'safe-b': sb + 'px', r: (+ref.cantos >= 0 && ref.cantos !== '' && ref.cantos != null ? +ref.cantos : 34) + 'px',
+      caixa: ref.titulo_caixa === 'alta' ? 'uppercase' : 'none', ft: ctx.ft || `"${fo.titulo}",sans-serif`, fx: ctx.fx || `"${fo.texto}",sans-serif`, ...p, ...v};
+    if (fmt === 'story') Object.assign(raiz, {t1: '104px', t2: '72px'});
+    if (fmt === 'quadrado') Object.assign(raiz, {t1: '80px', t2: '58px', tn: '210px'});
+    const escala = {leve: 1.06, media: 1, densa: 0.9}[ref.densidade] || 1;
+    const [miolo, centro] = corpo(s, i, n, plano, url);
+    const L = s.layout || 'capa'; const just = L === 'capa' && !s.foto ? 'flex-end' : L === 'capa' ? 'flex-start' : 'center';
+    const fimg = plano.fundo?.foto; const temFoto = fimg && (i === 0 || plano.fundo?.todas);
+    const estilo = Object.entries(raiz).map(([k, x]) => `--${k}:${x}`).join(';') + `;--just:${just};font-size:${escala}em`;
+    const html = `<div class="arte ${centro ? 'centro' : ''} ${esc(tipo)}" style="${esc(estilo)}">${temFoto ? `<div class="fundo"><img src="${esc(url(fimg))}" alt=""></div>` : ''}${fimg && i === 0 ? '' : '<div class="decor"></div>'}<div class="conteudo">${miolo}</div>${rodape(plano, i, n, ctx.logo)}</div>`;
+    return {w: W, h: H, css: CSS, html, fontes: fo, n};
+  }
+  /* texto que não cabe encolhe até 72%; devolve os campos que ainda vazam */
+  function ajustar(raiz) {
+    const vaza = [];
+    for (const el of raiz.querySelectorAll('[data-fit]')) {
+      el.style.fontSize = ''; const cs = getComputedStyle(el); const base = parseFloat(cs.fontSize); let k = 1;
+      const tol = () => parseFloat(getComputedStyle(el).fontSize) * 0.25 + 2;
+      const sobra = () => el.scrollHeight > el.clientHeight + tol() || el.scrollWidth > el.clientWidth + 2;
+      while (sobra() && k > 0.72) { k -= 0.04; el.style.fontSize = (base * k) + 'px'; }
+      if (sobra()) vaza.push(el.dataset.fit);
+    }
+    return vaza;
+  }
+  function nSlides(plano) { const n = (plano.slides || []).length; return plano.formato === 'carrossel' ? n : Math.min(1, n); }
+  return {TAM, FORMATOS, LAYOUTS, ICONES, PAL, paleta, fontes, pagina, ajustar, nSlides, esc};
+})();
+if (typeof module !== 'undefined') module.exports = ArteEngine;
+/* ARTE_ENGINE_FIM */
+/* ======================= ARTES (post, story, carrossel) =======================
+   formato "arte": p.arte = {fmt: post|quadrado|story|carrossel, fundo: {tipo: escuro|claro|gradiente|foto, foto, todas},
+     assinatura: {nome, registro, handle}, referencia: {paleta, fontes, alinhamento, titulo_caixa, densidade, cantos, observacoes},
+     refs: [{asset_id, nome}], pedido, slides: [{layout, kicker, titulo, destaque, …}], renders: [{t, rotulo, pngs: [asset_id], pdf}], status}.
+   A prévia usa o MESMO motor da skill docon-artes (ArteEngine); a skill gera os PNGs e o PDF finais. */
+const ehArte = (p) => p?.formato === 'arte';
+const ARTE_ICONES = Object.keys(ArteEngine.ICONES);
+function arteSlidesBase(fmt) {
+  const capa = {layout: 'capa', kicker: 'Tema', titulo: 'Título forte em até 8 palavras', destaque: 'até 8 palavras', subtitulo: 'Uma linha que explica o gancho'};
+  if (fmt === 'carrossel') return [capa, {layout: 'lista', titulo: 'O que saber', itens: [{icone: 'check', texto: 'Primeiro ponto'}, {icone: 'check', texto: 'Segundo ponto'}, {icone: 'check', texto: 'Terceiro ponto'}]}, {layout: 'cta', titulo: 'Quer entender o seu caso?', destaque: 'seu caso', texto: 'Converse com calma sobre o que é possível para você.', acao: 'Agende sua avaliação'}];
+  return [capa];
+}
+function artePlano(p) {
+  const a = p.arte || {}; const prof = p.profissional || {};
+  const ass = {nome: prof.nome || '', handle: prof.instagram ? '@' + String(prof.instagram).replace(/^@/, '') : '', ...(a.assinatura || {})};
+  return {formato: a.fmt || 'post', fundo: a.fundo || {tipo: 'escuro'}, assinatura: ass, referencia: a.referencia || {}, slides: a.slides || []};
+}
+function arteCtx(p) {
+  const id = identDe(p); const t = tplOf(p);
+  return {estilo: t ? {paleta: t.paleta, fontes: t.fontes} : {}, ident: id ? {paleta: id.paleta, fontes: id.fontes} : {}, logo: id?.logo_asset ? '/_blob/' + id.logo_asset : '', url: (s) => s};
+}
+/* desenha a lâmina i dentro de `host` (shadow DOM, escala para caber em largura w) e devolve os campos que vazam */
+async function arteDesenhar(host, p, i, w) {
+  const plano = artePlano(p); const ctx = arteCtx(p); const pg = ArteEngine.pagina(plano, i, ctx);
+  loadFont(pg.fontes.titulo); loadFont(pg.fontes.texto);
+  const k = w / pg.w; host.style.width = Math.round(pg.w * k) + 'px'; host.style.height = Math.round(pg.h * k) + 'px';
+  const sr = host.shadowRoot || host.attachShadow({mode: 'open'});
+  sr.innerHTML = `<style>:host{display:block;position:relative;overflow:hidden;border-radius:${Math.max(4, 14 * k * 2)}px}.esc{transform:scale(${k});transform-origin:0 0;width:${pg.w}px;height:${pg.h}px}${pg.css}</style><div class="esc">${pg.html}</div>`;
+  try { await Promise.race([Promise.all([document.fonts.load(`800 40px "${pg.fontes.titulo}"`), document.fonts.load(`500 40px "${pg.fontes.texto}"`)]), new Promise((r) => setTimeout(r, 1500))]); } catch (e) {}
+  return ArteEngine.ajustar(sr);
+}
+const ARTE_NOMES = {titulo: 'título', subtitulo: 'subtítulo', corpo: 'texto', itens: 'itens', passos: 'passos', texto: 'texto', frase: 'frase', esquerda: 'coluna da esquerda', direita: 'coluna da direita'};
+let arteTok = 0;
+async function arteStage(p) {
+  const el = document.getElementById('arteStage'); if (!el) return; const tok = ++arteTok;
+  const n = ArteEngine.nSlides(artePlano(p)); S.arteSel = Math.min(Math.max(0, S.arteSel || 0), Math.max(0, n - 1));
+  if (!n) { el.innerHTML = `<div class="empty"><b>Sem lâminas</b>Adicione uma lâmina em Projeto › Arte ou peça ao Claude na Direção.</div>`; return; }
+  const a = p.arte || {}; const fmtN = ArteEngine.FORMATOS[a.fmt || 'post'];
+  el.innerHTML = `<div class="artebar"><b>${esc(fmtN)}</b><span class="hint">${n > 1 ? `Lâmina ${S.arteSel + 1} de ${n}` : ''} · prévia ao vivo com o motor da skill: o PNG final sai igual</span><span class="sp"></span>${n > 1 ? `<button class="btn sm" type="button" id="arPrev" aria-label="Lâmina anterior">‹</button><button class="btn sm" type="button" id="arNext" aria-label="Próxima lâmina">›</button>` : ''}</div>
+    <div class="artemain"><div class="artehost" id="arteMain"></div></div><p class="hint artevaza" id="arteVaza" role="status"></p>
+    ${n > 1 ? `<div class="artestrip">${Array.from({length: n}, (_, i) => `<button type="button" class="artethumb ${i === S.arteSel ? 'on' : ''}" data-arsel="${i}" aria-label="Lâmina ${i + 1}"><div class="artehost" data-arth="${i}" style="width:92px;height:${Math.round(92 * ArteEngine.TAM[a.fmt || 'post'][1] / ArteEngine.TAM[a.fmt || 'post'][0])}px"></div><span>${i + 1}</span></button>`).join('')}</div>` : ''}`;
+  const box = el.querySelector('.artemain'); const [W, H] = ArteEngine.TAM[a.fmt || 'post']; await new Promise((r) => requestAnimationFrame(r)); if (tok !== arteTok) return;
+  const w = Math.max(120, Math.min(box.clientWidth - 8, (box.clientHeight - 8) * W / H));
+  const vaza = await arteDesenhar(document.getElementById('arteMain'), p, S.arteSel, w); if (tok !== arteTok) return;
+  document.getElementById('arteVaza').textContent = vaza.length ? `Texto demais nesta lâmina (${[...new Set(vaza)].map((v) => ARTE_NOMES[v] || v).join(', ')}): encurte ou divida em duas.` : '';
+  for (const h of el.querySelectorAll('[data-arth]')) { if (tok !== arteTok) return; await arteDesenhar(h, p, +h.dataset.arth, 92); }
+  el.querySelectorAll('[data-arsel]').forEach((b) => b.onclick = () => { S.arteSel = +b.dataset.arsel; arteStage(p); renderProj(); });
+  const mv = (d) => { S.arteSel = (S.arteSel + d + n) % n; arteStage(p); renderProj(); };
+  if (document.getElementById('arPrev')) { document.getElementById('arPrev').onclick = () => mv(-1); document.getElementById('arNext').onclick = () => mv(1); }
+}
+let arteTimer = 0;
+function arteRedesenhar() { clearTimeout(arteTimer); arteTimer = setTimeout(() => { const p = cur(); if (ehArte(p)) arteStage(p); }, 180); }
+function arteModo(p) {        // liga/desliga o layout de arte (sem timeline, sem vídeo)
+  const on = ehArte(p); document.body.classList.toggle('modo-arte', on);
+  const st = document.getElementById('arteStage'); if (st) st.hidden = !on;
+  if (on && S.rightTab === 'insp') showTab('chat');
+  if (!window._arteResize) { window._arteResize = true; window.addEventListener('resize', () => { if (ehArte(cur())) arteRedesenhar(); }); }
+}
+/* ---------- aba Projeto: editor ---------- */
+function arteCampo(id, rot, val, tipo = 'input', extra = '') {
+  return tipo === 'area' ? `<div class="f"><label for="${id}">${rot}</label><textarea id="${id}" rows="3" ${extra}>${esc(val)}</textarea></div>` : `<div class="f"><label for="${id}">${rot}</label><input id="${id}" value="${esc(val)}" ${extra}></div>`;
+}
+function arteSlideHTML(s, i) {
+  const L = ArteEngine.LAYOUTS[s.layout] || ArteEngine.LAYOUTS.capa; const c = L.campos; const out = [];
+  const q = (k) => `data-ark="${k}"`;
+  if (c.includes('kicker')) out.push(arteCampo('ar_kicker', 'Etiqueta (pílula acima do título)', s.kicker, 'input', q('kicker') + ' placeholder="Opcional"'));
+  if (c.includes('titulo')) out.push(arteCampo('ar_titulo', 'Título', s.titulo, 'area', q('titulo') + ' rows="2"'));
+  if (c.includes('destaque')) out.push(arteCampo('ar_destaque', 'Palavras em destaque no título (vírgula)', s.destaque, 'input', q('destaque') + ' placeholder="Ex.: não resolve"'));
+  if (c.includes('subtitulo')) out.push(arteCampo('ar_subtitulo', 'Subtítulo', s.subtitulo, 'input', q('subtitulo')));
+  if (c.includes('corpo')) out.push(arteCampo('ar_corpo', 'Texto (uma linha = um parágrafo)', s.corpo, 'area', q('corpo') + ' rows="5"'));
+  if (c.includes('valor')) out.push(`<div class="row2">${arteCampo('ar_valor', 'Número', s.valor, 'input', q('valor') + ' placeholder="87%"')}${arteCampo('ar_rotulo', 'Rótulo do número', s.rotulo, 'input', q('rotulo'))}</div>`);
+  if (c.includes('texto')) out.push(arteCampo('ar_texto', 'Texto', s.texto, 'area', q('texto') + ' rows="2"'));
+  if (c.includes('fonte')) out.push(arteCampo('ar_fonte', 'Fonte do dado (obrigatória para número ou estatística)', s.fonte, 'input', q('fonte') + ' placeholder="Ex.: SBCP, 2024"'));
+  if (c.includes('frase')) out.push(arteCampo('ar_frase', 'Frase', s.frase, 'area', q('frase') + ' rows="4"'), arteCampo('ar_autor', 'Autor', s.autor, 'input', q('autor')));
+  if (c.includes('acao')) out.push(arteCampo('ar_acao', 'Botão (ação)', s.acao, 'input', q('acao') + ' placeholder="Agende sua avaliação"'));
+  if (c.includes('itens')) out.push(arteCampo('ar_itens', 'Passos (um por linha)', (s.itens || []).map((x) => typeof x === 'object' ? x.texto : x).join('\n'), 'area', 'data-arlinhas="1" rows="4"'));
+  if (c.includes('itens_icone')) out.push(`<div class="f"><span class="lbl" style="font-size:12px;font-weight:600;color:var(--muted)">Itens (até 5)</span>${(s.itens || []).map((it, k) => `<div style="display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:6px;margin-bottom:6px"><select aria-label="Ícone do item ${k + 1}" data-aric="${k}">${ARTE_ICONES.map((n) => `<option ${n === (it?.icone || 'check') ? 'selected' : ''}>${n}</option>`).join('')}</select><input aria-label="Texto do item ${k + 1}" data-arit="${k}" value="${esc(typeof it === 'object' ? it.texto : it)}"><button class="x" type="button" aria-label="Remover item" data-aritx="${k}">×</button></div>`).join('')}${(s.itens || []).length < 6 ? '<button class="btn sm" type="button" id="arItAdd">Adicionar item</button>' : ''}</div>`);
+  if (c.includes('esquerda')) for (const [lado, nome] of [['esquerda', 'Coluna da esquerda'], ['direita', 'Coluna da direita']]) { const o = s[lado] || {}; out.push(`<div class="f"><span class="lbl" style="font-size:12px;font-weight:600;color:var(--muted)">${nome}</span><div style="display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px"><select aria-label="Ícone (${nome})" data-arcol="${lado}" data-arcf="icone">${ARTE_ICONES.map((n) => `<option ${n === (o.icone || (lado === 'esquerda' ? 'x' : 'check')) ? 'selected' : ''}>${n}</option>`).join('')}</select><input aria-label="Título (${nome})" data-arcol="${lado}" data-arcf="titulo" value="${esc(o.titulo)}" placeholder="${lado === 'esquerda' ? 'Mito' : 'Verdade'}"></div><textarea aria-label="Texto (${nome})" rows="2" data-arcol="${lado}" data-arcf="texto" style="margin-top:6px">${esc(o.texto)}</textarea></div>`); }
+  if (c.includes('foto')) out.push(`<div class="f"><span class="lbl" style="font-size:12px;font-weight:600;color:var(--muted)">Foto da capa (opcional)</span><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${s.foto ? `<img src="${esc(s.foto)}" alt="Foto da capa" style="height:52px;border-radius:6px">` : ''}<button class="btn sm" type="button" id="arFotoB">${s.foto ? 'Trocar foto' : 'Enviar foto'}</button><input id="arFotoF" type="file" accept="image/png,image/jpeg,image/webp" hidden>${s.foto ? '<button class="btn sm ghost" type="button" id="arFotoX">Tirar</button>' : ''}</div><span class="hint">Use só fotos do cliente ou de bancos livres.</span></div>`);
+  return out.join('');
+}
+function arteProjHTML(p) {
+  const a = p.arte || {}; const pl = artePlano(p); const n = ArteEngine.nSlides(pl); const i = Math.min(S.arteSel || 0, Math.max(0, n - 1)); const s = (a.slides || [])[i];
+  const ref = a.referencia || {}; const rp = ref.paleta || {}; const rf = ref.fontes || {};
+  const tOpts = Object.values(S.templates).map((t) => `<option value="${t.id}" ${t.id === p.estilo_id ? 'selected' : ''}>${esc(t.nome)}</option>`).join('');
+  const fo = FONTS.map((f) => f.f);
+  return `<p class="h">Arte</p>
+    ${fld('p_titulo', 'Título interno', p.titulo)}
+    <div class="row2"><div class="f"><label for="p_status">Status</label><select id="p_status">${STATUS.map((x) => `<option ${x === stOf(p) ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+    <div class="f"><label for="p_estilo">Estilo (base)</label><select id="p_estilo">${tOpts || '<option value="">(sem estilos)</option>'}</select></div></div>
+    <div class="row2"><div class="f"><label for="arFmt">Formato</label><select id="arFmt">${Object.entries(ArteEngine.FORMATOS).map(([k, v]) => `<option value="${k}" ${k === (a.fmt || 'post') ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+    <div class="f"><label for="arFundo">Fundo</label><select id="arFundo">${[['escuro', 'Escuro (cor do estilo)'], ['claro', 'Claro'], ['gradiente', 'Degradê'], ['foto', 'Foto']].map(([k, nn]) => `<option value="${k}" ${k === (a.fundo?.tipo || 'escuro') ? 'selected' : ''}>${nn}</option>`).join('')}</select></div></div>
+    ${a.fundo?.tipo === 'foto' ? `<div class="f"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${a.fundo.foto ? `<img src="${esc(a.fundo.foto)}" alt="Foto de fundo" style="height:52px;border-radius:6px">` : ''}<button class="btn sm" type="button" id="arFuB">${a.fundo.foto ? 'Trocar foto de fundo' : 'Enviar foto de fundo'}</button><input id="arFuF" type="file" accept="image/png,image/jpeg,image/webp" hidden><label class="chk" style="font-size:12px"><input type="checkbox" id="arFuT" ${a.fundo.todas ? 'checked' : ''}> Em todas as lâminas</label></div></div>` : ''}
+    <p class="h">Assinatura</p>
+    <div class="row2">${fld('arAN', 'Nome', pl.assinatura.nome, 'text', 'placeholder="Dra. …"')}${fld('arAH', '@ Instagram', pl.assinatura.handle, 'text', 'placeholder="@…"')}</div>
+    ${fld('arAR', 'CRM / RQE (só se informado)', pl.assinatura.registro, 'text', 'placeholder="CRM 00000 / RQE 0000"')}
+    <p class="h">Lâminas</p>
+    ${n ? `<div class="arteslides">${(a.slides || []).slice(0, a.fmt === 'carrossel' ? 10 : 1).map((x, k) => `<button type="button" class="chip" aria-pressed="${k === i}" data-arpick="${k}">${k + 1}. ${esc(ArteEngine.LAYOUTS[x.layout]?.n || x.layout)}</button>`).join('')}</div>` : ''}
+    ${s ? `<div class="card" id="arSlide"><div class="row2"><div class="f"><label for="arLay">Layout da lâmina ${i + 1}</label><select id="arLay">${Object.entries(ArteEngine.LAYOUTS).map(([k, v]) => `<option value="${k}" ${k === s.layout ? 'selected' : ''}>${v.n}</option>`).join('')}</select></div>
+      ${a.fmt === 'carrossel' ? `<div class="f"><span class="lbl" style="font-size:12px;font-weight:600;color:var(--muted)">Ordem</span><div style="display:flex;gap:4px;flex-wrap:wrap"><button class="btn sm" type="button" id="arUp" aria-label="Mover para antes" ${i ? '' : 'disabled'}>↑</button><button class="btn sm" type="button" id="arDn" aria-label="Mover para depois" ${i < n - 1 ? '' : 'disabled'}>↓</button><button class="btn sm" type="button" id="arDup" ${n < 10 ? '' : 'disabled'}>Duplicar</button><button class="btn sm ghost" type="button" id="arDel" style="color:var(--bad)" ${n > 2 ? '' : 'disabled'}>Excluir</button></div></div>` : ''}</div>
+      ${arteSlideHTML(s, i)}</div>` : ''}
+    ${a.fmt === 'carrossel' && n < 10 ? `<div style="display:flex;gap:6px;align-items:center"><select id="arNovoL" class="sel" aria-label="Layout da nova lâmina">${Object.entries(ArteEngine.LAYOUTS).map(([k, v]) => `<option value="${k}">${v.n}</option>`).join('')}</select><button class="btn sm" type="button" id="arAdd">Adicionar lâmina</button></div>` : ''}
+    <details ${Object.keys(ref).length ? 'open' : ''}><summary class="h" style="cursor:pointer">Referência (manda sobre o estilo)</summary>
+      <p class="hint">O que a arte deve copiar das referências. Deixe em branco o que deve vir do estilo e da identidade do cliente (a base).</p>
+      <div class="row2"><div class="f"><label for="arRAl">Alinhamento</label><select id="arRAl">${[['', 'Do estilo'], ['esquerda', 'À esquerda'], ['centro', 'Centralizado']].map(([k, nn]) => `<option value="${k}" ${k === (ref.alinhamento || '') ? 'selected' : ''}>${nn}</option>`).join('')}</select></div>
+      <div class="f"><label for="arRCx">Título</label><select id="arRCx">${[['', 'Normal'], ['alta', 'CAIXA ALTA']].map(([k, nn]) => `<option value="${k}" ${k === (ref.titulo_caixa || '') ? 'selected' : ''}>${nn}</option>`).join('')}</select></div></div>
+      <div class="row2"><div class="f"><label for="arRDe">Densidade</label><select id="arRDe">${[['', 'Média'], ['leve', 'Leve (letra maior)'], ['densa', 'Densa (letra menor)']].map(([k, nn]) => `<option value="${k}" ${k === (ref.densidade || '') ? 'selected' : ''}>${nn}</option>`).join('')}</select></div>
+      <div class="f"><label for="arRCa">Cantos (px)</label><input id="arRCa" type="number" min="0" max="80" step="2" value="${ref.cantos ?? ''}" placeholder="34"></div></div>
+      <div class="row2"><div class="f"><label for="arRFt">Fonte dos títulos</label><select id="arRFt"><option value="">Do estilo</option>${fo.map((f) => `<option ${f === rf.titulo ? 'selected' : ''}>${f}</option>`).join('')}</select></div>
+      <div class="f"><label for="arRFx">Fonte dos textos</label><select id="arRFx"><option value="">Do estilo</option>${fo.map((f) => `<option ${f === rf.texto ? 'selected' : ''}>${f}</option>`).join('')}</select></div></div>
+      <div class="row2">${[['glass', 'Fundo'], ['text', 'Texto'], ['key', 'Destaque'], ['button', 'Botão']].map(([k, nn]) => `<div class="f"><label for="arRP_${k}">${nn}</label><div style="display:flex;gap:6px;align-items:center"><span style="width:22px;height:22px;border-radius:5px;border:1px solid var(--line);background:${esc(rp[k] || 'transparent')}"></span><input id="arRP_${k}" data-arrp="${k}" value="${esc(rp[k] || '')}" maxlength="7" placeholder="do estilo" style="font:600 13px var(--mono)"></div></div>`).join('')}</div>
+      ${arteCampo('arRObs', 'Observações da referência', ref.observacoes, 'area', 'rows="2" placeholder="Ex.: muito respiro, títulos curtos em caixa alta, fotos P&B"')}
+    </details>
+    ${identHTML(p)}
+    <div><button class="btn" type="button" id="delProj" style="color:var(--bad)">Excluir arte</button></div>`;
+}
+async function arteSubirImagem(f) { if (!assetsApi) throw new Error('envio de arquivos indisponível'); const r = await assetsApi.upload(f, {type: f.type || 'image/png'}); return '/_blob/' + r.id; }
+function wireArteProj(p) {
+  const $ = (id) => document.getElementById(id); const pid = S.cur; p.arte = p.arte || {}; const a = p.arte; a.slides = a.slides || [];
+  const muda = (rot) => { touch('p', pid, rot); arteRedesenhar(); };
+  const bind = (id, fn, rot, re) => { const e = $(id); if (!e) return; e.addEventListener('input', () => { fn(e.value); touch(); arteRedesenhar(); if (re) renderProj(); }); e.addEventListener('change', () => touch('p', pid, rot)); };
+  bind('p_titulo', (v) => { p.titulo = v; renderTop(); }, 'Título'); bind('p_status', (v) => { p.status = v; renderTop(); }, 'Status');
+  bind('p_estilo', (v) => p.estilo_id = v, 'Estilo da arte');
+  const fmt = $('arFmt'); if (fmt) fmt.onchange = () => { a.fmt = fmt.value; if (a.fmt === 'carrossel' && a.slides.length < 2) a.slides = [...a.slides, ...arteSlidesBase('carrossel').slice(a.slides.length ? 1 : 0)].slice(0, Math.max(2, a.slides.length)); muda('Formato da arte'); renderProj(); };
+  const fu = $('arFundo'); if (fu) fu.onchange = () => { a.fundo = {...(a.fundo || {}), tipo: fu.value}; muda('Fundo da arte'); renderProj(); };
+  const ass = (k) => (v) => { a.assinatura = {...artePlano(p).assinatura, [k]: v}; };
+  bind('arAN', ass('nome'), 'Assinatura'); bind('arAH', ass('handle'), 'Assinatura'); bind('arAR', ass('registro'), 'Assinatura');
+  const foto = (bId, fId, set, rot) => { if (!$(bId)) return; $(bId).onclick = () => $(fId).click(); $(fId).onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { toast('Enviando a foto…'); set(await arteSubirImagem(f)); muda(rot); renderProj(); } catch (x) { toast('Não consegui enviar: ' + (x.message || x)); } }; };
+  foto('arFuB', 'arFuF', (u) => a.fundo = {...(a.fundo || {}), foto: u}, 'Foto de fundo');
+  if ($('arFuT')) $('arFuT').onchange = () => { a.fundo = {...(a.fundo || {}), todas: $('arFuT').checked}; muda('Foto em todas as lâminas'); };
+  document.querySelectorAll('[data-arpick]').forEach((b) => b.onclick = () => { S.arteSel = +b.dataset.arpick; renderProj(); arteStage(p); });
+  const i = Math.min(S.arteSel || 0, Math.max(0, a.slides.length - 1)); const s = a.slides[i];
+  if (s) {
+    if ($('arLay')) $('arLay').onchange = () => { a.slides[i] = {...s, layout: $('arLay').value}; if (['lista', 'passos'].includes(s.layout) !== ['lista', 'passos'].includes($('arLay').value) && !(a.slides[i].itens || []).length) a.slides[i].itens = $('arLay').value === 'lista' ? [{icone: 'check', texto: 'Primeiro ponto'}] : ['Primeiro passo']; muda('Layout da lâmina'); renderProj(); };
+    document.querySelectorAll('#arSlide [data-ark]').forEach((e) => { e.addEventListener('input', () => { s[e.dataset.ark] = e.value; touch(); arteRedesenhar(); }); e.addEventListener('change', () => touch('p', pid, 'Texto da lâmina')); });
+    const ln = document.querySelector('#arSlide [data-arlinhas]'); if (ln) { ln.addEventListener('input', () => { s.itens = ln.value.split('\n').map((x) => x.trim()).filter(Boolean); touch(); arteRedesenhar(); }); ln.addEventListener('change', () => touch('p', pid, 'Passos da lâmina')); }
+    const norm = () => { s.itens = (s.itens || []).map((x) => typeof x === 'object' ? x : {icone: 'check', texto: x}); };
+    document.querySelectorAll('#arSlide [data-arit]').forEach((e) => { e.addEventListener('input', () => { norm(); s.itens[+e.dataset.arit].texto = e.value; touch(); arteRedesenhar(); }); e.addEventListener('change', () => touch('p', pid, 'Item da lista')); });
+    document.querySelectorAll('#arSlide [data-aric]').forEach((e) => e.onchange = () => { norm(); s.itens[+e.dataset.aric].icone = e.value; muda('Ícone do item'); });
+    document.querySelectorAll('#arSlide [data-aritx]').forEach((b) => b.onclick = () => { norm(); s.itens.splice(+b.dataset.aritx, 1); muda('Remover item'); renderProj(); });
+    if ($('arItAdd')) $('arItAdd').onclick = () => { norm(); s.itens.push({icone: 'check', texto: ''}); muda('Adicionar item'); renderProj(); };
+    document.querySelectorAll('#arSlide [data-arcol]').forEach((e) => { const ev = e.tagName === 'SELECT' ? 'change' : 'input'; e.addEventListener(ev, () => { s[e.dataset.arcol] = {...(s[e.dataset.arcol] || {}), [e.dataset.arcf]: e.value}; touch(); arteRedesenhar(); }); e.addEventListener('change', () => touch('p', pid, 'Coluna da comparação')); });
+    foto('arFotoB', 'arFotoF', (u) => s.foto = u, 'Foto da capa');
+    if ($('arFotoX')) $('arFotoX').onclick = () => { delete s.foto; muda('Tirar foto da capa'); renderProj(); };
+    const troca = (j) => { const t = a.slides[i]; a.slides[i] = a.slides[j]; a.slides[j] = t; S.arteSel = j; muda('Reordenar lâminas'); renderProj(); };
+    if ($('arUp')) $('arUp').onclick = () => troca(i - 1); if ($('arDn')) $('arDn').onclick = () => troca(i + 1);
+    if ($('arDup')) $('arDup').onclick = () => { a.slides.splice(i + 1, 0, JSON.parse(JSON.stringify(s))); S.arteSel = i + 1; muda('Duplicar lâmina'); renderProj(); };
+    if ($('arDel')) $('arDel').onclick = () => { a.slides.splice(i, 1); S.arteSel = Math.max(0, i - 1); muda('Excluir lâmina'); renderProj(); };
+  }
+  if ($('arAdd')) $('arAdd').onclick = () => { const L = $('arNovoL').value; const base = {capa: arteSlidesBase('post')[0], lista: arteSlidesBase('carrossel')[1], cta: arteSlidesBase('carrossel')[2], texto: {layout: 'texto', titulo: 'Título', corpo: 'Texto da lâmina.'}, numero: {layout: 'numero', valor: '0%', rotulo: 'Rótulo', texto: '', fonte: ''}, passos: {layout: 'passos', titulo: 'Em 3 passos', itens: ['Primeiro', 'Segundo', 'Terceiro']}, comparacao: {layout: 'comparacao', titulo: 'Mito ou verdade?', esquerda: {titulo: 'Mito', texto: ''}, direita: {titulo: 'Verdade', texto: ''}}, citacao: {layout: 'citacao', frase: 'Frase.', autor: ''}}[L] || {layout: L};
+    a.slides.push(JSON.parse(JSON.stringify(base))); S.arteSel = a.slides.length - 1; muda('Adicionar lâmina'); renderProj(); };
+  const r = () => { a.referencia = a.referencia || {}; return a.referencia; };
+  const refSet = (k, v) => { if (v === '' || v == null) delete r()[k]; else r()[k] = v; };
+  for (const [id, k] of [['arRAl', 'alinhamento'], ['arRCx', 'titulo_caixa'], ['arRDe', 'densidade']]) if ($(id)) $(id).onchange = () => { refSet(k, $(id).value); muda('Referência da arte'); };
+  if ($('arRCa')) $('arRCa').addEventListener('input', () => { refSet('cantos', $('arRCa').value === '' ? '' : Math.max(0, Math.min(80, +$('arRCa').value))); touch(); arteRedesenhar(); });
+  for (const [id, k] of [['arRFt', 'titulo'], ['arRFx', 'texto']]) if ($(id)) $(id).onchange = () => { const f = {...(r().fontes || {})}; if ($(id).value) { f[k] = $(id).value; loadFont($(id).value); } else delete f[k]; refSet('fontes', Object.keys(f).length ? f : ''); muda('Fonte da referência'); };
+  document.querySelectorAll('[data-arrp]').forEach((e) => e.addEventListener('input', () => { const h = hexNorm(e.value); const pl = {...(r().paleta || {})}; if (h) pl[e.dataset.arrp] = h; else if (!e.value.trim()) delete pl[e.dataset.arrp]; else return; refSet('paleta', Object.keys(pl).length ? pl : ''); e.previousElementSibling.style.background = h || 'transparent'; touch(); arteRedesenhar(); }));
+  if ($('arRObs')) $('arRObs').addEventListener('input', () => { refSet('observacoes', $('arRObs').value); touch(); });
+  wireIdent(p);
+  if ($('delProj')) $('delProj').onclick = () => openDeleteProject(pid);
+}
+/* ---------- coluna da direita: referências, pedido ao Claude e artes geradas ---------- */
+function arteDirHTML(p) {
+  const a = p.arte || {}; const refs = a.refs || []; const rs = (a.renders || []).slice().reverse();
+  return `<div class="pad" style="display:grid;gap:12px;overflow:auto">
+    <div><p class="h">Referências de design</p>
+      <p class="hint">A referência manda: o Claude segue composição, tipografia, densidade e cores delas. O estilo e a identidade do cliente são a base. Mande de 2 a 5 imagens.</p>
+      <div class="arterefs">${refs.map((x, k) => `<figure><img src="/_blob/${esc(x.asset_id)}" alt="${esc(x.nome || 'Referência')}"><button class="x" type="button" aria-label="Remover referência" data-arrefx="${k}">×</button></figure>`).join('')}<label class="arteadd" for="arRefF">+ Imagem</label></div>
+      <input id="arRefF" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden>
+      ${referenciasHTML(p)}</div>
+    <div><p class="h">Pedir ao Claude</p>
+      <textarea id="arPed" rows="5" placeholder="Ex.: carrossel de 6 lâminas sobre o que o tratamento clínico não resolve na cirurgia plástica; tom acolhedor, sem promessa; última lâmina com convite para avaliação.">${esc(a.pedido || '')}</textarea>
+      <div class="acts" style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="btn pri" type="button" id="arCriar">Criar as lâminas com o Claude</button><button class="btn" type="button" id="arGerar">Gerar PNG${a.fmt === 'carrossel' ? ' e PDF' : ''}</button></div>
+      <p class="hint" id="arSt" role="status">${esc(a.status || 'O Claude escreve as lâminas aqui no Studio (você revisa e edita) e gera os arquivos finais com a skill docon-artes.')}</p></div>
+    ${rs.length ? `<div><p class="h">Artes geradas</p>${rs.map((r, k) => `<div class="card" style="margin-bottom:8px"><b>${esc(r.rotulo || 'Versão')}</b><span class="hint">${when(r.t)}</span>
+      <div class="artegen">${(r.pngs || []).map((id, j) => `<button type="button" data-ardl="${esc(id)}" data-arnm="${esc(slug(p.titulo || 'arte'))}_${String(j + 1).padStart(2, '0')}.png" title="Baixar a lâmina ${j + 1}"><img src="/_blob/${esc(id)}" alt="Lâmina ${j + 1}"></button>`).join('')}</div>
+      <div class="acts" style="display:flex;gap:6px;flex-wrap:wrap">${r.pdf ? `<button class="btn sm pri" type="button" data-ardl="${esc(r.pdf)}" data-arnm="${esc(slug(p.titulo || 'arte'))}.pdf">Baixar PDF</button>` : ''}<button class="btn sm" type="button" data-artodas="${rs.length - 1 - k}">Baixar ${(r.pngs || []).length > 1 ? 'todas as lâminas' : 'PNG'}</button></div></div>`).join('')}</div>` : ''}
+  </div>`;
+}
+async function arteBaixar(id, nome) {
+  if (!dlApi) { toast('O download não está disponível nesta visualização: abra o Studio no navegador do computador'); return false; }
+  try { const b = await (await fetch('/_blob/' + id)).blob(); await dlApi.save({filename: nome, data: b}); return true; }
+  catch (e) { if (e?.code !== 'declined') toast('Não consegui baixar: ' + (e?.code || e?.message || e)); return false; }
+}
+function arteResumoPedido(p, pid) {
+  const a = p.arte || {}; const refs = (a.refs || []).map((x) => x.asset_id);
+  return `formato ${a.fmt || 'post'}${a.fmt === 'carrossel' ? ' (' + (a.slides || []).length + ' lâminas hoje)' : ''}, estilo ${p.estilo_id || '—'}, referências de imagem ${refs.length ? refs.join(', ') : 'nenhuma'}${(p.referencias || []).length ? ', links de referência ' + p.referencias.length : ''}, identidade do cliente ${identDe(p) ? 'sim' : 'não'}`;
+}
+function wireArteDir(p) {
+  const $ = (id) => document.getElementById(id); const pid = S.cur; p.arte = p.arte || {}; const a = p.arte;
+  $('arRefF').onchange = async (e) => { const fs = [...e.target.files]; if (!fs.length) return; if (!assetsApi) { toast('Envio de arquivos indisponível nesta visualização'); return; } toast('Enviando referências…');
+    for (const f of fs.slice(0, 8)) { try { const r = await assetsApi.upload(f, {type: f.type || 'image/png'}); a.refs = [...(a.refs || []), {asset_id: r.id, nome: f.name, criado: Date.now()}]; } catch (x) { toast('Não consegui enviar ' + f.name + ': ' + (x.message || x)); } }
+    touch('p', pid, 'Referências da arte'); renderChat(); };
+  document.querySelectorAll('[data-arrefx]').forEach((b) => b.onclick = () => { a.refs.splice(+b.dataset.arrefx, 1); touch('p', pid, 'Remover referência'); renderChat(); });
+  const ri = $('refIn'), ra = $('refAdd'); if (ra) ra.onclick = () => { addReferencia(ri.value.trim()); };
+  document.querySelectorAll('[data-refdel]').forEach((b) => b.onclick = (e) => { e.preventDefault(); e.stopPropagation(); p.referencias.splice(+b.dataset.refdel, 1); touch(); renderChat(); });
+  $('arPed').addEventListener('input', () => { a.pedido = $('arPed').value; touch(); }); $('arPed').addEventListener('change', () => touch('p', pid, 'Pedido da arte'));
+  const pedir = async (txt, ok, rot) => { $('arSt').textContent = 'Enviando para o Claude…'; const okk = await askSession(txt, ok);
+    a.status = okk ? rot + ' em ' + new Date().toLocaleTimeString('pt-BR', {timeStyle: 'short'}) + '. O resultado aparece aqui quando o Claude terminar.' : 'Não enviado: ' + (S.askErr || 'sem sessão ligada') + '. Ligue a sessão na aba Sessão.'; touch('p', pid, rot); renderChat(); };
+  $('arCriar').onclick = () => { if (!(a.pedido || '').trim()) { toast('Escreva o que a arte deve dizer'); $('arPed').focus(); return; }
+    pedir(`Crie as LÂMINAS da ARTE do projeto ${pid} (espaço de Artes, skill docon-artes): leia projetos/${pid}.arte (pedido, formato, referência, slides atuais), as referências (${arteResumoPedido(p, pid)}) e o estilo/identidade. A referência manda; estilo e identidade são a base. Escreva em projetos/${pid}.arte.slides (e .referencia com o que tirou das referências), sem gerar PNG. Pedido: ${a.pedido}`, 'Pedido enviado: o Claude vai escrever as lâminas', 'Lâminas pedidas'); };
+  $('arGerar').onclick = () => { if (!(a.slides || []).length) { toast('Crie ao menos uma lâmina'); return; }
+    pedir(`Gere os ARQUIVOS da ARTE do projeto ${pid} (espaço de Artes, skill docon-artes): leia projetos/${pid}.arte e rode arte.py com o estilo e a identidade do projeto, exatamente com as lâminas e a referência que estão lá (a equipe já revisou). Suba os PNGs${a.fmt === 'carrossel' ? ' e o PDF' : ''} e registre em projetos/${pid}.arte.renders. ${arteResumoPedido(p, pid)}`, 'Pedido enviado: o Claude vai gerar os arquivos', 'Arquivos pedidos'); };
+  document.querySelectorAll('[data-ardl]').forEach((b) => b.onclick = () => arteBaixar(b.dataset.ardl, b.dataset.arnm));
+  document.querySelectorAll('[data-artodas]').forEach((b) => b.onclick = async () => { const r = (a.renders || [])[+b.dataset.artodas]; if (!r) return; for (const [j, id] of (r.pngs || []).entries()) { if (!(await arteBaixar(id, `${slug(p.titulo || 'arte')}_${String(j + 1).padStart(2, '0')}.png`))) break; } });
+}
+async function criarArte(d) {
+  const t = S.templates[WZ.estilo]; const id = 'p-' + uid(); const p = newProject(t);
+  Object.assign(p, {titulo: d.titulo || 'Arte', formato: 'arte', direcionamentos: d.rPedido || '', arte: {fmt: d.rFmt, fundo: {tipo: d.rFundo}, pedido: d.rPedido || '', slides: arteSlidesBase(d.rFmt), refs: [], renders: []}});
+  Object.assign(p.profissional, {nome: d.nome}); p.legenda.estilo = 'nenhuma'; p.musica.ativa = false;
+  S.projects[id] = p; S.cur = id; S.sel = null; S.styleEdit = null; S.arteSel = 0;
+  for (const f of (d.rRefs || []).slice(0, 8)) { if (!assetsApi) break; try { const r = await assetsApi.upload(f, {type: f.type || 'image/png'}); p.arte.refs.push({asset_id: r.id, nome: f.name, criado: Date.now()}); } catch (e) { toast('Não consegui enviar ' + f.name); } }
+  touch('p', id, 'Criar arte'); document.getElementById('modalRoot').innerHTML = ''; S.media.proj = null; loadProjectMedia(); renderAll(); document.getElementById('tabProj')?.click(); showTab('chat');
+  if (d.rEnviar && (d.rPedido || '').trim()) {
+    const ok = await askSession(`Crie as LÂMINAS da ARTE do projeto ${id} (espaço de Artes, skill docon-artes): leia projetos/${id}.arte (pedido, formato ${d.rFmt}, fundo ${d.rFundo}), as referências (${arteResumoPedido(p, id)}) e o estilo/identidade. A referência manda; estilo e identidade são a base. Escreva em projetos/${id}.arte.slides (e .referencia), sem gerar PNG. Pedido: ${d.rPedido}`, 'Pedido enviado: o Claude vai escrever as lâminas');
+    p.arte.status = ok ? 'Lâminas pedidas ao Claude. Enquanto isso, as lâminas-modelo já estão na prévia.' : 'Pedido não enviado: ' + (S.askErr || 'sem sessão ligada') + '. Use “Criar as lâminas com o Claude” depois.'; touch('p', id, 'Pedir lâminas'); renderChat();
+  }
+}
+
 /* ======================= referências (Pinterest e afins): moodboard do projeto, nunca entra no vídeo ======================= */
 async function addReferencia(url) {
   const p = cur(); if (!p || !/^https?:\/\//.test(url)) { toast('Cole um link'); return; }
@@ -3788,7 +4235,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.08-a';
+const STUDIO_VERSAO = '2026.11.08-b';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

@@ -6,7 +6,7 @@
   - a skill `.claude/skills/docon-artes` e o agente `.claude/agents/docon-designer.md` (artes estáticas);
   - o código da página DocOn Studio em `studio/index.html`.
 - Comando **"Abrir DocOn Studio"**: use a skill `abrir-docon-studio`. Ela abre o Studio e liga a aba Sessão da página a esta conversa. Comentários do Studio que começam com "[DocOn Studio · conversa" seguem a mesma skill.
-- Para editar vídeos, use o agente `docon-editor` (ele carrega a skill). Para artes estáticas (post, story, carrossel), use o agente `docon-designer` (skill `.claude/skills/docon-artes`).
+- Para editar vídeos, use o agente `docon-editor` (ele carrega a skill). Para artes estáticas (post, story, carrossel), use o agente `docon-designer` (skill `.claude/skills/docon-artes`). No Studio, a equipe cria e edita as artes em Novo projeto › Arte. O layout é um só (`docon-artes/scripts/arte_engine.js`): depois de mudar, rode `python3 tools/sync_arte_engine.py`.
 - Em vídeos e artes, **a referência manda e o estilo é a base**: peça e siga as referências de design; estilo e identidade preenchem o resto.
 - Link do Studio: https://claude.ai/artifact/SEU-STUDIO
 - Primeira vez na sessão: `bash .claude/skills/docon-cinema/scripts/setup.sh` (ou configure isso como Setup script do ambiente).

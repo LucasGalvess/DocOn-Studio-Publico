@@ -60,6 +60,50 @@ Artes em HTML/CSS renderizadas para PNG (Playwright), com as mesmas cores, fonte
    - Mande os PNGs (e o PDF do carrossel) com SendUserFile ou numa página de download.
    - Resuma em 3–5 linhas o que veio da referência, o que veio da identidade/estilo e o que foi deduzido.
 
+## Modo Studio (aba Artes do DocOn Studio)
+
+No Studio, "Novo projeto" › **Arte** cria um projeto com `formato: "arte"`. A equipe edita as lâminas em Projeto e vê a prévia ao vivo no centro. A prévia usa **o mesmo motor** da skill (`scripts/arte_engine.js`), então o PNG final sai igual.
+
+Formato do projeto: `projetos/<id>.arte` =
+- `fmt`: post, quadrado, story ou carrossel;
+- `fundo`: {tipo, foto, todas};
+- `assinatura`: {nome, registro, handle} (sem ela, usa o nome e o @ do profissional);
+- `referencia`: como em `plano.referencia`;
+- `refs`: [{asset_id, nome}], as imagens de referência enviadas;
+- `pedido`;
+- `slides`: como no plano; fotos ficam como `/_blob/<asset_id>`;
+- `renders`: [{t, rotulo, pngs: [asset_id], pdf}];
+- `status`.
+
+Os links de referência ficam em `projetos/<id>.referencias`.
+
+**Pedido "Crie as LÂMINAS da ARTE do projeto <id>":**
+1. Leia o projeto e o estilo `estilos/<estilo_id>`.
+2. Leia a identidade em `clientes/<slug>`.
+3. Baixe as referências (`Artifact` `read` + `path` = asset_id), analise com `referencias.py` e olhe a folha.
+4. Escreva `arte.slides` e `arte.referencia` com `ArtifactData` `update` + `if_version`, sem tocar no resto do projeto. Antes, crie um ponto salvo em `projetos/<id>/historico`.
+5. Não gere PNG: a equipe revisa no Studio primeiro.
+6. Responda na Sessão em 2–3 linhas: o que veio da referência e o que foi deduzido.
+
+**Pedido "Gere os ARQUIVOS da ARTE do projeto <id>":**
+1. Salve o projeto, o estilo e o cliente com `ArtifactData` `get` + `out_dir`.
+2. Baixe para uma pasta os assets usados: logo da identidade, fotos das lâminas e do fundo.
+3. Rode:
+   ```bash
+   python3 scripts/studio_arte.py PROJETO.json SAIDA --estilo ESTILO.json --cliente CLIENTE.json --blobs PASTA
+   ```
+4. Olhe a `folha.png`.
+5. Suba os PNGs e o PDF com `Artifact` `asset:true` (até 25 por chamada).
+6. Acrescente em `arte.renders` {t, rotulo, pngs, pdf} e atualize `arte.status`.
+
+**Use exatamente as lâminas do projeto:** a equipe já revisou. Se algo vazar ou estiver errado, avise em vez de mudar.
+
+**Mudou o layout?** Edite só `scripts/arte_engine.js` e rode:
+```bash
+python3 tools/sync_arte_engine.py
+```
+Depois republique o Studio, seguindo o CLAUDE.md.
+
 ## Formatos
 
 | formato | tamanho | uso |
@@ -89,9 +133,12 @@ Artes em HTML/CSS renderizadas para PNG (Playwright), com as mesmas cores, fonte
 - `fundo.tipo: "foto"` + `fundo.foto`: foto de fundo com véu escuro. `fundo.todas: true` aplica a foto a todas as lâminas.
   - Use só fotos do cliente, do banco do Studio ou de bancos livres (Pexels/Unsplash/Pixabay).
 - Ícones: check, heart, sparkle, calendar, target, clock, shield, leaf, star, alert, chat, x.
-- Layout novo: acrescente um ramo em `corpo_html()` de `arte.py`, teste com os 3 exemplos e registre aqui.
+- Layout novo: acrescente em `LAYOUTS` e em `corpo()` de `scripts/arte_engine.js`. Teste com os 3 exemplos, rode `tools/sync_arte_engine.py`, republique o Studio e registre aqui.
 
 ## Lições aprendidas
+
+- 08/11/2026: o layout saiu do Python para `arte_engine.js`, que serve a prévia do Studio e o PNG final. Duas cópias do layout (Python e JS) iam divergir. `tools/sync_arte_engine.py --check` acusa diferença.
+- Na referência, o "destaque" (`key`) arrasta ícones, degradê, pílula e borda; o "fundo" (`glass`) arrasta o texto da pílula. Assim uma cor só já muda a arte inteira.
 
 - A detecção de texto vazando precisa de tolerância (`fontSize*0.25+2`). Sem ela, títulos com acento encolhiam à toa.
 - Capa sem foto fica vazia: a camada `.decor` (brilho + anel) segura o espaço. Mantenha-a sutil.

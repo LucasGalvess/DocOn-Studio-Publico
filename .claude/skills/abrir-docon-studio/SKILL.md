@@ -67,6 +67,10 @@ O texto chega como "[Artifact comment sent to Claude]" e começa com `[DocOn Stu
         - `anim.status` = "Pronta: <rótulo>".
         O projeto passa a usar a animação como vídeo base quando a equipe clicar em "Usar no projeto". Não grave `bruto` sem a equipe pedir.
      5. Responda no canal com o que foi feito e o que ajustar.
+   - **Artes** ("Crie as LÂMINAS da ARTE do projeto <pid>…" ou "Gere os ARQUIVOS da ARTE do projeto <pid>…"): siga a seção "Modo Studio" da skill `docon-artes`.
+     - Lâminas: escreva `arte.slides` e `arte.referencia`, sem PNG.
+     - Arquivos: rode `scripts/studio_arte.py`, suba os PNGs e o PDF e registre em `arte.renders`.
+     - A referência manda; estilo e identidade são a base.
    - **Voz da DocOn** ("Gere a narração … narracoes/<projeto>"): leia o documento com `ArtifactData` `get` (salve com `out_dir`), rode `python3 .claude/skills/docon-cinema/scripts/narracao.py <doc.json> <pasta>`, converta cada MP3 em MP4 só de áudio (`ffmpeg -i x.mp3 -c:a aac x.mp4`, o banco não aceita MP3), suba com `Artifact` `asset:true` (até 25 por chamada) e grave `itens.<id> = {texto, base, asset_id}` e `status: "pronto"` com `update` + `if_version`. O perfil está em `config/voz.perfil`.
 3. **Responder no Studio.** `set` em `canal/<cid>/msgs/m-<epoch>-claude` = `{de: "claude", texto: "<resposta curta, humana, em pt-BR, ≤ 1500 caracteres>", t, em_resposta: "<mid>"}`.
 4. **Responder no comentário.** `ArtifactComments` `reply` no `thread_id` do comentário com a mesma resposta (ou um resumo de 1 linha), para ela ficar visível também nos comentários do claude.ai.
