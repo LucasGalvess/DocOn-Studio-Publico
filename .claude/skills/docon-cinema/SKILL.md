@@ -320,6 +320,23 @@ Animações de estúdio renderizadas de verdade e sobrepostas ao vídeo (PNG com
   - mantenha a duração pedida;
   - use som só se pedirem.
 
+## Animação anatômica a partir de ilustração de referência (padrão aprovado)
+
+Quando a equipe mandar uma ilustração de referência (ex.: rosto metade pele, metade músculos), **a animação usa a própria imagem**. Ela precisa ser idêntica e fiel à anatomia e à fisionomia; modelo procedural foi reprovado como "deformado".
+
+- **Preparar:**
+  ```bash
+  python3 motion/anim25d.py preparar REF.png TRAB
+  ```
+  Faz a super-resolução 4x (EDSR, `~/.docon/models/EDSR_x4.pb`) e acha os pontos do rosto (MediaPipe).
+- **Cenas:** use `python3 motion/anim25d.py cena N DUR_REAL TRAB SAIDA [DUR_DESENHO]`, com as mesmas 6 cenas da seção abaixo.
+  - A câmera se move sobre a imagem.
+  - A pálpebra cai e a sobrancelha sobe por deformação local da imagem.
+  - O músculo frontal é o vermelho real da testa: acende ao contrair e fica cinza quando bloqueado.
+  - Por cima: levantador em transparência, agulha, partículas, títulos e etiquetas.
+- **Tela dividida:** cenas 2, 4 e 6, como abaixo.
+- **Direitos:** confirme que a referência tem licença comercial (banco pago, criação própria ou IA da conta da DocOn) antes de entregar ao cliente.
+
 ## Animação 3D anatômica (storytelling médico)
 
 Use quando o vídeo explica o que acontece **no corpo** (músculo, pálpebra, toxina, preenchimento). A animação mostra o efeito do que a profissional fala.
@@ -417,6 +434,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 - **Pinterest** e outros links: só referência visual no projeto (`projeto.referencias`), lida pelo diretor. A imagem é de quem publicou e nunca entra no vídeo.
 
 ## Lições aprendidas (não repita)
+
+- **12/11/2026 (anatomia):** o holograma escuro e o boneco procedural ficaram "estranhos, obscuros e deformados" para a equipe. Com ilustração de referência, anime a própria imagem em 2.5D (`motion/anim25d.py`). Ficou "idêntico à referência".
 
 - **12/11/2026 (tela dividida):** a equipe reprovou painel 3D e CTA sobre o rosto da doutora. O padrão para 3D com a profissional falando passou a ser a tela dividida, com a legenda no centro, abaixo do rosto, acompanhando a divisão. O espaço entre palavras da legenda subiu de 18 para 26 px, porque 18 px parecia palavra colada.
 
