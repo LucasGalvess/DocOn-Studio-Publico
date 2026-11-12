@@ -44,7 +44,7 @@ if A.stage in ('all', 'prep'):
     if not have('words_raw.json'): sh(['python3', HERE + '/transcribe.py', A.video, A.work, MODELS + '/parakeet'])
     if not have('shots.json'): sh(['python3', HERE + '/analyze.py', A.video, A.work, MODELS] + (['--faces'] if TALK else []))
     if not have('graded.mkv'):
-        sh(['python3', HERE + '/grade.py', A.video, A.work, 'full'] + (['--skin'] if IMG.get('suavizar_pele') and TALK else []) + (['--dof'] if IMG.get('desfoque_fundo') else []))
+        sh(['python3', HERE + '/grade.py', A.video, A.work, 'full'] + (['--skin'] if IMG.get('suavizar_pele') and TALK else []) + (['--dof'] if IMG.get('desfoque_fundo') else []) + (['--original'] if IMG.get('cor_original') else []))
     if A.stage == 'prep': sys.exit(0)
 
 # ------------------------------------------------------------------ montar a edição
@@ -166,6 +166,7 @@ def ys_for(pg):
     return tuple(int(v) for v in out)
 if DIN or not ed.WORDS: pages = []            # sem fala não há gancho falado: use blocos "texto"
 if pages: ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=min(1000, int(860 * HK_S)), size=int(92 * HK_S), kw_size=int(150 * HK_S))
+if IMG.get('cor_original'): ed.leak = False; ed.vig_amt = 0.0; ed._vig = None     # cor original: sem flash de luz e sem vinheta sobre a pessoa
 if hk and bgk(hk) > 0: ed.bg_blur(0, ed.hook_end + 0.2, bgk(hk)); plan.append(f'desfoque de fundo com o gancho {round(bgk(hk) * 100)}%')
 plan.append(f'gancho {ed.hook_end:.2f}s · {nwords} palavras · {len(pages)} página(s)')
 

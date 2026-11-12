@@ -435,6 +435,12 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 ## Lições aprendidas (não repita)
 
+- **12/11/2026 (cor e cortes):** a equipe pediu a cor original da profissional e o vídeo sem cortes.
+  - Para a cor original, use `estilo.imagem.cor_original: true`: sem grade, sem suavizar pele, sem vinheta e sem flash de luz; a estabilização continua.
+  - Para não cortar, use `cortar_pausas: false` e `velocidade: 1.0`.
+  - Entrega: a versão "download" de 14 MB fica para prévia. Para baixar em alta, a página de download junta partes de 18 MB no navegador (o limite é 20 MB por arquivo).
+  - Vídeo bruto grande (mais de 30 MB): peça pelo Google Drive (conector).
+
 - **12/11/2026 (anatomia):** o holograma escuro e o boneco procedural ficaram "estranhos, obscuros e deformados" para a equipe. Com ilustração de referência, anime a própria imagem em 2.5D (`motion/anim25d.py`). Ficou "idêntico à referência".
 
 - **12/11/2026 (tela dividida):** a equipe reprovou painel 3D e CTA sobre o rosto da doutora. O padrão para 3D com a profissional falando passou a ser a tela dividida, com a legenda no centro, abaixo do rosto, acompanhando a divisão. O espaço entre palavras da legenda subiu de 18 para 26 px, porque 18 px parecia palavra colada.

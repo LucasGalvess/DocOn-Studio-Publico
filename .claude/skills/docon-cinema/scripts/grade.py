@@ -1,9 +1,10 @@
 """DocOn Cinema · grade por quadro (sem reamostrar): balanço de branco por plano, look natural, pele/dentes e DOF opcionais.
 Também calcula a correção de estabilização (corr.npy), aplicada depois numa única reamostragem no compositor.
-uso: python3 grade.py VIDEO WORKDIR [preview i,j,k | full] [--dof] [--skin]"""
+uso: python3 grade.py VIDEO WORKDIR [preview i,j,k | full] [--dof] [--skin] [--original]
+--original: mantém a cor do vídeo como veio (sem balanço, look, pele): só calcula a estabilização."""
 import cv2, numpy as np, sys, json, subprocess
 from scipy.ndimage import gaussian_filter1d
-V, WD, mode = sys.argv[1:4]; DOF = '--dof' in sys.argv; SKIN = '--skin' in sys.argv
+V, WD, mode = sys.argv[1:4]; DOF = '--dof' in sys.argv; SKIN = '--skin' in sys.argv; ORIG = '--original' in sys.argv
 info = json.load(open(WD + '/shots.json')); CUTS = info['cuts']; N = info['n']; W, H = info['w'], info['h']
 tr = np.load(WD + '/tr.npy'); AL = np.load(WD + '/alphas.npy'); LM = np.load(WD + '/lms.npy')
 NS = len(CUTS) - 1
@@ -85,6 +86,6 @@ else:
     p = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-s', f'{W}x{H}', '-r', str(info['fps']), '-i', '-',
                           '-c:v', 'ffv1', '-level', '3', '-pix_fmt', 'bgr0', WD + '/graded.mkv'], stdin=subprocess.PIPE)
     for i in range(N):
-        ok, f = cap.read(); p.stdin.write(process(i, f).tobytes())
+        ok, f = cap.read(); p.stdin.write((f if ORIG else process(i, f)).tobytes())
         if i % 200 == 0: print(i, N, flush=True)
     p.stdin.close(); p.wait()
