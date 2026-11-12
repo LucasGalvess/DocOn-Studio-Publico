@@ -320,6 +320,36 @@ Animações de estúdio renderizadas de verdade e sobrepostas ao vídeo (PNG com
   - mantenha a duração pedida;
   - use som só se pedirem.
 
+## Animação 3D anatômica (storytelling médico)
+
+Use quando o vídeo explica o que acontece **no corpo** (músculo, pálpebra, toxina, preenchimento). A animação mostra o efeito do que a profissional fala.
+
+**Regra:** a anatomia tem de ser real. Nada de cabeça genérica ou corpo inventado.
+- **O rosto** vem do próprio vídeo: `motion/3d/malha.py` usa o MediaPipe, com 478 pontos e profundidade, nos quadros mais frontais e neutros.
+- **Os músculos** ficam presos aos marcos anatômicos dessa malha:
+  - **Frontal:** dois ventres, com fibras verticais, da gálea até a pele das sobrancelhas, afastados em V na linha média.
+  - **Levantador da pálpebra superior:** origem no ápice da órbita, cerca de 40 mm atrás, corre sobre o globo e se insere em leque na pálpebra superior.
+- **Pálpebras e sobrancelhas** se movem pelos pontos reais. A pálpebra cai em direção à pálpebra inferior; a sobrancelha sobe quando o frontal contrai.
+
+**Cenas prontas em `motion/3d/cena.html`** (three.js, holograma dourado da DocOn):
+1. olhar normal x pálpebra caída;
+2. terço superior da face (painel);
+3. levantador da pálpebra: a toxina chega até ele e a pálpebra desce;
+4. músculo frontal elevando as sobrancelhas (painel);
+5. dose alta ou pontos errados: sobrancelha e pálpebra descem;
+6. avaliação de contração, força e assimetria (painel).
+- As cenas 2, 4 e 6 são painéis de vidro acima da legenda. As outras ocupam a tela inteira.
+
+**Fluxo:**
+1. Ponha no briefing os blocos `motion` com `"pasta": "TRAB/seq/s<N>"` e o `gatilho` da fala.
+2. Rode `--stage preview`. O `plano.txt` dá o tempo real de cada bloco.
+3. Rode `bash motion/3d/anim3d.sh VIDEO TRAB "1:5.8:<real> 3:6.9:<real> …"`. São 2 a 10 min com as cenas em paralelo; o WebGL roda por SwiftShader, sem GPU.
+4. Rode `--stage render`.
+- Quadros: PNG 720x1280 com transparência. O pipeline amplia para a tela.
+- Cena nova: acrescente em `cena.html` e teste antes com 3 quadros (`render3d.cjs N DUR pasta 1,3,5`).
+
+**Dados:** a malha do rosto é dado biométrico da cliente. Ela fica só na pasta de trabalho, nunca no repositório.
+
 ## Ofício de movimento e revisão (aprendido do HyperFrames)
 
 Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos quadro a quadro nos filmes deles, adaptados ao reels DocOn.
@@ -385,6 +415,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 - **Pinterest** e outros links: só referência visual no projeto (`projeto.referencias`), lida pelo diretor. A imagem é de quem publicou e nunca entra no vídeo.
 
 ## Lições aprendidas (não repita)
+
+- **12/11/2026 (3D):** a primeira versão usava uma cabeça procedural genérica, e a equipe apontou que tema médico exige a estrutura real do corpo. Agora a malha é o rosto real do vídeo (MediaPipe), e os músculos ficam nos marcos anatômicos. Em quadro vertical o campo horizontal é estreito: calcule a distância da câmera pela largura que precisa caber.
 
 - **12/11/2026:** imagem do Openverse fica hospedada em sites variados, muitos bloqueados ou com limite (a Wikimedia dá 429). A prévia agora baixa a miniatura servida pelo próprio api.openverse.org, e o original fica em `url`. O acervo do Openverse é fraco para clínica e estética; o B-roll bom de vídeo depende da chave do Pexels.
 

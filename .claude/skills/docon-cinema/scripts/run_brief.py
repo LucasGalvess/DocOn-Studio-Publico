@@ -194,7 +194,10 @@ for b in blocks:
         t1 = min(max(out_of(b['fim']), t0 + 0.6), ed.TOTAL)
         try:
             import motion as _mo
-            pasta = _mo.render(b.get('modelo') or 'titulo_cinetico', None, b.get('motor') or None, t1 - t0, b.get('variaveis') or {}, ST, b.get('pos_y'))
+            pre = b.get('pasta') and os.path.expanduser(b['pasta'])          # sequência já renderizada (ex.: animação 3D sob medida)
+            if b.get('pasta') and not (os.path.isdir(pre) and any(f.endswith('.png') for f in os.listdir(pre))):
+                plan.append(f'AVISO motion {t0:.2f}-{t1:.2f} sem quadros em {pre}'); continue
+            pasta = pre or _mo.render(b.get('modelo') or 'titulo_cinetico', None, b.get('motor') or None, t1 - t0, b.get('variaveis') or {}, ST, b.get('pos_y'))
             ed.motion(t0, t1, pasta); plan.append(f'motion {t0:.2f}-{t1:.2f} {b.get("motor") or "hyperframes"}:{b.get("modelo")}')
         except SystemExit as e: plan.append(f'AVISO motion {b.get("modelo")} não renderizou: {str(e)[:200]}')
         continue

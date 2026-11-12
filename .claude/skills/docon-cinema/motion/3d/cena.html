@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<style>
+@font-face{font-family:DT;src:url(fonts/Montserrat-800.ttf);font-weight:800}
+@font-face{font-family:DX;src:url(fonts/InterDisplay-SemiBold.ttf);font-weight:600}
+@font-face{font-family:DX;src:url(fonts/InterDisplay-Bold.ttf);font-weight:700}
+html,body{margin:0;width:720px;height:1280px;overflow:hidden;background:transparent}
+#full{position:absolute;inset:0;background:radial-gradient(110% 65% at 50% 46%,#3f2a22 0%,#22160f 50%,#0f0907 100%)}
+#card{position:absolute;left:47px;top:627px;width:626px;height:366px;border-radius:26px;overflow:hidden;
+  background:radial-gradient(90% 120% at 72% 50%,#3f2a22 0%,#22160f 55%,#140d0a 100%);
+  box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1.5px rgba(232,211,176,.38)}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(233,196,140,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(233,196,140,.05) 1px,transparent 1px);background-size:36px 36px;
+  -webkit-mask:radial-gradient(70% 60% at 50% 50%,#000,transparent);mask:radial-gradient(70% 60% at 50% 50%,#000,transparent)}
+canvas{position:absolute;display:block}
+.lab{position:absolute;color:#f8f3ea;opacity:0}
+.kick{display:inline-block;background:#f2d6a6;color:#34241e;font:800 15px/1 DT;letter-spacing:.12em;text-transform:uppercase;padding:8px 13px;border-radius:99px}
+.tit{font:800 36px/1.1 DT;letter-spacing:-.01em;margin-top:12px;text-shadow:0 3px 18px rgba(0,0,0,.7)}
+.tit b{background:linear-gradient(100deg,#f6deac,#c99660);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font:600 21px/1.3 DX;color:rgba(248,243,234,.86);margin-top:8px;text-shadow:0 2px 12px rgba(0,0,0,.7)}
+.card .tit{font-size:25px}.card .kick{font-size:12px;padding:6px 10px}.card .sub{font-size:16px}
+.tag{position:absolute;font:700 15px/1.2 DX;color:#f8f3ea;background:rgba(20,13,10,.78);border:1px solid rgba(232,211,176,.5);padding:6px 10px;border-radius:10px;opacity:0;white-space:nowrap}
+.tag i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f2d6a6;margin-right:7px;vertical-align:1px;box-shadow:0 0 8px #f2d6a6}
+</style></head><body>
+<div id="full" hidden><div class="grid"></div></div><div id="card" hidden><div class="grid"></div></div>
+<div id="labs"></div>
+<script type="importmap">{"imports":{"three":"./three/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+const Q = new URLSearchParams(location.search); const SC = +Q.get('s') || 1; const DUR = +Q.get('dur') || 6;
+const PANEL = [2, 4, 6].includes(SC);
+const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const sm = (x) => { x = cl(x); return x * x * (3 - 2 * x); };
+const eio = (x) => { x = cl(x); return x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+const eo = (x) => 1 - Math.pow(1 - cl(x), 3);
+const win = (t, a, b, f = .45) => sm((t - a) / f) * (1 - sm((t - (b - f)) / f));
+const lerp = (a, b, k) => a + (b - a) * k;
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const GOLD = new THREE.Color(0xe9c48c), KEY = new THREE.Color(0xf2d6a6), MUS = new THREE.Color(0xe8705f), DIM = new THREE.Color(0x6f625c);
+/* ---------- renderer ---------- */
+const box = PANEL ? {x: 47, y: 627, w: 626, h: 366} : {x: 0, y: 0, w: 720, h: 1280};
+document.getElementById(PANEL ? 'card' : 'full').hidden = false;
+const R = new THREE.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true});
+R.setPixelRatio(1.5); R.setSize(box.w, box.h); R.setClearColor(0, 0);
+R.toneMapping = THREE.ACESFilmicToneMapping; R.outputColorSpace = THREE.SRGBColorSpace;
+Object.assign(R.domElement.style, {left: box.x + 'px', top: box.y + 'px', width: box.w + 'px', height: box.h + 'px', borderRadius: PANEL ? '26px' : '0'});
+document.body.insertBefore(R.domElement, document.getElementById('labs'));
+const scene = new THREE.Scene(); const cam = new THREE.PerspectiveCamera(PANEL ? 26 : 40, box.w / box.h, .02, 50);
+scene.add(new THREE.HemisphereLight(0xfff3e6, 0x2a1b16, 1.1));
+const kl = new THREE.DirectionalLight(0xfff1e0, 2.2); kl.position.set(2, 3, 4); scene.add(kl);
+const rl = new THREE.DirectionalLight(0xf2d6a6, 1.6); rl.position.set(-3, 1, -4); scene.add(rl);
+function glowTex() { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); const r = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  r.addColorStop(0, 'rgba(255,244,222,1)'); r.addColorStop(.22, 'rgba(246,214,160,.65)'); r.addColorStop(1, 'rgba(201,150,96,0)'); g.fillStyle = r; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); }
+const GLOW = glowTex();
+/* ---------- rótulos ---------- */
+const labs = [], tags = [];
+function rotulo(html, x, y, a, b, w) { const d = document.createElement('div'); d.className = 'lab ' + (PANEL ? 'card' : ''); Object.assign(d.style, {left: x + 'px', top: y + 'px', width: (w || (PANEL ? 250 : 620)) + 'px'}); d.innerHTML = html; document.getElementById('labs').appendChild(d); labs.push({d, a, b}); }
+function tag(txt, a, b, dx = 14, dy = -14) { const d = document.createElement('div'); d.className = 'tag'; d.innerHTML = '<i></i>' + txt; document.getElementById('labs').appendChild(d); const o = {d, a, b, p: null, dx, dy}; tags.push(o); return o; }
+function txt(t) {
+  for (const L of labs) { L.d.style.opacity = win(t, L.a, L.b, .5); L.d.style.transform = `translateY(${(1 - eo((t - L.a) / .7)) * 16}px)`; }
+  for (const T of tags) { if (!T.p) continue; const v = T.p.clone().project(cam); const x = box.x + (v.x * .5 + .5) * box.w, y = box.y + (-v.y * .5 + .5) * box.h;
+    T.d.style.left = (x + T.dx) + 'px'; T.d.style.top = (y + T.dy) + 'px'; T.d.style.opacity = win(t, T.a, T.b, .4); }
+}
+/* =================== rosto real (malha do MediaPipe tirada do próprio vídeo) =================== */
+const MALHA = await (await fetch('malha.json')).json();
+const B0 = MALHA.v.map((p) => new THREE.Vector3(...p));
+{ const roll = Math.atan2(B0[263].y - B0[33].y, B0[263].x - B0[33].x); for (const p of B0) p.applyAxisAngle(new THREE.Vector3(0, 0, 1), -roll); }
+const FACES = MALHA.f;
+/* subdivisão (regra de aresta de Loop; os pontos originais não se movem, então os marcos anatômicos ficam exatos) */
+function subdiv(P, F) {
+  const E = new Map(), opp = new Map(); const key = (a, b) => a < b ? a + '_' + b : b + '_' + a;
+  for (const [a, b, c] of F) for (const [x, y, z] of [[a, b, c], [b, c, a], [c, a, b]]) { const k = key(x, y); (opp.get(k) || opp.set(k, []).get(k)).push(z); }
+  const Q = P.map((p) => p.clone()); const NF = [];
+  const mid = (a, b) => { const k = key(a, b); if (E.has(k)) return E.get(k); const o = opp.get(k); let m;
+    if (o.length === 2) m = P[a].clone().add(P[b]).multiplyScalar(3 / 8).add(P[o[0]].clone().add(P[o[1]]).multiplyScalar(1 / 8)); else m = P[a].clone().add(P[b]).multiplyScalar(.5);
+    Q.push(m); E.set(k, Q.length - 1); return Q.length - 1; };
+  for (const [a, b, c] of F) { const ab = mid(a, b), bc = mid(b, c), ca = mid(c, a); NF.push([a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]); }
+  return [Q, NF];
+}
+const LID = {     // pálpebra superior (borda e prega) e inferior correspondente, por coluna — índices do MediaPipe
+  d: {up: [246, 161, 160, 159, 158, 157, 173], cr: [247, 30, 29, 27, 28, 56, 190], lo: [7, 163, 144, 145, 153, 154, 155], iris: 468, c: [33, 133]},
+  e: {up: [466, 388, 387, 386, 385, 384, 398], cr: [467, 260, 259, 257, 258, 286, 414], lo: [249, 390, 373, 374, 380, 381, 382], iris: 473, c: [263, 362]}};
+const BROW = {d: [70, 63, 105, 66, 107, 46, 53, 52, 65, 55], e: [300, 293, 334, 296, 336, 276, 283, 282, 295, 285]};
+function deform(st) {           // st = {lidD, lidE (0 = normal, 1 = cobre metade da íris; negativo abre), browD, browE (elevação)}
+  const P = B0.map((p) => p.clone());
+  for (const [k, lado] of [['lidD', 'd'], ['lidE', 'e']]) { const L = LID[lado]; const amt = st[k] || 0;
+    L.up.forEach((u, i) => { const lo = B0[L.lo[i]]; const d = lo.clone().sub(B0[u]); P[u].addScaledVector(d, .62 * amt); P[L.cr[i]].addScaledVector(d, .36 * amt); }); }
+  for (const [k, lado, sx] of [['browD', 'd', -1], ['browE', 'e', 1]]) { const lift = st[k] || 0; if (!lift) continue;
+    const by = B0[BROW[lado][2]].y; const ey = B0[LID[lado].iris].y;
+    for (let i = 0; i < P.length; i++) { const p = B0[i]; if (p.x * sx < .03 || p.x * sx > .52) continue;
+      let w = p.y >= by ? cl(1 - (p.y - by) / .3) * .9 + .1 : cl((p.y - ey) / (by - ey)) ** 1.5;     // máximo na sobrancelha; some na testa alta e na pálpebra
+      P[i].y += lift * w; } }
+  return P;
+}
+function faceGeo(P, lv = 2) { let Q = P, F = FACES; for (let i = 0; i < lv; i++) [Q, F] = subdiv(Q, F);
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(Q.flatMap((p) => [p.x, p.y, p.z]), 3)); g.setIndex(F.flat()); g.computeVertexNormals(); return g; }
+function setFace(g, P, lv = 2) { let Q = P, F = FACES; for (let i = 0; i < lv; i++) [Q, F] = subdiv(Q, F); const A = g.attributes.position.array; Q.forEach((p, i) => A.set([p.x, p.y, p.z], i * 3)); g.attributes.position.needsUpdate = true; g.computeVertexNormals(); g.computeBoundingSphere(); }
+const holoMat = (op = 1) => new THREE.ShaderMaterial({transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  uniforms: {uC: {value: GOLD}, uBand: {value: new THREE.Vector3(0, 0, 0)}, uScan: {value: -9}, uA: {value: op}},
+  vertexShader: `varying vec3 vN; varying vec3 vV; varying vec3 vP; void main(){ vP = position; vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+  fragmentShader: `uniform vec3 uC; uniform vec3 uBand; uniform float uScan; uniform float uA; varying vec3 vN; varying vec3 vV; varying vec3 vP;
+    void main(){ float f = pow(1.-abs(dot(normalize(vN),normalize(vV))), 2.0);
+      float ln = smoothstep(.9,1.,abs(fract(vP.y*34.)-.5)*2.)*.14;
+      float band = uBand.z * smoothstep(uBand.x-.02,uBand.x+.02,vP.y) * (1.-smoothstep(uBand.y-.02,uBand.y+.02,vP.y));
+      float scan = exp(-pow((vP.y-uScan)/.018,2.));
+      vec3 col = uC*(f*1.0 + ln + .03) + vec3(1.,.86,.62)*band*(.32+.7*f) + vec3(1.,.95,.85)*scan*(.5+f);
+      gl_FragColor = vec4(col, uA); }`});
+let IRIS = null;
+function irisTex() { const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128, 128, 30, 128, 128, 128); gr.addColorStop(0, '#6e4223'); gr.addColorStop(.6, '#432614'); gr.addColorStop(.93, '#20120a'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.beginPath(); g.arc(128, 128, 128, 0, 7); g.fill(); seed = 3;
+  for (let i = 0; i < 180; i++) { const a = rnd() * 7; g.strokeStyle = `rgba(${160 + rnd() * 60},${100 + rnd() * 40},${55},${.2 + rnd() * .3})`; g.lineWidth = 1 + rnd() * 1.5; g.beginPath(); g.moveTo(128 + Math.cos(a) * 42, 128 + Math.sin(a) * 42); g.lineTo(128 + Math.cos(a) * (90 + rnd() * 30), 128 + Math.sin(a) * (90 + rnd() * 30)); g.stroke(); }
+  g.fillStyle = '#050302'; g.beginPath(); g.arc(128, 128, 44, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.8)'; g.beginPath(); g.arc(104, 104, 10, 0, 7); g.fill();
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t; }
+const MM = .62 / 95;        // 1 mm em unidades da cena (cantos externos dos olhos ≈ 95 mm)
+function faceModel(fillOp = .95) {
+  const g = new THREE.Group(); const geo = faceGeo(B0, 2);
+  const fill = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: 0x2b1d17, roughness: .5, metalness: .1, side: THREE.DoubleSide, transparent: fillOp < 1, opacity: fillOp, depthWrite: fillOp >= .9})); g.add(fill);
+  const holo = holoMat(); const shell = new THREE.Mesh(geo, holo); g.add(shell);
+  const lo = faceGeo(B0, 1); const hit = new THREE.Mesh(lo, new THREE.MeshBasicMaterial({side: THREE.DoubleSide})); hit.visible = false; g.add(hit);
+  // nuvem de pontos do escaneamento: pontos aleatórios sobre os triângulos
+  seed = 11; const pts = []; const pos = geo.attributes.position, idx = geo.index.array;
+  for (let k = 0; k < 5000; k++) { const t = Math.floor(rnd() * idx.length / 3) * 3; let u = rnd(), v = rnd(); if (u + v > 1) { u = 1 - u; v = 1 - v; } pts.push([idx[t], idx[t + 1], idx[t + 2], u, v]); }
+  const pg = new THREE.BufferGeometry(); pg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(pts.length * 3), 3));
+  const dots = new THREE.Points(pg, new THREE.PointsMaterial({color: 0xf2d6a6, size: PANEL ? .005 : .007, transparent: true, opacity: .5, depthWrite: false, blending: THREE.AdditiveBlending})); g.add(dots);
+  IRIS = IRIS || irisTex(); const eyes = {};
+  for (const lado of ['d', 'e']) { const ic = B0[LID[lado].iris]; const c = ic.clone().add(new THREE.Vector3(0, 0, -12 * MM));
+    const ball = new THREE.Mesh(new THREE.SphereGeometry(12 * MM, 48, 32), new THREE.MeshPhysicalMaterial({color: 0xf1e9e0, roughness: .25, clearcoat: 1, clearcoatRoughness: .05})); ball.position.copy(c); g.add(ball);
+    const iris = new THREE.Mesh(new THREE.CircleGeometry(5.8 * MM, 48), new THREE.MeshBasicMaterial({map: IRIS})); iris.position.copy(c).add(new THREE.Vector3(0, 0, 12 * MM + .001)); g.add(iris);
+    eyes[lado] = {c, ball, iris}; }
+  const F = {g, geo, holo, fill, hit, eyes, dots, pts, st: {}};
+  F.set = (st) => { const P = deform(st); setFace(geo, P, 2); setFace(lo, P, 1);
+    const A = pg.attributes.position.array, Pa = geo.attributes.position.array; pts.forEach(([a, b, c, u, v], k) => { for (let j = 0; j < 3; j++) A[k * 3 + j] = Pa[a * 3 + j] * (1 - u - v) + Pa[b * 3 + j] * u + Pa[c * 3 + j] * v; });
+    pg.attributes.position.needsUpdate = true; F.st = st; F.P = P; };
+  F.set({});
+  return F;
+}
+/* ponto da superfície do rosto em (x, y), com afastamento pela normal */
+const RC = new THREE.Raycaster(); const DOWN = new THREE.Vector3(0, 0, -1);
+function FP(F, x, y, off = 0) { RC.set(new THREE.Vector3(x, y, 2), DOWN); const h = RC.intersectObject(F.hit, false)[0];
+  if (!h) return new THREE.Vector3(x, y, -.2); const n = h.face.normal.clone(); if (n.z < 0) n.negate(); return h.point.clone().addScaledVector(n, off); }
+/* músculos: material com fibras */
+const muscleMat = () => new THREE.ShaderMaterial({transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  uniforms: {uC: {value: MUS.clone()}, uAct: {value: 0}, uDim: {value: 0}, uT: {value: 0}, uN: {value: 30}},
+  vertexShader: `varying vec2 vU; varying vec3 vN; varying vec3 vV; void main(){ vU = uv; vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+  fragmentShader: `uniform vec3 uC; uniform float uAct; uniform float uDim; uniform float uT; uniform float uN; varying vec2 vU; varying vec3 vN; varying vec3 vV;
+    void main(){ float fib = .72 + .28*smoothstep(.2,.9,abs(fract(vU.x*uN)-.5)*2.);
+      float edge = smoothstep(0.,.1,vU.x)*smoothstep(1.,.9,vU.x)*smoothstep(0.,.08,vU.y)*smoothstep(1.,.75,vU.y);
+      float wave = .5+.5*sin(vU.y*18.-uT*7.);
+      vec3 base = mix(uC, vec3(.43,.38,.36), uDim);
+      vec3 col = base*fib*(.75+.25*wave*uAct) + vec3(1.,.55,.45)*uAct*(1.-uDim)*.45*fib;
+      float f = pow(1.-abs(dot(normalize(vN),normalize(vV))),2.);
+      gl_FragColor = vec4(col*1.08 + f*.2*vec3(1.,.7,.6), edge*(.6+.28*uAct)); }`});
+/* músculo frontal (anatomia): dois ventres, fibras verticais, da gálea (alto da testa) até a pele das sobrancelhas;
+   bordas mediais próximas na glabela e afastadas para cima (V); lateral até a linha temporal */
+function frontalis(Fc) {
+  const R = {mats: [], meshes: []};
+  for (const lado of ['d', 'e']) { const sx = lado === 'd' ? -1 : 1; const m = muscleMat(); R.mats.push(m);
+    const br = BROW[lado]; const g = patchGeo(24, 18, (u, v) => {
+      const P = Fc.P || B0; const xMed = sx * (.035 + .07 * v), xLat = sx * (.39 - .06 * v); const x = lerp(xMed, xLat, u);
+      // borda inferior acompanha a sobrancelha (pontos 70..107 / 300..336), interpolada em x
+      const up = br.slice(0, 5).map((i) => P[i]).sort((a, b) => a.x - b.x); let yb = up[0].y;
+      for (let k = 0; k < up.length - 1; k++) if ((x - up[k].x) * (x - up[k + 1].x) <= 0) { const f = (x - up[k].x) / (up[k + 1].x - up[k].x); yb = lerp(up[k].y, up[k + 1].y, f); }
+      if (x * sx > Math.max(...up.map((p) => p.x * sx))) yb = up.reduce((a, p) => p.x * sx > a.x * sx ? p : a).y;
+      if (x * sx < Math.min(...up.map((p) => p.x * sx))) yb = up.reduce((a, p) => p.x * sx < a.x * sx ? p : a).y;
+      const yt = .52 - .1 * (Math.abs(x) / .45) ** 2; return FP(Fc, x, lerp(yb - .008, yt, v), .012 + .006 * Math.sin(v * Math.PI)); });
+    const me = new THREE.Mesh(g, m); me.renderOrder = 2; Fc.g.add(me); R.meshes.push(g); }
+  R.refresh = () => R.meshes.forEach((g) => refreshPatch(g));
+  R.set = (act, dim, t, actD = act, actE = act) => { R.mats.forEach((m, i) => { m.uniforms.uAct.value = i ? actE : actD; m.uniforms.uDim.value = dim; m.uniforms.uT.value = t; }); };
+  return R;
+}
+/* levantador da pálpebra superior (anatomia): origem na asa menor do esfenoide, no ápice da órbita (~40 mm atrás),
+   corre por cima do globo e abre em leque (aponeurose) até a borda da pálpebra superior */
+function levator(Fc, lado) { const m = muscleMat(); m.uniforms.uN.value = 16; m.depthTest = false;
+  const L = LID[lado]; const e = Fc.eyes[lado]; const sx = lado === 'd' ? -1 : 1;
+  const pt = (u, v) => { const P = Fc.P || B0; const k = Math.round(lerp(0, 6, u)); const lid = P[L.up[k]].clone().add(new THREE.Vector3(0, .004, -.006));
+    const top = e.c.clone().add(new THREE.Vector3((u - .5) * 18 * MM, 13.5 * MM, -3 * MM));
+    const apex = e.c.clone().add(new THREE.Vector3(-sx * 4 * MM + (u - .5) * 3 * MM, 3 * MM, -36 * MM));
+    if (v < .35) return lid.lerp(top, v / .35); return top.clone().lerp(apex, (v - .35) / .65).add(new THREE.Vector3(0, 2.5 * MM * Math.sin((v - .35) / .65 * Math.PI), 0)); };
+  const g = patchGeo(14, 30, pt); const me = new THREE.Mesh(g, m); me.renderOrder = 9; Fc.g.add(me); return {g, m, me, refresh: () => refreshPatch(g)}; }
+/* malha de um retalho da superfície (lon/lat) com afastamento: lâminas de músculo, pálpebras */
+function patchGeo(nu, nv, fn) {        // fn(u,v) -> Vector3
+  const g = new THREE.BufferGeometry(); const P = new Float32Array((nu + 1) * (nv + 1) * 3), U = new Float32Array((nu + 1) * (nv + 1) * 2), I = [];
+  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const k = j * (nu + 1) + i; U.set([i / nu, j / nv], k * 2); }
+  for (let j = 0; j < nv; j++) for (let i = 0; i < nu; i++) { const a = j * (nu + 1) + i, b = a + 1, c = a + nu + 1, d = c + 1; I.push(a, c, b, b, c, d); }
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3)); g.setAttribute('uv', new THREE.BufferAttribute(U, 2)); g.setIndex(I);
+  g.userData = {nu, nv, fn}; refreshPatch(g); return g;
+}
+function refreshPatch(g, fn) { const {nu, nv} = g.userData; fn = fn || g.userData.fn; const P = g.attributes.position.array;
+  for (let j = 0; j <= nv; j++) for (let i = 0; i <= nu; i++) { const p = fn(i / nu, j / nv); P.set([p.x, p.y, p.z], (j * (nu + 1) + i) * 3); }
+  g.attributes.position.needsUpdate = true; g.computeVertexNormals(); g.computeBoundingSphere(); }
+
+/* partículas */
+function particles(n, size) { const geo = new THREE.BufferGeometry(); const P = new Float32Array(n * 3); geo.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  const mat = new THREE.PointsMaterial({map: GLOW, size, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, color: 0xf6deac}); const pts = new THREE.Points(geo, mat); pts.renderOrder = 5;
+  mat.depthTest = SC !== 3; seed = 5; const seeds = Array.from({length: n}, () => [rnd(), rnd(), rnd(), rnd()]); return {pts, P, geo, mat, seeds}; }
+function needle() { const g = new THREE.Group(); const m = new THREE.MeshPhysicalMaterial({color: 0xe6e8ea, metalness: .9, roughness: .15});
+  const nd = new THREE.Mesh(new THREE.CylinderGeometry(.0035, .0035, .36, 10), m); nd.position.y = .18; g.add(nd);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(.02, .014, .07, 20), new THREE.MeshStandardMaterial({color: 0xf2d6a6, roughness: .3})); hub.position.y = .39; g.add(hub);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .34, 28), new THREE.MeshPhysicalMaterial({color: 0xffffff, roughness: .05, transparent: true, opacity: .3, clearcoat: 1})); body.position.y = .6; g.add(body);
+  const liq = new THREE.Mesh(new THREE.CylinderGeometry(.03, .03, .2, 24), new THREE.MeshBasicMaterial({color: 0xf6deac, transparent: true, opacity: .55})); liq.position.y = .53; g.add(liq);
+  return g; }
+function halo() { const h = new THREE.Sprite(new THREE.SpriteMaterial({map: GLOW, color: 0xf6deac, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending})); h.renderOrder = 6; return h; }
+
+/* =================== cenas =================== */
+const Fc = faceModel(SC === 3 ? .38 : .95); scene.add(Fc.g); let FR = null, LV = null; const S = {};
+if ([4, 5, 6].includes(SC)) FR = frontalis(Fc);
+const arrow = (x, y) => { const a = new THREE.Group(); const m = new THREE.MeshBasicMaterial({color: 0xf6deac, transparent: true, opacity: 0, depthTest: false}); const sh = new THREE.Mesh(new THREE.CylinderGeometry(.006, .006, 1, 8), m); sh.geometry.translate(0, .5, 0); const hd = new THREE.Mesh(new THREE.ConeGeometry(.02, .045, 16), m); a.add(sh, hd); a.renderOrder = 10; a.position.copy(FP(Fc, x, y, .05)); Fc.g.add(a); return {a, sh, hd, m}; };
+const setArrow = (o, L, op) => { o.sh.scale.y = Math.max(.001, L); o.hd.position.y = L + .02; o.m.opacity = op; };
+if (SC === 1) {
+  rotulo('<span class="kick">Depois da toxina</span><div class="tit">A pálpebra pode <b>descer</b></div><div class="sub">e o olhar fica pesado</div>', 50, 150, .3, DUR + 1);
+  S.t1 = tag('olhar normal', .9, DUR + 1, -58, 30); S.t2 = tag('pálpebra caída', 2.7, DUR + 1, -62, 30);
+}
+if (SC === 2) rotulo('<span class="kick">Terço superior</span><div class="tit">Testa, sobrancelhas e pálpebras</div>', 72, 660, .3, DUR + 1);
+if (SC === 3) {
+  LV = levator(Fc, 'e'); Fc.eyes.d.ball.visible = Fc.eyes.d.iris.visible = false;
+  S.nd = needle(); Fc.g.add(S.nd); S.tox = particles(420, .014); Fc.g.add(S.tox.pts);
+  rotulo('<span class="kick">Ptose palpebral</span><div class="tit">O músculo que <b>levanta a pálpebra</b></div>', 50, 150, .2, 2.6);
+  rotulo('<span class="kick">Ptose palpebral</span><div class="tit">A toxina pode <b>chegar até ele</b></div>', 50, 150, 2.6, 4.7);
+  rotulo('<span class="kick">Ptose palpebral</span><div class="tit">A pálpebra <b>desce</b></div><div class="sub">Um efeito temporário</div>', 50, 150, 4.7, DUR + 1);
+  S.tg = tag('músculo levantador da pálpebra', .9, 2.7, 16, -16);
+}
+if (SC === 4) { rotulo('<span class="kick">Músculo frontal</span><div class="tit">Eleva as sobrancelhas</div><div class="sub">e ajuda a abrir o olhar</div>', 72, 660, .3, DUR + 1);
+  S.arrows = [arrow(-.26, .4), arrow(.26, .42)]; }
+if (SC === 5) { S.tox = particles(520, .026); Fc.g.add(S.tox.pts);
+  S.pts = [[-.33, .34], [-.17, .31], [0, .42], [.17, .32], [.33, .36], [-.27, .262], [.27, .29], [-.1, .46], [.1, .46], [0, .31]];
+  S.halos = S.pts.map(([x, y]) => { const h = halo(); h.position.copy(FP(Fc, x, y, .025)); Fc.g.add(h); return h; });
+  rotulo('<span class="kick">Aplicação inadequada</span><div class="tit">Dose alta ou <b>pontos errados</b></div>', 50, 150, .2, 3.7);
+  rotulo('<span class="kick">Resultado</span><div class="tit">Sobrancelha e pálpebra <b>descem</b></div><div class="sub">O olhar fica mais caído</div>', 50, 150, 3.7, DUR + 1); }
+if (SC === 6) { rotulo('<span class="kick">Avaliação</span><div class="tit">Contração, força e assimetrias</div>', 72, 660, .3, DUR + 1);
+  S.arrows = [arrow(-.26, .4), arrow(.26, .42)];
+  S.tL = tag('contrai mais', 3.6, DUR + 1, -112, -6); S.tR = tag('contrai menos', 3.6, DUR + 1, -60, -44); }
+
+/* =================== animação =================== */
+window.renderAt = (t) => {
+  const st = {}; let act = 0, actD = 0, actE = 0, dim = 0;
+  if (SC === 1) { Fc.g.rotation.y = .05 * Math.sin(t * .5); cam.position.set(0, .12, 2.15 - .15 * eio(t / DUR)); cam.lookAt(0, .1, 0);
+    st.lidE = .85 * eio((t - 1.7) / 2.0); }
+  if (SC === 2) { Fc.g.rotation.y = lerp(-.55, -.15, eio(t / DUR)); cam.position.set(0, .0, 2.75); cam.lookAt(-.48, -.08, 0);
+    Fc.holo.uniforms.uBand.value.set(.19, .62, eio((t - .8) / 1.2)); }
+  if (SC === 3) { const c = Fc.eyes.e.c; const a = lerp(1.15, .9, eio(t / DUR)); cam.position.set(c.x + Math.sin(a) * 1.45, c.y + .08, c.z + Math.cos(a) * 1.45); cam.lookAt(c.x - .04, c.y + .03, c.z - .08);
+    const pulse = t < 2.6 ? .5 + .5 * Math.sin(t / 1.3 * Math.PI - Math.PI / 2) : 0; dim = eio((t - 3.3) / 1.4);
+    st.lidE = t < 2.6 ? -.25 * pulse : .9 * eio((t - 4.6) / 1.5);
+    LV.m.uniforms.uAct.value = pulse; LV.m.uniforms.uDim.value = dim; LV.m.uniforms.uT.value = t;
+    const tip = FP(Fc, .24, .29, 0); const nIn = eio((t - 2.5) / .6), nOut = eio((t - 4.1) / .5);
+    S.nd.position.copy(tip).add(new THREE.Vector3(.02, .03, .04).multiplyScalar(1 + 4 * (1 - nIn) + 5 * nOut)); S.nd.rotation.set(.6, 0, -.35); S.nd.visible = t > 2.3 && t < 4.7;
+    const tp = S.tox; for (let i = 0; i < tp.seeds.length; i++) { const [a1, b, cc, d] = tp.seeds[i]; const age = Math.max(0, t - (3.0 + a1 * 1.1)); const k = 1 - Math.exp(-age * 1.5);
+      const dest = c.clone().add(new THREE.Vector3((b - .5) * 16 * MM, 13 * MM + (cc - .5) * 5 * MM, -(4 + d * 18) * MM)); const p = tip.clone().lerp(dest, k * (.35 + .65 * cc)); tp.P.set([p.x, p.y, p.z], i * 3); }
+    tp.geo.attributes.position.needsUpdate = true; tp.mat.opacity = cl((t - 3.0) / .3) * (1 - .5 * eio((t - 5.3) / 1.4));
+    S.tg.p = c.clone().add(new THREE.Vector3(0, 15 * MM, -22 * MM)).applyMatrix4(Fc.g.matrixWorld); }
+  if (SC === 4) { Fc.g.rotation.y = lerp(.3, .08, eio(t / DUR)); cam.position.set(0, .1, 2.6); cam.lookAt(-.46, .02, 0);
+    const c = t > .9 && t < DUR - .4 ? Math.max(0, Math.sin((t - .9) / 2.7 * Math.PI)) : 0; act = actD = actE = c; st.browD = st.browE = .035 * c; st.lidD = st.lidE = -.3 * c;
+    S.arrows.forEach((o) => setArrow(o, .1 * c, cl(c * 3))); }
+  if (SC === 5) { Fc.g.rotation.y = lerp(-.15, .1, eio(t / DUR)); cam.position.set(0, .3, 1.95 - .15 * eio(t / DUR)); cam.lookAt(0, .27, 0);
+    dim = eio((t - 2.2) / 2.0); st.browD = st.browE = -.03 * eio((t - 3.5) / 2.0); st.lidD = st.lidE = .7 * eio((t - 3.7) / 2.0);
+    S.halos.forEach((h, i) => { const b = .3 + i * .2; const k = eo((t - b) / 1.4); h.material.opacity = cl((t - b) / .2) * (.8 - .45 * k) * (1 - .6 * eio((t - 5.4) / 1.5)); h.scale.setScalar(.025 + .16 * k); });
+    const tp = S.tox; for (let i = 0; i < tp.seeds.length; i++) { const [a1, b, c, d] = tp.seeds[i]; const k = Math.floor(a1 * S.pts.length); const [x0, y0] = S.pts[k]; const age = Math.max(0, t - (.3 + k * .2));
+      const sp = (1 - Math.exp(-age * 1.2)) * (.02 + .07 * c); const th = b * 6.283; const p = FP(Fc, x0 + Math.cos(th) * sp, y0 + Math.sin(th) * sp - .018 * age * d, .022); tp.P.set([p.x, p.y, p.z], i * 3); }
+    tp.geo.attributes.position.needsUpdate = true; tp.mat.opacity = cl((t - .3) / .3) * (1 - .45 * eio((t - 5) / 2)); }
+  if (SC === 6) { Fc.g.rotation.y = lerp(-.08, .08, eio(t / DUR)); cam.position.set(0, .05, 2.75); cam.lookAt(-.48, -.02, 0);
+    Fc.holo.uniforms.uScan.value = t < 3.2 ? lerp(.55, -.75, eio((t - .4) / 2.6)) : -9;
+    const c = (t > 3.4 ? Math.max(0, Math.sin((t - 3.4) / 2.6 * Math.PI)) : 0) + (t > 6.2 && t < 8.8 ? Math.max(0, Math.sin((t - 6.2) / 2.6 * Math.PI)) : 0);
+    actD = c; actE = .5 * c; act = c; st.browD = .036 * c; st.browE = .016 * c; st.lidD = -.3 * c; st.lidE = -.12 * c;
+    setArrow(S.arrows[0], .13 * c, cl(c * 3)); setArrow(S.arrows[1], .05 * c, cl(c * 3));
+    S.tL.p = FP(Fc, -.26, .52, .05).applyMatrix4(Fc.g.matrixWorld); S.tR.p = FP(Fc, .26, .5, .05).applyMatrix4(Fc.g.matrixWorld); }
+  Fc.set(st); if (FR) { FR.refresh(); FR.set(act, dim, t, actD, actE); } if (LV) LV.refresh();
+  if (SC === 1) { S.t1.p = FP(Fc, -.22, -.02, .03).applyMatrix4(Fc.g.matrixWorld); S.t2.p = FP(Fc, .22, .02, .03).applyMatrix4(Fc.g.matrixWorld); }
+  scene.updateMatrixWorld(true); R.render(scene, cam); txt(t); return true;
+};
+await document.fonts.ready; window.pronto = true;
+</script></body></html>
