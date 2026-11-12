@@ -338,7 +338,9 @@ Use quando o vídeo explica o que acontece **no corpo** (músculo, pálpebra, to
 4. músculo frontal elevando as sobrancelhas (painel);
 5. dose alta ou pontos errados: sobrancelha e pálpebra descem;
 6. avaliação de contração, força e assimetria (painel).
-- As cenas 2, 4 e 6 são painéis de vidro acima da legenda. As outras ocupam a tela inteira.
+- As cenas 2, 4 e 6 são de **tela dividida**: o vídeo da profissional sobe para a metade de cima (bloco `motion` com `"divisao": true` e `"desloca": 260`) e a animação entra deslizando na metade de baixo, no mesmo ritmo. As outras cenas ocupam a tela inteira.
+- **Nunca ponha painel 3D sobre o rosto da profissional.**
+- **Legenda:** use `projeto.legenda.y` abaixo do queixo (≈1290) e `legenda.y_divisao` na linha da divisão (≈962). A legenda acompanha a divisão.
 
 **Fluxo:**
 1. Ponha no briefing os blocos `motion` com `"pasta": "TRAB/seq/s<N>"` e o `gatilho` da fala.
@@ -415,6 +417,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 - **Pinterest** e outros links: só referência visual no projeto (`projeto.referencias`), lida pelo diretor. A imagem é de quem publicou e nunca entra no vídeo.
 
 ## Lições aprendidas (não repita)
+
+- **12/11/2026 (tela dividida):** a equipe reprovou painel 3D e CTA sobre o rosto da doutora. O padrão para 3D com a profissional falando passou a ser a tela dividida, com a legenda no centro, abaixo do rosto, acompanhando a divisão. O espaço entre palavras da legenda subiu de 18 para 26 px, porque 18 px parecia palavra colada.
 
 - **12/11/2026 (3D):** a primeira versão usava uma cabeça procedural genérica, e a equipe apontou que tema médico exige a estrutura real do corpo. Agora a malha é o rosto real do vídeo (MediaPipe), e os músculos ficam nos marcos anatômicos. Em quadro vertical o campo horizontal é estreito: calcule a distância da câmera pela largura que precisa caber.
 

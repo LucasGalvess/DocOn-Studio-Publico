@@ -198,7 +198,8 @@ for b in blocks:
             if b.get('pasta') and not (os.path.isdir(pre) and any(f.endswith('.png') for f in os.listdir(pre))):
                 plan.append(f'AVISO motion {t0:.2f}-{t1:.2f} sem quadros em {pre}'); continue
             pasta = pre or _mo.render(b.get('modelo') or 'titulo_cinetico', None, b.get('motor') or None, t1 - t0, b.get('variaveis') or {}, ST, b.get('pos_y'))
-            ed.motion(t0, t1, pasta); plan.append(f'motion {t0:.2f}-{t1:.2f} {b.get("motor") or "hyperframes"}:{b.get("modelo")}')
+            ed.motion(t0, t1, pasta); plan.append(f'motion {t0:.2f}-{t1:.2f} {b.get("motor") or "hyperframes"}:{b.get("modelo")}' + (' · tela dividida' if b.get('divisao') else ''))
+            if b.get('divisao'): ed.split(t0, t1, int(b.get('desloca') or 140))
         except SystemExit as e: plan.append(f'AVISO motion {b.get("modelo")} não renderizou: {str(e)[:200]}')
         continue
     if tp == 'texto':                                              # texto na tela (Reels Dinâmico e qualquer estilo)
@@ -308,7 +309,9 @@ if leg != 'nenhuma':
     try: cap_s = min(2.5, max(0.4, float((PJ.get('legenda') or {}).get('fonte_px') or 0) / (44 if leg == 'subtle' else 54))) or 1.0
     except (TypeError, ValueError): cap_s = 1.0
     if not (PJ.get('legenda') or {}).get('fonte_px'): cap_s = 1.0
-    ed.captions(style='subtle' if leg == 'subtle' else 'docon', y=1600 if leg == 'subtle' else 1585, maxc=30 if leg == 'subtle' else 26, keywords=kwords, s=cap_s)
+    cap_y = int((PJ.get('legenda') or {}).get('y') or (1600 if leg == 'subtle' else 1585))          # legenda.y: altura do centro da legenda (padrão embaixo)
+    ed.captions(style='subtle' if leg == 'subtle' else 'docon', y=cap_y, maxc=30 if leg == 'subtle' else 26, keywords=kwords, s=cap_s)
+    ed.cap_y0 = cap_y; ed.cap_split_y = int((PJ.get('legenda') or {}).get('y_divisao') or 940)
 warn = ed.check(); plan += ['AVISO ' + w for w in warn]
 # ---- revisão de ofício (critérios medidos dos filmes do HyperFrames, adaptados ao reels DocOn): avisos, não regras
 def revisao():

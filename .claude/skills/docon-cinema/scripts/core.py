@@ -121,7 +121,7 @@ class Edit:
             self.WORDS.append(dict(w=w, s=s, e=e, os=self.src2out(s), oe=self.src2out(e)))
         self.panels, self.sfx, self.hook_items, self.brolls = [], [], [], []
         self.fx = FX()                                         # efeitos visuais dos blocos fx (scripts/fx.py)
-        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.textos = []; self.motions = []; self.escuros = []; self.escuro = 0.0; self.logo = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
+        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.textos = []; self.motions = []; self.escuros = []; self.escuro = 0.0; self.splits = []; self.cap_y0 = 1585; self.cap_split_y = None; self.logo = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
         self.anchor_y = anchor_y
         self._face_track()
     # ---------------- tempo
@@ -445,7 +445,7 @@ class Edit:
                 merged[-1] = merged[-1] + ln
             else: merged.append(ln)
         if style == 'subtle': FN, FK, space, shadow = INTER('SemiBold', round(44 * s)), INTER('Bold', round(46 * s)), round(13 * s), 0.92
-        else: FN, FK, space, shadow = INTER('Bold', round(54 * s)), INTER('Bold', round(60 * s)), round(18 * s), 0.8
+        else: FN, FK, space, shadow = INTER('Bold', round(54 * s)), INTER('Bold', round(60 * s)), round(26 * s), 0.8
         self.cap_lines = []
         for ln in merged:
             sprs = []
@@ -461,10 +461,12 @@ class Edit:
             cl[1] = min(nxt, last['oe'] + 0.6)
     def draw_caps(self, fr, t):
         subtle = getattr(self, 'cap_style', 'docon') == 'subtle'
+        oy = self.split_a(t) * (self.cap_split_y - self.cap_y0) if self.cap_split_y is not None else 0   # a legenda acompanha a divisão de tela
         for t0, t1, items in self.cap_lines:
             if not (t0 <= t < t1): continue
             fade = 1 - ease((t - (t1 - 0.09)) / 0.09)
             for j, spr, x, y, kw, tw in items:
+                y = y + oy
                 d = self.WORDS[j]; p = (t - d['os'] + 0.05) / (0.18 if subtle else 0.15)
                 if p <= 0: continue
                 op = ease_out(min(p, 1)) * fade; dy = (6 if subtle else 10) * (1 - ease_out(min(p, 1)))
@@ -507,10 +509,22 @@ class Edit:
     def broll_active(self, t): return any(b['t0'] <= t < b['t1'] for b in self.brolls)
 
     # ================================================================== render
+    # ---------------- divisão de tela: o vídeo sobe para a metade de cima e a animação ocupa a de baixo
+    def split(self, t0, t1, shift=140, trans=0.55):
+        self.splits.append((t0, t1, shift, trans))
+    def split_a(self, t):
+        a = 0.0
+        for t0, t1, sh, tr in self.splits:
+            if t0 - 1e-3 <= t <= t1: a = max(a, ease_out((t - t0) / tr) * (1 - ease((t - (t1 - tr)) / tr)))
+        return a
     def render_frame(self, reader, t):
         fr = self.video_layer(reader, t)
         fx = getattr(self, 'fx', None)
         if fx and fx.items: fr = np.ascontiguousarray(fx.video(fr, t), dtype=np.float32)
+        a = self.split_a(t)
+        if a > 0:
+            sh = int(round(a * max(s[2] for s in self.splits if s[0] - 1e-3 <= t <= s[1])))
+            if sh > 0: fr[:-sh] = fr[sh:].copy(); fr[-sh:] = fr[-sh - 1:-sh]
         self.draw_broll(fr, t)
         self.light_leak(fr, t)
         if fx and fx.items: fr[:] = fx.under(fr, t)

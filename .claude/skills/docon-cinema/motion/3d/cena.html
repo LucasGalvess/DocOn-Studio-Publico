@@ -6,9 +6,9 @@
 @font-face{font-family:DX;src:url(fonts/InterDisplay-Bold.ttf);font-weight:700}
 html,body{margin:0;width:720px;height:1280px;overflow:hidden;background:transparent}
 #full{position:absolute;inset:0;background:radial-gradient(110% 65% at 50% 46%,#3f2a22 0%,#22160f 50%,#0f0907 100%)}
-#card{position:absolute;left:47px;top:627px;width:626px;height:366px;border-radius:26px;overflow:hidden;
-  background:radial-gradient(90% 120% at 72% 50%,#3f2a22 0%,#22160f 55%,#140d0a 100%);
-  box-shadow:0 18px 50px rgba(0,0,0,.55),inset 0 0 0 1.5px rgba(232,211,176,.38)}
+#card{position:absolute;left:0;top:640px;width:720px;height:640px;overflow:hidden;
+  background:radial-gradient(90% 100% at 68% 55%,#3f2a22 0%,#22160f 55%,#120b08 100%)}
+#card:before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,#f2d6a6 20%,#f2d6a6 80%,transparent);box-shadow:0 0 18px #e9c48c;z-index:2}
 .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(233,196,140,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(233,196,140,.05) 1px,transparent 1px);background-size:36px 36px;
   -webkit-mask:radial-gradient(70% 60% at 50% 50%,#000,transparent);mask:radial-gradient(70% 60% at 50% 50%,#000,transparent)}
 canvas{position:absolute;display:block}
@@ -17,7 +17,7 @@ canvas{position:absolute;display:block}
 .tit{font:800 36px/1.1 DT;letter-spacing:-.01em;margin-top:12px;text-shadow:0 3px 18px rgba(0,0,0,.7)}
 .tit b{background:linear-gradient(100deg,#f6deac,#c99660);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sub{font:600 21px/1.3 DX;color:rgba(248,243,234,.86);margin-top:8px;text-shadow:0 2px 12px rgba(0,0,0,.7)}
-.card .tit{font-size:25px}.card .kick{font-size:12px;padding:6px 10px}.card .sub{font-size:16px}
+.card .tit{font-size:28px}.card .kick{font-size:13px;padding:7px 11px}.card .sub{font-size:18px}
 .tag{position:absolute;font:700 15px/1.2 DX;color:#f8f3ea;background:rgba(20,13,10,.78);border:1px solid rgba(232,211,176,.5);padding:6px 10px;border-radius:10px;opacity:0;white-space:nowrap}
 .tag i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#f2d6a6;margin-right:7px;vertical-align:1px;box-shadow:0 0 8px #f2d6a6}
 </style></head><body>
@@ -37,14 +37,14 @@ const lerp = (a, b, k) => a + (b - a) * k;
 let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 const GOLD = new THREE.Color(0xe9c48c), KEY = new THREE.Color(0xf2d6a6), MUS = new THREE.Color(0xe8705f), DIM = new THREE.Color(0x6f625c);
 /* ---------- renderer ---------- */
-const box = PANEL ? {x: 47, y: 627, w: 626, h: 366} : {x: 0, y: 0, w: 720, h: 1280};
+const box = PANEL ? {x: 0, y: 640, w: 720, h: 640} : {x: 0, y: 0, w: 720, h: 1280};
 document.getElementById(PANEL ? 'card' : 'full').hidden = false;
 const R = new THREE.WebGLRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true});
 R.setPixelRatio(1.5); R.setSize(box.w, box.h); R.setClearColor(0, 0);
 R.toneMapping = THREE.ACESFilmicToneMapping; R.outputColorSpace = THREE.SRGBColorSpace;
-Object.assign(R.domElement.style, {left: box.x + 'px', top: box.y + 'px', width: box.w + 'px', height: box.h + 'px', borderRadius: PANEL ? '26px' : '0'});
+Object.assign(R.domElement.style, {left: box.x + 'px', top: box.y + 'px', width: box.w + 'px', height: box.h + 'px', borderRadius: '0'});
 document.body.insertBefore(R.domElement, document.getElementById('labs'));
-const scene = new THREE.Scene(); const cam = new THREE.PerspectiveCamera(PANEL ? 26 : 40, box.w / box.h, .02, 50);
+const scene = new THREE.Scene(); const cam = new THREE.PerspectiveCamera(PANEL ? 30 : 40, box.w / box.h, .02, 50);
 scene.add(new THREE.HemisphereLight(0xfff3e6, 0x2a1b16, 1.1));
 const kl = new THREE.DirectionalLight(0xfff1e0, 2.2); kl.position.set(2, 3, 4); scene.add(kl);
 const rl = new THREE.DirectionalLight(0xf2d6a6, 1.6); rl.position.set(-3, 1, -4); scene.add(rl);
@@ -210,7 +210,7 @@ if (SC === 1) {
   rotulo('<span class="kick">Depois da toxina</span><div class="tit">A pálpebra pode <b>descer</b></div><div class="sub">e o olhar fica pesado</div>', 50, 150, .3, DUR + 1);
   S.t1 = tag('olhar normal', .9, DUR + 1, -58, 30); S.t2 = tag('pálpebra caída', 2.7, DUR + 1, -62, 30);
 }
-if (SC === 2) rotulo('<span class="kick">Terço superior</span><div class="tit">Testa, sobrancelhas e pálpebras</div>', 72, 660, .3, DUR + 1);
+if (SC === 2) rotulo('<span class="kick">Terço superior</span><div class="tit">Testa, sobrancelhas e pálpebras</div>', 40, 700, .5, DUR + 1);
 if (SC === 3) {
   LV = levator(Fc, 'e'); Fc.eyes.d.ball.visible = Fc.eyes.d.iris.visible = false;
   S.nd = needle(); Fc.g.add(S.nd); S.tox = particles(420, .014); Fc.g.add(S.tox.pts);
@@ -219,23 +219,23 @@ if (SC === 3) {
   rotulo('<span class="kick">Ptose palpebral</span><div class="tit">A pálpebra <b>desce</b></div><div class="sub">Um efeito temporário</div>', 50, 150, 4.7, DUR + 1);
   S.tg = tag('músculo levantador da pálpebra', .9, 2.7, 16, -16);
 }
-if (SC === 4) { rotulo('<span class="kick">Músculo frontal</span><div class="tit">Eleva as sobrancelhas</div><div class="sub">e ajuda a abrir o olhar</div>', 72, 660, .3, DUR + 1);
+if (SC === 4) { rotulo('<span class="kick">Músculo frontal</span><div class="tit">Eleva as sobrancelhas</div><div class="sub">e ajuda a abrir o olhar</div>', 40, 700, .5, DUR + 1);
   S.arrows = [arrow(-.26, .4), arrow(.26, .42)]; }
 if (SC === 5) { S.tox = particles(520, .026); Fc.g.add(S.tox.pts);
   S.pts = [[-.33, .34], [-.17, .31], [0, .42], [.17, .32], [.33, .36], [-.27, .262], [.27, .29], [-.1, .46], [.1, .46], [0, .31]];
   S.halos = S.pts.map(([x, y]) => { const h = halo(); h.position.copy(FP(Fc, x, y, .025)); Fc.g.add(h); return h; });
   rotulo('<span class="kick">Aplicação inadequada</span><div class="tit">Dose alta ou <b>pontos errados</b></div>', 50, 150, .2, 3.7);
   rotulo('<span class="kick">Resultado</span><div class="tit">Sobrancelha e pálpebra <b>descem</b></div><div class="sub">O olhar fica mais caído</div>', 50, 150, 3.7, DUR + 1); }
-if (SC === 6) { rotulo('<span class="kick">Avaliação</span><div class="tit">Contração, força e assimetrias</div>', 72, 660, .3, DUR + 1);
+if (SC === 6) { rotulo('<span class="kick">Avaliação</span><div class="tit">Contração, força e assimetrias</div>', 40, 700, .5, DUR + 1);
   S.arrows = [arrow(-.26, .4), arrow(.26, .42)];
-  S.tL = tag('contrai mais', 3.6, DUR + 1, -112, -6); S.tR = tag('contrai menos', 3.6, DUR + 1, -60, -44); }
+  S.tL = tag('contrai mais', 3.6, DUR + 1, -52, -44); S.tR = tag('contrai menos', 3.6, DUR + 1, -40, -44); }
 
 /* =================== animação =================== */
 window.renderAt = (t) => {
   const st = {}; let act = 0, actD = 0, actE = 0, dim = 0;
   if (SC === 1) { Fc.g.rotation.y = .05 * Math.sin(t * .5); cam.position.set(0, .12, 2.15 - .15 * eio(t / DUR)); cam.lookAt(0, .1, 0);
     st.lidE = .85 * eio((t - 1.7) / 2.0); }
-  if (SC === 2) { Fc.g.rotation.y = lerp(-.55, -.15, eio(t / DUR)); cam.position.set(0, .0, 2.75); cam.lookAt(-.48, -.08, 0);
+  if (SC === 2) { Fc.g.rotation.y = lerp(-.55, -.15, eio(t / DUR)); cam.position.set(0, .02, 3.25); cam.lookAt(-.36, -.02, 0);
     Fc.holo.uniforms.uBand.value.set(.19, .62, eio((t - .8) / 1.2)); }
   if (SC === 3) { const c = Fc.eyes.e.c; const a = lerp(1.15, .9, eio(t / DUR)); cam.position.set(c.x + Math.sin(a) * 1.45, c.y + .08, c.z + Math.cos(a) * 1.45); cam.lookAt(c.x - .04, c.y + .03, c.z - .08);
     const pulse = t < 2.6 ? .5 + .5 * Math.sin(t / 1.3 * Math.PI - Math.PI / 2) : 0; dim = eio((t - 3.3) / 1.4);
@@ -247,7 +247,7 @@ window.renderAt = (t) => {
       const dest = c.clone().add(new THREE.Vector3((b - .5) * 16 * MM, 13 * MM + (cc - .5) * 5 * MM, -(4 + d * 18) * MM)); const p = tip.clone().lerp(dest, k * (.35 + .65 * cc)); tp.P.set([p.x, p.y, p.z], i * 3); }
     tp.geo.attributes.position.needsUpdate = true; tp.mat.opacity = cl((t - 3.0) / .3) * (1 - .5 * eio((t - 5.3) / 1.4));
     S.tg.p = c.clone().add(new THREE.Vector3(0, 15 * MM, -22 * MM)).applyMatrix4(Fc.g.matrixWorld); }
-  if (SC === 4) { Fc.g.rotation.y = lerp(.3, .08, eio(t / DUR)); cam.position.set(0, .1, 2.6); cam.lookAt(-.46, .02, 0);
+  if (SC === 4) { Fc.g.rotation.y = lerp(.3, .08, eio(t / DUR)); cam.position.set(0, .08, 3.25); cam.lookAt(-.36, .06, 0);
     const c = t > .9 && t < DUR - .4 ? Math.max(0, Math.sin((t - .9) / 2.7 * Math.PI)) : 0; act = actD = actE = c; st.browD = st.browE = .035 * c; st.lidD = st.lidE = -.3 * c;
     S.arrows.forEach((o) => setArrow(o, .1 * c, cl(c * 3))); }
   if (SC === 5) { Fc.g.rotation.y = lerp(-.15, .1, eio(t / DUR)); cam.position.set(0, .3, 1.95 - .15 * eio(t / DUR)); cam.lookAt(0, .27, 0);
@@ -256,7 +256,7 @@ window.renderAt = (t) => {
     const tp = S.tox; for (let i = 0; i < tp.seeds.length; i++) { const [a1, b, c, d] = tp.seeds[i]; const k = Math.floor(a1 * S.pts.length); const [x0, y0] = S.pts[k]; const age = Math.max(0, t - (.3 + k * .2));
       const sp = (1 - Math.exp(-age * 1.2)) * (.02 + .07 * c); const th = b * 6.283; const p = FP(Fc, x0 + Math.cos(th) * sp, y0 + Math.sin(th) * sp - .018 * age * d, .022); tp.P.set([p.x, p.y, p.z], i * 3); }
     tp.geo.attributes.position.needsUpdate = true; tp.mat.opacity = cl((t - .3) / .3) * (1 - .45 * eio((t - 5) / 2)); }
-  if (SC === 6) { Fc.g.rotation.y = lerp(-.08, .08, eio(t / DUR)); cam.position.set(0, .05, 2.75); cam.lookAt(-.48, -.02, 0);
+  if (SC === 6) { Fc.g.rotation.y = lerp(-.08, .08, eio(t / DUR)); cam.position.set(0, .06, 3.3); cam.lookAt(-.36, .04, 0);
     Fc.holo.uniforms.uScan.value = t < 3.2 ? lerp(.55, -.75, eio((t - .4) / 2.6)) : -9;
     const c = (t > 3.4 ? Math.max(0, Math.sin((t - 3.4) / 2.6 * Math.PI)) : 0) + (t > 6.2 && t < 8.8 ? Math.max(0, Math.sin((t - 6.2) / 2.6 * Math.PI)) : 0);
     actD = c; actE = .5 * c; act = c; st.browD = .036 * c; st.browE = .016 * c; st.lidD = -.3 * c; st.lidE = -.12 * c;
@@ -264,7 +264,10 @@ window.renderAt = (t) => {
     S.tL.p = FP(Fc, -.26, .52, .05).applyMatrix4(Fc.g.matrixWorld); S.tR.p = FP(Fc, .26, .5, .05).applyMatrix4(Fc.g.matrixWorld); }
   Fc.set(st); if (FR) { FR.refresh(); FR.set(act, dim, t, actD, actE); } if (LV) LV.refresh();
   if (SC === 1) { S.t1.p = FP(Fc, -.22, -.02, .03).applyMatrix4(Fc.g.matrixWorld); S.t2.p = FP(Fc, .22, .02, .03).applyMatrix4(Fc.g.matrixWorld); }
-  scene.updateMatrixWorld(true); R.render(scene, cam); txt(t); return true;
+  scene.updateMatrixWorld(true); R.render(scene, cam); txt(t);
+  if (PANEL) { const ease = (x) => { x = cl(x); return x * x * (3 - 2 * x); }; const TR = .55; const a = eo(t / TR) * (1 - ease((t - (DUR - TR)) / TR));   // mesmo ritmo da divisão no pipeline
+    const y = (1 - a) * 640; for (const el of [document.getElementById('card'), R.domElement, document.getElementById('labs')]) el.style.transform = `translateY(${y.toFixed(1)}px)`; }
+  return true;
 };
 await document.fonts.ready; window.pronto = true;
 </script></body></html>
