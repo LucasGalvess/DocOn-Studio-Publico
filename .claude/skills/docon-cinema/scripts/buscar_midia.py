@@ -4,13 +4,18 @@ uso:
   python3 buscar_midia.py buscar "dermatologist clinic" --tipo video [--fontes pexels,pixabay] [--n 6] --saida PASTA
   python3 buscar_midia.py gerar "mãos de médica aplicando protetor" --saida PASTA          (IA Magnific, imagem 9:16)
 Saída: PASTA/<fonte>_<id>.<ext> (prévia baixada) + PASTA/itens.json [{arquivo, fonte, id, tipo, titulo, autor, licenca, pagina, duracao}].
-Chaves no ambiente: MAGNIFIC_API_KEY (ou FREEPIK_API_KEY), PEXELS_API_KEY, PIXABAY_API_KEY, FREESOUND_API_KEY. Openverse dispensa chave.
+Chaves: o jeito seguro é salvar cada uma como "network secret" do ambiente (o proxy põe a chave no cabeçalho, ela nunca fica
+na máquina): Pexels (api.pexels.com, Authorization), Freesound (freesound.org, Authorization: Token) e Magnific (api.magnific.com,
+x-magnific-api-key). Sem variável no ambiente, o script manda um valor provisório que o proxy troca pela chave salva.
+Também valem as variáveis MAGNIFIC_API_KEY (ou FREEPIK_API_KEY), PEXELS_API_KEY, FREESOUND_API_KEY e PIXABAY_API_KEY
+(a Pixabay só por variável: a chave dela vai na URL, e o proxy não consegue pôr). Openverse dispensa chave.
 A sessão sobe os arquivos como assets do Studio e grava em buscas/<id>.itens (com asset_id); só entram no banco depois de aprovados.
 Licenças não comerciais (NC) e sem derivação (ND) ficam de fora.
 """
 import os, sys, json, time, re, argparse, urllib.request, urllib.parse
 E = os.environ.get
-MAG = E('MAGNIFIC_API_KEY') or E('FREEPIK_API_KEY') or ''
+PROV = 'chave-pelo-proxy'      # valor provisório: o proxy do ambiente troca pela chave salva
+MAG = E('MAGNIFIC_API_KEY') or E('FREEPIK_API_KEY') or PROV
 MAG_BASE = E('MAGNIFIC_API_BASE', 'https://api.magnific.com')
 UA = {'User-Agent': 'DocOnStudio/1.0'}
 def get(url, headers=None, data=None):
@@ -20,7 +25,7 @@ def okLic(l): return not re.search(r'(^|[-\s/_])(nc|nd)([-\s/_.]|$)|noncommercia
 q = urllib.parse.quote
 
 def pexels(t, tipo):
-    h = {'Authorization': E('PEXELS_API_KEY')}
+    h = {'Authorization': E('PEXELS_API_KEY') or PROV}
     if tipo == 'video':
         r = get(f'https://api.pexels.com/videos/search?query={q(t)}&orientation=portrait&per_page=15', h); out = []
         for v in r['videos']:
@@ -38,7 +43,7 @@ def pixabay(t, tipo):
     return [dict(fonte='pixabay', id=str(p['id']), tipo='imagem', titulo=p['tags'], url=p['largeImageURL'], thumb=p['webformatURL'], pagina=p['pageURL'], autor=p['user'], licenca='Licença Pixabay (uso comercial; não revender o arquivo isolado)') for p in r['hits']]
 def freesound(t, tipo):
     f = q('license:("Creative Commons 0" OR "Attribution") duration:[0 TO 30]')
-    r = get(f'https://freesound.org/apiv2/search/text/?query={q(t)}&filter={f}&fields=id,name,previews,license,username,duration,url&page_size=15&token={E("FREESOUND_API_KEY")}')
+    r = get(f'https://freesound.org/apiv2/search/text/?query={q(t)}&filter={f}&fields=id,name,previews,license,username,duration,url&page_size=15', {'Authorization': 'Token ' + (E('FREESOUND_API_KEY') or PROV)})
     return [dict(fonte='freesound', id=str(s['id']), tipo='som', titulo=s['name'], url=s['previews']['preview-hq-mp3'], pagina=s['url'], autor=s['username'], licenca=s['license'], duracao=s['duration']) for s in r['results'] if okLic(s['license'])]
 def openverse(t, tipo):
     k = 'audio' if tipo == 'som' else 'images'
@@ -53,13 +58,21 @@ def magnific(t, tipo):     # conferir os caminhos em docs.magnific.com
         except Exception: continue
         out.append(dict(fonte='magnific', id=str(x['id']), tipo=tipo, titulo=x.get('title') or x.get('name') or t, url=url, pagina=x.get('url'), autor=(x.get('author') or {}).get('name'), licenca='Magnific (licença da sua conta)'))
     return out
-FONTES = dict(magnific=(lambda: bool(MAG), ('imagem', 'video')), pexels=(lambda: bool(E('PEXELS_API_KEY')), ('imagem', 'video')), pixabay=(lambda: bool(E('PIXABAY_API_KEY')), ('imagem', 'video')),
-              freesound=(lambda: bool(E('FREESOUND_API_KEY')), ('som',)), openverse=(lambda: True, ('imagem', 'som')))
+FONTES = dict(magnific=(lambda: True, ('imagem', 'video')), pexels=(lambda: True, ('imagem', 'video')), pixabay=(lambda: bool(E('PIXABAY_API_KEY')), ('imagem', 'video')),
+              freesound=(lambda: True, ('som',)), openverse=(lambda: True, ('imagem', 'som')))
 def baixar(it, pasta):
     ext = {'video': '.mp4', 'som': '.mp3'}.get(it['tipo'], '.jpg'); dst = os.path.join(pasta, f"{it['fonte']}_{re.sub(r'[^A-Za-z0-9_-]', '', it['id'])[:40]}{ext}")
-    req = urllib.request.Request(it['url'], headers=UA)
-    with urllib.request.urlopen(req, timeout=120) as r, open(dst, 'wb') as f: f.write(r.read())
-    return dst
+    # imagem do Openverse: o original fica em sites variados (Wikimedia, Flickr…), muitas vezes bloqueados ou com limite;
+    # a miniatura (servida pelo próprio api.openverse.org) sempre baixa e serve de prévia. O original fica em it['url'].
+    urls = [it['url']] if not (it['fonte'] == 'openverse' and it['tipo'] == 'imagem' and it.get('thumb')) else [it['url'], it['thumb']]
+    erro = None
+    for u in urls:
+        try:
+            with urllib.request.urlopen(urllib.request.Request(u, headers=UA), timeout=120) as r, open(dst, 'wb') as f: f.write(r.read())
+            if u != it['url']: it['previa_miniatura'] = True
+            return dst
+        except Exception as e: erro = e
+    raise erro
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('acao', choices=['buscar', 'gerar']); ap.add_argument('texto'); ap.add_argument('--tipo', default='video')
@@ -74,7 +87,6 @@ if __name__ == '__main__':
                 try: it['arquivo'] = baixar(it, A.saida); itens.append(it); print('ok', f, it['titulo'][:50] if it.get('titulo') else it['id'])
                 except Exception as e: print('download falhou', f, e, file=sys.stderr)
     else:
-        if not MAG: sys.exit('defina MAGNIFIC_API_KEY')
         h = {'x-magnific-api-key': MAG, 'x-freepik-api-key': MAG}
         t = get(f'{MAG_BASE}/v1/ai/mystic', h, dict(prompt=A.texto + '. Vertical 9:16, luz natural, sem texto na imagem, sem marcas, aparência real e profissional.', aspect_ratio='social_story_9_16', resolution='2k'))
         tid = (t.get('data') or t)['task_id']

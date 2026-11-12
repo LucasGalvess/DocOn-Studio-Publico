@@ -371,6 +371,11 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
   - Licença, autor e página de origem ficam gravados no banco.
   - Licenças NC/ND ficam de fora.
   - Magnific Free exige o crédito "Designed by Freepik".
+- **Chaves e rede:**
+  - O ambiente "DocOn Studio" libera o Openverse e os servidores de arquivos (images/videos.pexels.com, cdn.freesound.org, Wikimedia, Flickr).
+  - As chaves do Pexels, do Freesound e da Magnific entram como "network secret" do ambiente, cadastradas pelo dono da conta. O script manda um valor provisório e o proxy põe a chave.
+  - A Pixabay só funciona com a variável PIXABAY_API_KEY, porque a chave dela vai na URL.
+  - Sem chave, a busca usa só o Openverse e avisa quais fontes falharam.
 - **Pedido de B-roll sem mídia no banco:**
   1. Busque (ou gere com a Magnific).
   2. Mostre como rascunho no vídeo.
@@ -380,6 +385,8 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 - **Pinterest** e outros links: só referência visual no projeto (`projeto.referencias`), lida pelo diretor. A imagem é de quem publicou e nunca entra no vídeo.
 
 ## Lições aprendidas (não repita)
+
+- **12/11/2026:** imagem do Openverse fica hospedada em sites variados, muitos bloqueados ou com limite (a Wikimedia dá 429). A prévia agora baixa a miniatura servida pelo próprio api.openverse.org, e o original fica em `url`. O acervo do Openverse é fraco para clínica e estética; o B-roll bom de vídeo depende da chave do Pexels.
 
 - **08/11/2026:** a equipe decidiu que a referência manda e o estilo é só a base, em vídeos e artes. Antes, o estilo vencia e a referência era só "inspiração": o resultado saía genérico.
 
