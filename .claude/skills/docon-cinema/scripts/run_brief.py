@@ -201,6 +201,7 @@ for b in blocks:
             pasta = pre or _mo.render(b.get('modelo') or 'titulo_cinetico', None, b.get('motor') or None, t1 - t0, b.get('variaveis') or {}, ST, b.get('pos_y'))
             ed.motion(t0, t1, pasta); plan.append(f'motion {t0:.2f}-{t1:.2f} {b.get("motor") or "hyperframes"}:{b.get("modelo")}' + (' · tela dividida' if b.get('divisao') else ''))
             if b.get('divisao'): ed.split(t0, t1, int(b.get('desloca') or 140))
+            elif b.get('legenda_y'): ed.split(t0, t1, 0, cap_y=int(b['legenda_y']))     # ex.: abertura recortada: só a legenda muda de altura
         except SystemExit as e: plan.append(f'AVISO motion {b.get("modelo")} não renderizou: {str(e)[:200]}')
         continue
     if tp == 'texto':                                              # texto na tela (Reels Dinâmico e qualquer estilo)

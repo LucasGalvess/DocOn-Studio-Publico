@@ -435,6 +435,12 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 ## Lições aprendidas (não repita)
 
+- **12/11/2026 (abertura recortada):**
+  - **Formato comentário/react:** o vídeo do caso fica como fundo em tela cheia, e a profissional aparece recortada (RVM em alta), menor, presa ao canto de baixo e à lateral (`motion/recorte_fundo.py`). O efeito dura o tempo do vídeo de fundo.
+  - **Saída sem dissolve:** o dissolve duplicava a pessoa. Agora o recorte cresce até a tela cheia.
+  - **Legenda:** no trecho, ela desce para o peito da profissional (`legenda_y` no bloco).
+  - **Animações:** só nos trechos que a equipe pedir (aqui: ptose, bloqueio do frontal, sobrancelha e pálpebra descem).
+
 - **12/11/2026 (cor e cortes):** a equipe pediu a cor original da profissional e o vídeo sem cortes.
   - Para a cor original, use `estilo.imagem.cor_original: true`: sem grade, sem suavizar pele, sem vinheta e sem flash de luz; a estabilização continua.
   - Para não cortar, use `cortar_pausas: false` e `velocidade: 1.0`.

@@ -461,7 +461,7 @@ class Edit:
             cl[1] = min(nxt, last['oe'] + 0.6)
     def draw_caps(self, fr, t):
         subtle = getattr(self, 'cap_style', 'docon') == 'subtle'
-        oy = self.split_a(t) * (self.cap_split_y - self.cap_y0) if self.cap_split_y is not None else 0   # a legenda acompanha a divisão de tela
+        oy = self.cap_oy(t)                                       # a legenda acompanha a divisão de tela / a abertura recortada
         for t0, t1, items in self.cap_lines:
             if not (t0 <= t < t1): continue
             fade = 1 - ease((t - (t1 - 0.09)) / 0.09)
@@ -510,13 +510,20 @@ class Edit:
 
     # ================================================================== render
     # ---------------- divisão de tela: o vídeo sobe para a metade de cima e a animação ocupa a de baixo
-    def split(self, t0, t1, shift=140, trans=0.55):
-        self.splits.append((t0, t1, shift, trans))
+    def split(self, t0, t1, shift=140, trans=0.55, cap_y=None):
+        self.splits.append((t0, t1, shift, trans, cap_y))     # cap_y: para onde a legenda vai nesse trecho (None = linha da divisão)
     def split_a(self, t):
         a = 0.0
-        for t0, t1, sh, tr in self.splits:
+        for t0, t1, sh, tr, cy in self.splits:
             if t0 - 1e-3 <= t <= t1: a = max(a, ease_out((t - t0) / tr) * (1 - ease((t - (t1 - tr)) / tr)))
         return a
+    def cap_oy(self, t):
+        for t0, t1, sh, tr, cy in self.splits:
+            if t0 - 1e-3 <= t <= t1:
+                alvo = cy if cy is not None else self.cap_split_y
+                if alvo is None: return 0
+                return (ease_out((t - t0) / tr) * (1 - ease((t - (t1 - tr)) / tr))) * (alvo - self.cap_y0)
+        return 0
     def render_frame(self, reader, t):
         fr = self.video_layer(reader, t)
         fx = getattr(self, 'fx', None)
