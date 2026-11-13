@@ -176,7 +176,7 @@ if cta:
     t0, src = when(cta, out_of(cta['inicio']))
     t0 = min(t0, ed.TOTAL - 2.5)                     # o cartão final sempre aparece inteiro e vai até o último quadro
     ed.end_card(t0 - 0.05, (cta.get('kicker') or PJ.get('tema') or '').upper()[:34] or 'DOCON', (cta.get('titulo') or 'Me conta nos comentários').split('\n')[:2],
-                cta.get('subtitulo') or '', PJ['profissional'].get('nome') or '', cta.get('botao') or 'Agende sua avaliação',
+                cta.get('subtitulo') or '', (PJ['profissional'].get('nome') or '') if cta.get('mostrar_nome') is not False else '', cta.get('botao') or 'Agende sua avaliação',
                 foot=cta.get('rodape') or None, icon=cta.get('icone') or icon_hook, y=int(posy(cta, 640)), s=escala(cta) * txt(cta), blur=bgk(cta))
     plan.append(f'cta {t0:.2f}s ({src})')
 
