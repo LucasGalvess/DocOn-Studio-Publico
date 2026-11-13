@@ -251,8 +251,8 @@ for b in blocks:
         items = [i for i in b.get('itens', []) if i.get('texto')]; lay = b.get('layout', 'lista')
         tit = (b.get('titulo') or '').strip(); n = len(items)
         h = 46 + 52 + 22 + (0 if lay == 'destaque' or not tit else 64 * len(tit.split('\n'))) + (112 if lay == 'destaque' else 0) + \
-            (150 if lay == 'linha_do_tempo' else 230 if lay == 'opcoes' else 92 * n) + 30
-        h = min(max(h, 220), 540); y = int(min(max(1200 - h / 2, 930), 1470 - h)) if b.get('pos_y') in (None, '') else int(min(max(posy(b, 0), 60), 1880 - h))
+            (150 if lay == 'linha_do_tempo' else 230 if lay == 'opcoes' else 92 * n) + (330 + (52 if b.get('preco_de') else 0) - 8 * n if lay == 'preco' else 0) + 30
+        h = min(max(h, 220), 760 if lay == 'preco' else 540); y = int(min(max(1200 - h / 2, 930), 1470 - h)) if b.get('pos_y') in (None, '') else int(min(max(posy(b, 0), 60), 1880 - h))
         es, tx = escala(b), txt(b)
         if es != 1 or tx != 1:     # painel menor/maior (retângulo inteiro) e texto maior/menor por dentro
             h = int(h * es * tx)
@@ -267,6 +267,25 @@ for b in blocks:
             big = gold_gradient_text(tit or '—', MONT(900, 92), pad=0)
             if big.width > 820: big = big.resize((820, int(big.height * 820 / big.width)))
             p.add(big, 56, 118, t0 + 0.05, anim='pop'); ed.sfx.append((t0 + 0.05, 'tick')); yy = 246
+            for k, it in enumerate(items): ed.row(p, ic(it.get('icone'), 64), it['texto'], yy + 84 * k, it_t[k], size=42)
+        elif lay == 'preco':                                       # preço de oferta: moeda pequena, valor grande, centavos e selo (ex.: no PIX)
+            yy = ed.kicker_title(p, b.get('kicker') or 'OFERTA', tit, tsize=52) if tit else (p.add(pill(b.get('kicker') or 'OFERTA', MONT(800, 26)), 56, 46, p.t0) or 128)
+            cur = b.get('moeda', 'R$') if b.get('moeda') is not None else 'R$'
+            if b.get('preco_de'):
+                de = text_sprite(f"de {cur} {b['preco_de']} por", INTER('Medium', 38), P['text'], pad=0); dd = ImageDraw.Draw(de)
+                x0 = INTER('Medium', 38).getlength('de '); x1 = INTER('Medium', 38).getlength(f"de {cur} {b['preco_de']}"); dd.line([(x0, de.height * .55), (x1, de.height * .55)], fill=tuple(P['text']) + (255,), width=3)
+                p.add(de, 56, yy, p.t0 + 0.15); yy += 52
+            val = gold_gradient_text(str(b.get('preco') or '0'), MONT(900, 320), c1=P['text'], c2=P['grad1'], pad=0); val = val.crop(val.getbbox() or (0, 0, val.width, val.height))   # rente às letras (sem o vão da fonte)
+            cs = text_sprite(cur, MONT(800, 84), P['text'], pad=0); ce = text_sprite(b['centavos'], MONT(800, 84), P['text'], pad=0) if b.get('centavos') else None
+            sel = pill(str(b['condicao']).upper(), INTER('Bold', 36), fg=P.get('button_fg', P['text']), bg=P.get('button', P['key']), padx=26, pady=14, track=2) if b.get('condicao') else None
+            side = max(ce.width if ce else 0, sel.width if sel else 0); W_ = cs.width + 16 + val.width + 16 + side; H_ = max(val.height, 20 + (ce.height + 16 if ce else 0) + (sel.height if sel else 0))
+            pr = Image.new('RGBA', (W_, H_), (0, 0, 0, 0)); pr.alpha_composite(cs, (0, 22)); pr.alpha_composite(val, (cs.width + 16, 0)); sx = cs.width + 32 + val.width; sy = 22
+            if ce: pr.alpha_composite(ce, (sx, sy)); sy += ce.height + 16
+            if sel: pr.alpha_composite(sel, (sx, sy))
+            if pr.width > 828: pr = pr.resize((828, int(pr.height * 828 / pr.width)), Image.LANCZOS)
+            g = b.get('preco_gatilho') or b.get('preco'); tp = find(str(g), b['inicio'] - 1, t0 - 0.3) if g else None
+            tp = tp if tp is not None and tp < t1 - 0.5 else t0 + 0.3
+            p.add(pr, 56, yy + 6, tp, anim='pop'); ed.sfx.append((tp, 'tick')); yy += pr.height + 30
             for k, it in enumerate(items): ed.row(p, ic(it.get('icone'), 64), it['texto'], yy + 84 * k, it_t[k], size=42)
         elif lay == 'linha_do_tempo':
             yy = ed.kicker_title(p, b.get('kicker') or 'PASSO A PASSO', tit, tsize=52) if tit else (p.add(pill(b.get('kicker') or 'PASSO A PASSO', MONT(800, 26)), 56, 46, p.t0) or 130)
