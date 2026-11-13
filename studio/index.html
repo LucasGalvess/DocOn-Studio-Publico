@@ -490,6 +490,7 @@ const FX = [
   {k: 'glow', cat: 'filtro', n: 'Brilho suave', d: 'Halo luminoso no trecho', dur: 1.5, a: 'fxGlow'},
   {k: 'desfoque', cat: 'transicao', n: 'Desfoque de transição', d: 'Sai e volta do foco', dur: 0.6, a: 'fxBlur'},
   {k: 'escurecer', cat: 'filtro', n: 'Escurecer fundo', d: 'Sombra geral: escurece o vídeo atrás dos textos, na % que você escolher', dur: 3, a: 'fxBlur'},
+  {k: 'fade_preto', cat: 'filtro', n: 'Fade preto', d: 'Escurece tudo até 100% preto (por cima do vídeo, da legenda e dos textos). Entrada: começa preto e clareia. Saída: escurece até o preto total.', dur: 1.2, a: 'fxBlur'},
   {k: 'fundo_desfocado', cat: 'filtro', n: 'Desfoque de fundo', d: 'Camada que desfoca e escurece o vídeo atrás dos textos, na % que você escolher', dur: 3, a: 'fxBlur'},
   {k: 'grao', cat: 'filtro', n: 'Grão de filme', d: 'Textura de película no trecho', dur: 3, a: 'fxGrain'},
   {k: 'vinheta', cat: 'filtro', n: 'Vinheta forte', d: 'Escurece as bordas para focar no rosto', dur: 3, a: 'fxVig'},
@@ -1146,6 +1147,7 @@ function renderInsp() {
   if (b.tipo === 'cta') body = fld('b_ck', 'Kicker', b.kicker, 'text', 'data-k="kicker" placeholder="VERÃO LEVE"') + `<div class="f"><label for="b_ct">Título (uma linha por quebra)</label><textarea id="b_ct" rows="2" data-k="titulo" placeholder="Quer ver mais&#10;bastidores?">${esc(b.titulo)}</textarea></div>` + fld('b_cs', 'Subtítulo', b.subtitulo, 'text', 'data-k="subtitulo"') + fld('b_cb', 'Botão', b.botao, 'text', 'data-k="botao" placeholder="Agende sua avaliação"') + fld('b_cr', 'Rodapé (opcional)', b.rodape, 'text', 'data-k="rodape" placeholder="@perfil · link na bio"') + `<div class="f"><label for="b_cic">Ícone</label><select id="b_cic" data-k="icone">${icOpts(b.icone)}</select></div><label class="chk"><input type="checkbox" id="b_fim" data-k="ate_o_fim" data-bool="1" ${b.ate_o_fim ? 'checked' : ''}> Ficar até o fim do vídeo</label><label class="chk"><input type="checkbox" id="b_mnm" data-k="mostrar_nome" data-bool="1" ${b.mostrar_nome !== false ? 'checked' : ''}> Mostrar o nome da profissional</label>`;
   if (b.tipo === 'fx') body = `<div class="f"><label for="b_fx">Efeito</label><select id="b_fx" data-k="efeito">${FX.map((f) => `<option value="${f.k}" ${f.k === b.efeito ? 'selected' : ''}>${f.n}</option>`).join('')}</select></div><p class="hint">${esc(FXN[b.efeito]?.d || '')}</p>
     ${b.efeito === 'escurecer' ? `<div class="f"><label for="b_esc2">Quanto escurecer (%)</label><input id="b_esc2" type="number" min="5" max="100" step="5" data-k="escuro_pct" data-num="1" value="${numOk(b.escuro_pct) ? +b.escuro_pct : 40}"></div><p class="hint">100% deixa o vídeo 60% mais escuro. Entra em 0,4 s e sai em 0,35 s.</p>` : ''}
+    ${b.efeito === 'fade_preto' ? `<div class="f"><label for="b_fpd">Direção</label><select id="b_fpd" data-k="direcao"><option value="saida" ${pretoDir(b) === 'saida' ? 'selected' : ''}>Saída: escurece até o preto</option><option value="entrada" ${pretoDir(b) === 'entrada' ? 'selected' : ''}>Entrada: começa preto e clareia</option></select></div><p class="hint">O bloco inteiro é a duração do fade. Fica por cima de todas as camadas.</p>` : ''}
     ${b.efeito === 'camera' ? `<div class="row2"><div class="f"><label for="b_cz">Zoom (x)</label><input id="b_cz" type="number" min="1" max="3" step="0.1" data-k="zoom" data-num="1" value="${camPars(b)[0]}"></div>
       <div class="f"><label for="b_ctr">Movimento (s)</label><input id="b_ctr" type="number" min="0.1" max="3" step="0.1" data-k="transicao" data-num="1" value="${numOk(b.transicao) ? +b.transicao : 0.7}"></div></div>
       <div class="row2"><div class="f"><label for="b_cfx">Foco horizontal (%)</label><input id="b_cfx" type="number" min="0" max="100" step="1" data-k="foco_x" data-num="1" value="${Math.round(camPars(b)[1] * 100)}"></div>
@@ -1478,6 +1480,17 @@ function camAt(p, t) {
   return st(t);
 }
 /* efeitos visuais e look aplicados ao vídeo da prévia (mesma lógica do scripts/fx.py) */
+/* fade preto por cima de tudo (0 = nada, 1 = preto total) */
+function pretoDir(b) { return b.direcao === 'entrada' || b.direcao === 'saida' ? b.direcao : (+b.inicio < 0.5 ? 'entrada' : 'saida'); }
+function pretoAt(p, t) {
+  let a = 0;
+  for (const b of p.blocos) {
+    if (b.tipo !== 'fx' || b.efeito !== 'fade_preto') continue; const d = Math.max(0.05, b.fim - b.inicio), x = (t - b.inicio) / d, ss = (v) => { v = cl(v); return v * v * (3 - 2 * v); };
+    if (pretoDir(b) === 'entrada') { if (t <= b.fim) a = Math.max(a, t < b.inicio ? 1 : 1 - ss(x)); }
+    else if (t >= b.inicio) a = Math.max(a, ss(x));
+  }
+  return a;
+}
 function fxState(p, t) {
   const st = tplOf(p); const dur = projDur(p);
   const o = {sc: 1, tx: 0, ty: 0, blur: 0, bright: 1, sat: 1.06, con: 0.98, gray: 0, sep: 0, under: '<div class="vig" style="opacity:.55"></div>', top: ''};
@@ -1500,6 +1513,7 @@ function fxState(p, t) {
     else if (b.efeito === 'quente') { o.sep = Math.max(o.sep, 0.3 * fade * I); o.sat += 0.15 * fade; }
   }
   let esc = sombrasOf(p).geral; for (const b of p.blocos) if (b.tipo === 'fx' && b.efeito === 'escurecer' && t >= b.inicio && t <= b.fim) esc += (numOk(b.escuro_pct) ? +b.escuro_pct : 40) / 100 * eo((t - b.inicio) / 0.4) * (1 - cl((t - (b.fim - 0.35)) / 0.35));
+  o.preto = pretoAt(p, t); if (o.preto > 0.001) o.top += `<div style="position:absolute;inset:0;background:#000;opacity:${f2(o.preto)}"></div>`;
   o.esc = Math.min(1, esc); if (o.esc > 0) o.under += `<div style="position:absolute;inset:0;background:#000;opacity:${f2(0.6 * o.esc)}"></div>`;
   const cm = camAt(p, t);
   if (cm && cm[0] > 1.0005) {         // translate+scale em torno de 50%/45% (igual na prévia e na exportação), sem sair do quadro
@@ -2050,7 +2064,7 @@ ${memText()}`;
 function applyChange(fn, label) { const p = cur(); const h = hOf(S.cur); if (h) settle(h, S.cur); const r = fn(p); if (S.dirMudou && S.sel) S.dirMudou.add(S.sel); touch('p', S.cur, 'Diretor: ' + label); if (h) settle(h, S.cur); renderTL(); renderStage(); if (S.rightTab === 'insp') renderInsp();
   const b = S.sel && p.blocos.find((x) => x.id === S.sel); if (b && !PL.playing) { seek(Math.min(b.fim - 0.05, b.inicio + Math.min(1.2, (b.fim - b.inicio) * 0.6))); flashBlock(b.id); } return r; }
 const TOOLS = () => [
-  {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx|texto|motion. Campos extras conforme o tipo (motion: motor hyperframes|remotion, modelo assinatura|titulo_cinetico|numero|lista|logo_revelar|logo_brilho|logo_mascara (logo: variaveis {logo asset, slogan, tam %}) (remotion só titulo_cinetico e numero), variaveis {nome,subtitulo | titulo,destaque | valor,prefixo,sufixo,rotulo | kicker,itens[]}, pos_y %; texto: texto (\n quebra linha), animacao escrever|escala|opacidade|subir|descer|esquerda|direita, saida opacidade|escala|subir|descer, pos_y %, pos_x esquerda|centro|direita, texto_px (padrão 72), peso 400-900, fonte titulo|texto, cor text|key|icon|grad2|#hex, sombra %, fundo true/false; fx efeito escurecer: escuro_pct 5-100; fx: efeito, intensidade suave|média|forte; fx efeito camera = zoom em um ponto: zoom 1-3 (padrão 1.6), foco_x e foco_y em % do quadro do bruto (onde está o rosto de quem fala, veja nos quadros), transicao em s do movimento (padrão 0.7); painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
+  {name: 'criar_bloco', description: 'Cria um bloco na timeline. Retorna o id. tipo: gancho|painel|nome|broll|destaque|corte|cta|som|fx|texto|motion. Campos extras conforme o tipo (motion: motor hyperframes|remotion, modelo assinatura|titulo_cinetico|numero|lista|logo_revelar|logo_brilho|logo_mascara (logo: variaveis {logo asset, slogan, tam %}) (remotion só titulo_cinetico e numero), variaveis {nome,subtitulo | titulo,destaque | valor,prefixo,sufixo,rotulo | kicker,itens[]}, pos_y %; texto: texto (\n quebra linha), animacao escrever|escala|opacidade|subir|descer|esquerda|direita, saida opacidade|escala|subir|descer, pos_y %, pos_x esquerda|centro|direita, texto_px (padrão 72), peso 400-900, fonte titulo|texto, cor text|key|icon|grad2|#hex, sombra %, fundo true/false; fx efeito escurecer: escuro_pct 5-100; fx efeito fade_preto = fade até 100% preto por cima de tudo (vídeo, legenda, textos): direcao entrada (começa preto e clareia, use no início) | saida (escurece até o preto, use no fim, até o fim do vídeo); fx: efeito, intensidade suave|média|forte; fx efeito camera = zoom em um ponto: zoom 1-3 (padrão 1.6), foco_x e foco_y em % do quadro do bruto (onde está o rosto de quem fala, veja nos quadros), transicao em s do movimento (padrão 0.7); painel: layout, kicker, titulo, itens[{icone,texto,gatilho}]; gancho: frase, palavra_chave, icone; nome: nome, subtitulo; cta: kicker, titulo, subtitulo, botao, rodape, icone; destaque: palavras; broll: modo, busca, arquivo).',
     inputSchema: {type: 'object', properties: {tipo: {type: 'string'}, inicio: {type: 'number'}, fim: {type: 'number'}, gatilho: {type: 'string'}, campos: {type: 'object'}}, required: ['tipo', 'inicio', 'fim']},
     execute: (a) => applyChange((p) => { const b = defaultBlock(String(a.tipo), +a.inicio || 0); b.fim = Math.max(b.inicio + 0.5, +a.fim || b.inicio + 3); b.gatilho = String(a.gatilho || ''); Object.assign(b, cleanFields(a.campos)); p.blocos.push(b); S.sel = b.id; return {id: b.id}; }, 'criar')},
   {name: 'editar_bloco', description: 'Altera campos de um bloco existente pelo id (inclui inicio, fim, gatilho, kicker, titulo, itens, frase, palavra_chave, icone, nome, subtitulo, botao, pos_y...). pos_y = altura na tela em % do topo onde o bloco começa (gancho, painel, nome, cta); escala = % do tamanho total do bloco (40-160, 100 = padrão); desfoque_fundo (true/false: desfoca o vídeo atrás do bloco; na CTA vem ligado) e desfoque_pct (5-100); texto_px = px do texto principal numa tela de 1080 (padrão: painel 45, cta 80, gancho 82, nome 50); null volta ao padrão. pos_x = lado na tela para nome, painel e texto: esquerda|centro|direita (painel de lado fica com 72% da largura); use o lado oposto ao rosto de quem fala. Retorna o bloco atualizado.',
@@ -3119,6 +3133,7 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
     if (b.efeito === 'flash') { const a = x < 0.15 ? x / 0.15 : 1 - (x - 0.15) / 0.85; c.save(); c.globalAlpha = 0.9 * I * a * a; c.fillStyle = '#fff'; c.fillRect(0, 0, W, H); c.restore(); }
     if (b.efeito === 'grao' && GRAIN_IMG.complete) { c.save(); c.globalCompositeOperation = 'overlay'; c.globalAlpha = 0.55 * fade * I; const ox = Math.floor(rnd(t * 30) * 160), oy = Math.floor(rnd(t * 31 + 7) * 160); for (let yy = -oy; yy < H; yy += 160 * k / 2) for (let xx = -ox; xx < W; xx += 160 * k / 2) c.drawImage(GRAIN_IMG, xx, yy, 160 * k / 2, 160 * k / 2); c.restore(); }
   }
+  if (o.preto > 0.001) { c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.filter = 'none'; c.globalAlpha = Math.min(1, o.preto); c.fillStyle = '#000'; c.fillRect(0, 0, W, H); c.restore(); }   // fade preto: a última camada
 }
 const GRAIN_IMG = (() => { const i = new Image(); if (GRAIN) i.src = GRAIN; return i; })();
 function seekEl(el, t) { return new Promise((res) => { const tt = Math.min(Math.max(0, t), Math.max(0, (el.duration || 0) - 0.04)); if (Math.abs(el.currentTime - tt) < 0.004 && el.readyState >= 2) return res(); const done = () => { el.removeEventListener('seeked', done); res(); }; el.addEventListener('seeked', done); el.currentTime = tt; setTimeout(done, 3000); }); }
@@ -4244,7 +4259,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.13-b';
+const STUDIO_VERSAO = '2026.11.13-c';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

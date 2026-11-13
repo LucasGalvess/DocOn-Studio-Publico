@@ -189,6 +189,10 @@ for b in blocks:
     t0, src = when(b, out_of(b['inicio']))
     if t0 >= ed.TOTAL - 0.2: plan.append(f'AVISO {tp} depois do fim do vídeo ({b["inicio"]}s): ignorado'); continue
     if tp == 'fx' and b.get('efeito') == 'camera': tp = 'camera'   # Zoom / câmera do Studio
+    if tp == 'fx' and b.get('efeito') == 'fade_preto':             # fade até 100% preto por cima de tudo (entrada: começa preto; saída: termina preto)
+        ent = b.get('direcao') == 'entrada' or (b.get('direcao') not in ('entrada', 'saida') and float(b['inicio']) < 0.5)
+        t0 = 0.0 if ent and float(b['inicio']) < 0.05 else t0; t1 = min(max(out_of(b['fim']), t0 + 0.2), ed.TOTAL)
+        ed.fade_preto(t0, t1, ent); plan.append(f'fade preto {"entrada" if ent else "saída"} {t0:.2f}-{t1:.2f}'); continue
     if tp == 'fx' and b.get('efeito') == 'escurecer':              # sombra geral num trecho
         t1 = min(max(out_of(b['fim']), t0 + 0.3), ed.TOTAL); k = _pct(b.get('escuro_pct'), 0.4); ed.escurecer(t0, t1, k); plan.append(f'escurecer fundo {t0:.2f}-{t1:.2f} {round(k * 100)}%'); continue
     if tp == 'motion':                                             # motion graphics: modelo Hyperframes ou Remotion (scripts/motion.py)

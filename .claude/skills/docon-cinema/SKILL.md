@@ -571,3 +571,4 @@ python3 scripts/music.py OUT.wav DURACAO --bpm 92 --key D --mood warm|calm
 - Sem acesso ao Pexels nem a bancos de música, a trilha é sintetizada por `music.py`. Ofereça trocar por trilha licenciada.
 - Não dá para ouvir o áudio. Confira por métricas: ebur128, fator de crista, cromagrama da trilha, correlação de envelope na sincronia.
 - Render em CPU leva ~1,5 min a cada 10 s de vídeo no grade e ~0,3 s por quadro no compositor. Rode os passos longos em segundo plano.
+- "Escurecer" é só a sombra atrás dos textos (máx. 60% e some no fim do bloco). Para abrir ou fechar o vídeo no preto, use o fx `fade_preto` (`direcao` entrada | saida): ele fica por cima de tudo, inclusive legenda, painéis e CTA, e a saída termina em 100% preto.

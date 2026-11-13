@@ -121,7 +121,7 @@ class Edit:
             self.WORDS.append(dict(w=w, s=s, e=e, os=self.src2out(s), oe=self.src2out(e)))
         self.panels, self.sfx, self.hook_items, self.brolls = [], [], [], []
         self.fx = FX()                                         # efeitos visuais dos blocos fx (scripts/fx.py)
-        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.textos = []; self.motions = []; self.escuros = []; self.escuro = 0.0; self.splits = []; self.cap_y0 = 1585; self.cap_split_y = None; self.logo = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
+        self.lt = None; self.ec = None; self.ec0 = None; self.ec_blur = 0.5; self.bg_blurs = []; self.textos = []; self.motions = []; self.escuros = []; self.pretos = []; self.escuro = 0.0; self.splits = []; self.cap_y0 = 1585; self.cap_split_y = None; self.logo = None; self.hook_end = 0.0; self.cap_lines = []; self.topics = []
         self.anchor_y = anchor_y
         self._face_track()
     # ---------------- tempo
@@ -550,7 +550,18 @@ class Edit:
             if self.ec_blur > 0: fr[:] = self._blur_mix(fr, ease_out((t - self.ec0) / 0.4), self.ec_blur)   # 0,5 = o desfoque padrão de antes
             self.ec.draw(fr, t)
         if fx and fx.items: fr = fx.top(fr, t)
+        k_pr = self.preto_at(t)
+        if k_pr > 1e-3: fr = fr * (1 - k_pr)                     # fade preto: a última camada, por cima de vídeo, legenda e textos
         return fr
+    def fade_preto(self, t0, t1, entrada):
+        self.pretos.append((t0, t1, entrada))
+    def preto_at(self, t):
+        a = 0.0
+        for t0, t1, ent in self.pretos:
+            x = ease((t - t0) / max(0.05, t1 - t0))
+            if ent and t <= t1: a = max(a, 1.0 if t < t0 else 1 - x)
+            elif not ent and t >= t0: a = max(a, x)
+        return a
     def check(self):
         """avisos: painel vazio, painel sobre B-roll, sobreposição de painéis."""
         warn = []
