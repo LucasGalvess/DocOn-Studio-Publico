@@ -267,16 +267,24 @@ class Edit:
         lt.add(Image.new('RGBA', (6, 104), tuple(P['accent']) + (255,)), 40, 33, t0 + 0.05)
         lt.add(n_, 66, 32, t0 + 0.1); lt.add(s_, 66, 104, t0 + 0.22); self.panels.append(lt); return lt
     def end_card(self, t0, kicker, title_lines, subtitle, name, button, foot=None, icon='sparkle', h=760, y=640, s=1.0, blur=0.5):
+        """cartão final: só desenha o que tem texto (kicker, subtítulo, nome e rodapé vazios somem) e a caixa encolhe junto."""
+        kicker, subtitle, name, foot = (kicker or '').strip(), (subtitle or '').strip(), (name or '').strip(), (foot or '').strip()
+        title_lines = [l for l in title_lines if l.strip()]
+        hh = 60 + (90 if kicker else 0) + 100 * len(title_lines) + (100 if subtitle else 20) + (100 if name else 0) + 120 + (60 if foot else 0) + 60
+        h = min(h, hh); y = y + int((760 - h) * s / 2)          # mesma altura central, caixa mais justa
         self.ec0 = t0; self.ec_blur = blur; ec = Panel(self, t0, self.TOTAL + 1, int(90 + 900 * (1 - s) / 2), y, int(900 * s), int(h * s), int(34 * s), s)
         def center(spr, yy, t, anim='rise'): ec.add(spr, (900 - spr.width) // 2, yy, t, anim=anim)
-        center(pill(kicker, MONT(800, 28)), 70, t0)
-        yy = 160
+        yy = 70
+        if kicker: center(pill(kicker, MONT(800, 28)), yy, t0); yy += 90
+        else: yy = 60
         for k, ln in enumerate(title_lines):
             sp = text_sprite(ln, MONT(900, 80), P['text'], pad=0); center(sp, yy, t0 + 0.08 * (k + 1)); yy += 100
-        yy += 20; center(text_sprite(subtitle, INTER('Medium', 36), P['border'], pad=0), yy, t0 + 0.3); yy += 80
-        nm = gold_gradient_text(name, INTER('Bold', 54), pad=0); center(nm, yy, t0 + 0.45)
-        ic = ICONS[icon](46); ec.add(ic, (900 - nm.width) // 2 - 70, yy + 4, t0 + 0.5, anim='pop'); ec.add(ic, (900 + nm.width) // 2 + 24, yy + 4, t0 + 0.55, anim='pop')
-        yy += 100
+        if subtitle: yy += 20; center(text_sprite(subtitle, INTER('Medium', 36), P['border'], pad=0), yy, t0 + 0.3); yy += 80
+        else: yy += 20
+        if name:
+            nm = gold_gradient_text(name, INTER('Bold', 54), pad=0); center(nm, yy, t0 + 0.45)
+            ic = ICONS[icon](46); ec.add(ic, (900 - nm.width) // 2 - 70, yy + 4, t0 + 0.5, anim='pop'); ec.add(ic, (900 + nm.width) // 2 + 24, yy + 4, t0 + 0.55, anim='pop')
+            yy += 100
         btn = Image.new('RGBA', (640 * 3, 120 * 3), (0, 0, 0, 0))
         ImageDraw.Draw(btn).rounded_rectangle([0, 0, 640 * 3 - 1, 120 * 3 - 1], radius=180, fill=tuple(P['button']) + (255,))
         btn = gfx.down(btn); bt = text_sprite(button, INTER('Bold', 42), P['button_fg'], pad=0)
@@ -605,6 +613,12 @@ class Panel:
         if abs(self.s - 1) > 1e-3:
             a = cv2.resize(a, (max(1, round(a.shape[1] * self.s)), max(1, round(a.shape[0] * self.s))), interpolation=cv2.INTER_AREA if self.s < 1 else cv2.INTER_CUBIC)
             rx, ry = round(rx * self.s), round(ry * self.s)
+        m = max(18, round(36 * self.s))                      # texto nunca passa da caixa de vidro: encolhe o que não cabe
+        if rx < m or rx + a.shape[1] > self.w - m:
+            cab = (self.w - 2 * m) if rx < m else (self.w - m - rx)
+            if 0 < cab < a.shape[1]:
+                k = cab / a.shape[1]; a = cv2.resize(a, (max(1, round(a.shape[1] * k)), max(1, round(a.shape[0] * k))), interpolation=cv2.INTER_AREA)
+            if rx < m: rx = (self.w - a.shape[1]) // 2 if rx + a.shape[1] // 2 > 0 else m
         self.items.append((a, rx, ry, t, anim))
         if tick: self.sfx.append((t, 'tick'))
     def draw(self, fr, t):

@@ -175,7 +175,7 @@ cta = next((b for b in blocks if b['tipo'] == 'cta'), None)
 if cta:
     t0, src = when(cta, out_of(cta['inicio']))
     t0 = min(t0, ed.TOTAL - 2.5)                     # o cartão final sempre aparece inteiro e vai até o último quadro
-    ed.end_card(t0 - 0.05, (cta.get('kicker') or PJ.get('tema') or '').upper()[:34] or 'DOCON', (cta.get('titulo') or 'Me conta nos comentários').split('\n')[:2],
+    ed.end_card(t0 - 0.05, (cta['kicker'] if 'kicker' in cta else (PJ.get('tema') or 'DOCON')).upper()[:34], (cta.get('titulo') or 'Me conta nos comentários').split('\n')[:2],
                 cta.get('subtitulo') or '', (PJ['profissional'].get('nome') or '') if cta.get('mostrar_nome') is not False else '', cta.get('botao') or 'Agende sua avaliação',
                 foot=cta.get('rodape') or None, icon=cta.get('icone') or icon_hook, y=int(posy(cta, 640)), s=escala(cta) * txt(cta), blur=bgk(cta))
     plan.append(f'cta {t0:.2f}s ({src})')
@@ -252,6 +252,7 @@ for b in blocks:
         tit = (b.get('titulo') or '').strip(); n = len(items)
         h = 46 + 52 + 22 + (0 if lay == 'destaque' or not tit else 64 * len(tit.split('\n'))) + (112 if lay == 'destaque' else 0) + \
             (150 if lay == 'linha_do_tempo' else 230 if lay == 'opcoes' else 92 * n) + (330 + (52 if b.get('preco_de') else 0) - 8 * n if lay == 'preco' else 0) + 30
+        if lay == 'preco': h = 120 + (64 * len(tit.split('\n')) + 16 if tit else 8) + 266 + (52 if b.get('preco_de') else 0) + (54 if b.get('chamada') else 0) + 84 * n + 30   # medida real do painel de preço
         h = min(max(h, 220), 760 if lay == 'preco' else 540); y = int(min(max(1200 - h / 2, 930), 1470 - h)) if b.get('pos_y') in (None, '') else int(min(max(posy(b, 0), 60), 1880 - h))
         es, tx = escala(b), txt(b)
         if es != 1 or tx != 1:     # painel menor/maior (retângulo inteiro) e texto maior/menor por dentro
@@ -275,6 +276,7 @@ for b in blocks:
                 de = text_sprite(f"de {cur} {b['preco_de']} por", INTER('Medium', 38), P['text'], pad=0); dd = ImageDraw.Draw(de)
                 x0 = INTER('Medium', 38).getlength('de '); x1 = INTER('Medium', 38).getlength(f"de {cur} {b['preco_de']}"); dd.line([(x0, de.height * .55), (x1, de.height * .55)], fill=tuple(P['text']) + (255,), width=3)
                 p.add(de, 56, yy, p.t0 + 0.15); yy += 52
+            if b.get('chamada'): p.add(text_sprite(str(b['chamada']), INTER('Medium', 40), P['text'], pad=0), 56, yy, p.t0 + 0.15); yy += 54
             val = gold_gradient_text(str(b.get('preco') or '0'), MONT(900, 320), c1=P['text'], c2=P['grad1'], pad=0); val = val.crop(val.getbbox() or (0, 0, val.width, val.height))   # rente às letras (sem o vão da fonte)
             cs = text_sprite(cur, MONT(800, 84), P['text'], pad=0); ce = text_sprite(b['centavos'], MONT(800, 84), P['text'], pad=0) if b.get('centavos') else None
             sel = pill(str(b['condicao']).upper(), INTER('Bold', 36), fg=P.get('button_fg', P['text']), bg=P.get('button', P['key']), padx=26, pady=14, track=2) if b.get('condicao') else None
