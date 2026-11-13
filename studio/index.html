@@ -92,9 +92,9 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .g-lt{position:absolute;left:6.5cqw;top:67.7%;border-radius:3.1cqw;padding:2.8cqw 5cqw 2.8cqw 6cqw;background:color-mix(in srgb,var(--v-glass) 62%,transparent);backdrop-filter:blur(2.6cqw);border:.25cqw solid color-mix(in srgb,var(--v-border) 65%,transparent);border-left:.6cqw solid var(--v-icon)}
 .g-lt b{display:block;font:700 calc(4.6cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:var(--v-key)}
 .g-lt span{font:500 calc(3.1cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:var(--v-text)}
-.g-cap{position:absolute;left:0;right:0;top:82.5%;text-align:center;font:700 calc(5cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:#fff;text-shadow:0 calc(.3cqw*var(--ts,1)) calc(1.4cqw*var(--ts,1)) rgba(0,0,0,.8);padding-inline:calc(6cqw*var(--ts,1))}
+.g-cap{position:absolute;left:0;right:0;top:var(--cap-top,82.5%);text-align:center;font:700 calc(5cqw*var(--ts,1)) var(--f-text,"Figtree"),sans-serif;color:#fff;text-shadow:0 calc(.3cqw*var(--ts,1)) calc(1.4cqw*var(--ts,1)) rgba(0,0,0,.8);padding-inline:calc(6cqw*var(--ts,1))}
 .g-cap.sutil{font-weight:600;font-size:calc(4.1cqw*var(--ts,1))}
-.g-cap u{color:var(--v-key);text-decoration-color:var(--v-icon);text-underline-offset:1cqw;text-decoration-thickness:.4cqw}
+.g-cap u{color:var(--cap-key,var(--v-key));text-decoration-color:var(--cap-key,var(--v-icon));text-underline-offset:1cqw;text-decoration-thickness:.4cqw}
 .g-cap.sutil u{color:#fff}
 .g-broll{position:absolute;inset:0;display:grid;place-items:center;background:repeating-linear-gradient(135deg,rgba(199,156,226,.16) 0 2cqw,rgba(199,156,226,.06) 2cqw 4cqw);color:#f1e6fa;font:700 4cqw var(--f-text,"Figtree"),sans-serif;text-align:center;padding:8cqw}
 .g-broll.band{top:50%;-webkit-mask:linear-gradient(transparent,#000 18%);mask:linear-gradient(transparent,#000 18%)}
@@ -666,6 +666,8 @@ function renderProj() {
     <div class="f"><label for="p_mus">Trilha</label><select id="p_mus"><option value="0" ${!p.musica.ativa ? 'selected' : ''}>Sem trilha</option><option value="1" ${p.musica.ativa ? 'selected' : ''}>Com trilha</option></select></div></div>
     <div class="row2"><div class="f"><label for="p_clima">Clima da trilha</label><select id="p_clima">${[['warm', 'Acolhedora'], ['calm', 'Calma']].map(([v, n]) => `<option value="${v}" ${v === p.musica.clima ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     <div class="f"><label for="p_vol">Volume</label><select id="p_vol">${['discreta', 'média', 'presente'].map((v) => `<option ${v === p.musica.volume ? 'selected' : ''}>${v}</option>`).join('')}</select></div></div>
+    <div class="row2"><div class="f"><label for="p_capy">Altura da legenda</label><select id="p_capy">${[['', 'Embaixo (padrão)'], ['65', 'Abaixo do centro'], ['50', 'Centro'], ['20', 'Em cima']].map(([v, n]) => `<option value="${v}" ${String(p.legenda.pos_y ?? '') === v ? 'selected' : ''}>${n}</option>`).join('')}${numOk(p.legenda.pos_y) && !['65', '50', '20'].includes(String(p.legenda.pos_y)) ? `<option value="${p.legenda.pos_y}" selected>${p.legenda.pos_y}% da tela</option>` : ''}</select></div>
+    <div class="f"><label for="p_capk_hex">Cor das palavras em destaque</label>${corCampo('p_capk', capKey(p) || tplOf(p)?.paleta?.key || '#f2d6a6')}<button class="btn sm ghost" type="button" id="p_capk0" ${capKey(p) ? '' : 'hidden'}>Voltar à cor do estilo</button></div></div>
     <div class="f"><label for="p_capx">Tamanho do texto da legenda (px)</label><input id="p_capx" type="number" min="20" max="140" step="1" placeholder="${p.legenda.estilo === 'subtle' ? 44 : 54} (padrão)" value="${numOk(p.legenda.fonte_px) ? +p.legenda.fonte_px : ''}"></div>
     <div class="f"><label for="p_kw">Palavras-chave da legenda (vírgula)</label><textarea id="p_kw" rows="2" placeholder="osteoartrite, qualidade de vida, 1x ao mês">${esc(p.legenda.palavras_chave)}</textarea></div>
     <div class="f"><label for="p_tr">Trilha do banco</label><select id="p_tr"><option value="">(gerada pelo editor)</option>${Object.entries(S.bank).filter(([, v]) => v.tipo === 'trilha').map(([id, v]) => `<option value="${id}" ${id === p.musica.banco_id ? 'selected' : ''}>${esc(v.nome)}</option>`).join('')}</select></div>
@@ -682,6 +684,9 @@ function renderProj() {
   bind('p_estilo', (v) => { p.estilo_id = v; renderStyles(); }); bind('p_formato', (v) => { p.formato = v; setTimeout(renderProj, 0); }); bind('p_alvo', (v) => p.duracao_alvo = v);
   bind('p_nome', (v) => p.profissional.nome = v); bind('p_sub', (v) => p.profissional.subtitulo = v); bind('p_esp', (v) => p.profissional.especialidade = v); bind('p_ig', (v) => p.profissional.instagram = v);
   bind('p_leg', (v) => p.legenda.estilo = v); bind('p_kw', (v) => p.legenda.palavras_chave = v); bind('p_capx', (v) => { if (numOk(v)) p.legenda.fonte_px = Math.round(+v); else delete p.legenda.fonte_px; });
+  bind('p_capy', (v) => { if (numOk(v) && v !== '') p.legenda.pos_y = +v; else delete p.legenda.pos_y; });
+  { const ck = document.getElementById('p_capk'); if (ck) ck.addEventListener('input', () => { const h = hexNorm(ck.value); if (h) { p.legenda.cor_destaque = h; touch(); renderStage(); const b0 = document.getElementById('p_capk0'); if (b0) b0.hidden = false; } });
+    const c0 = document.getElementById('p_capk0'); if (c0) c0.onclick = () => { delete p.legenda.cor_destaque; touch(); renderProj(); renderStage(); }; }
   bind('p_mus', (v) => p.musica.ativa = v === '1'); bind('p_clima', (v) => p.musica.clima = v); bind('p_vol', (v) => p.musica.volume = v);
 
   bind('p_tr', (v) => { p.musica.banco_id = v; if (v) { p.musica.ativa = true; p.musica.arquivo = S.bank[v]?.nome || ''; } });
@@ -1377,6 +1382,10 @@ function esOf(b) { return numOk(b.escala) ? Math.min(1.6, Math.max(0.4, +b.escal
 /* painel de lado: desloca a partir do centro para encostar na margem (fração da largura do painel) */
 function ladoShift(b) { const es = esOf(b), l = ladoOf(b); return l === 'esquerda' ? -(1 - es) / 2 : l === 'direita' ? (1 - es) / 2 : 0; }
 function tsOf(b) { return numOk(b.texto_px) && TXT_BASE[b.tipo] ? Math.min(3, Math.max(0.3, +b.texto_px / TXT_BASE[b.tipo])) : 1; }
+/* legenda: altura (legenda.pos_y, % da tela) e cor das palavras de destaque (legenda.cor_destaque); vazios = padrão do estilo */
+function capTop(p) { const v = p.legenda?.pos_y; return numOk(v) ? Math.min(90, Math.max(8, +v)) : 82.5; }
+function capKey(p) { return hexNorm(p.legenda?.cor_destaque) || ''; }
+function capVars(p) { return `--cap-top:${capTop(p)}%;${capKey(p) ? `--cap-key:${capKey(p)};` : ''}`; }
 function capTs(p) { const v = p.legenda?.fonte_px; return numOk(v) ? Math.min(2.5, Math.max(0.4, +v / (p.legenda?.estilo === 'subtle' ? 44 : 54))) : 1; }
 function topPct(b) { const d = POS[b.tipo]?.padrao ?? 49; const v = b.pos_y; return v === '' || v == null || !Number.isFinite(+v) ? d : Math.min(88, Math.max(3, +v)); }
 /* cor: seletor + caixa com o código HEX (#E9C48C). Os dois ficam sincronizados; o HEX aceita com ou sem # e o formato curto (#abc). */
@@ -1453,10 +1462,10 @@ function captionHTML(p, show, t) {
   if (lines) {
     const ln = lines.find((l) => t >= l[0].s - 0.05 && t <= l[l.length - 1].e + 0.15); if (!ln) return '';
     const x = (t - ln[0].s + 0.05) / 0.18;
-    return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}" style="--ts:${f2(capTs(p))};opacity:${f2(cl(x))};transform:translateY(${f2((1 - eo(x)) * 1.2)}cqw)">${ln.map((w) => { const on = t >= w.s && t <= w.e + 0.05; const k = kws.has(norm(w.w)); const s = style === 'subtle' ? '' : `transform:scale(${on ? 1.08 : 1});${on ? 'color:var(--v-key)' : ''}`; return `<span class="cw" style="${s}">${k ? `<u>${esc(w.w)}</u>` : esc(w.w)}</span>`; }).join(' ')}</div>`;
+    return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}" style="${capVars(p)}--ts:${f2(capTs(p))};opacity:${f2(cl(x))};transform:translateY(${f2((1 - eo(x)) * 1.2)}cqw)">${ln.map((w) => { const on = t >= w.s && t <= w.e + 0.05; const k = kws.has(norm(w.w)); const s = style === 'subtle' ? '' : `transform:scale(${on ? 1.08 : 1});${on ? 'color:var(--cap-key,var(--v-key))' : ''}`; return `<span class="cw" style="${s}">${k ? `<u>${esc(w.w)}</u>` : esc(w.w)}</span>`; }).join(' ')}</div>`;
   }
   const sample = show.find((b) => b.tipo === 'destaque')?.palavras ? `exemplo com ${show.find((b) => b.tipo === 'destaque').palavras.split(',')[0].trim()}` : 'legenda de exemplo';
-  return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}" style="--ts:${f2(capTs(p))}">${sample.split(' ').map((w) => kws.has(w.toLowerCase()) ? `<u>${esc(w)}</u>` : esc(w)).join(' ')}</div>`;
+  return `<div class="g-cap ${style === 'subtle' ? 'sutil' : ''}" style="${capVars(p)}--ts:${f2(capTs(p))}">${sample.split(' ').map((w) => kws.has(w.toLowerCase()) ? `<u>${esc(w)}</u>` : esc(w)).join(' ')}</div>`;
 }
 const GRAIN = (() => { try { const c = document.createElement('canvas'); c.width = c.height = 160; const x = c.getContext('2d'); const d = x.createImageData(160, 160); for (let i = 0; i < d.data.length; i += 4) { const v = Math.random() * 255; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 46; } x.putImageData(d, 0, 0); return c.toDataURL(); } catch (e) { return ''; } })();
 function rnd(n) { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
@@ -3096,10 +3105,10 @@ async function drawExportFrame(c, p, t, src, W, H, mediaEls) {
       const sub = p.legenda.estilo === 'subtle'; const sz = (sub ? 4.1 : 5) * u * capTs(p); c.font = `${sub ? 600 : 700} ${sz}px ${FX_}`; const xA = cl((t - ln[0].s + 0.05) / 0.18);
       const kws = new Set([...(p.legenda.palavras_chave || '').split(','), ...act.filter((b) => b.tipo === 'destaque').flatMap((b) => (b.palavras || '').split(','))].flatMap((s) => s.trim().toLowerCase().split(/\s+/)).filter(Boolean));
       const nrm = (w) => w.toLowerCase().replace(/[.,?!:;…"“”]/g, ''); const sp = Math.max(c.measureText(' ').width, sz * 0.26); const ws = ln.map((w) => ({...w, wd: c.measureText(w.w).width}));   // espaço mínimo: alguns navegadores medem o espaço como 0 e as palavras grudavam
-      const tot = ws.reduce((n, w) => n + w.wd, 0) + sp * (ws.length - 1); let x = (W - tot) / 2; const y = 0.825 * H + sz + (1 - eo(xA)) * 1.2 * u;
+      const tot = ws.reduce((n, w) => n + w.wd, 0) + sp * (ws.length - 1); let x = (W - tot) / 2; const y = capTop(p) / 100 * H + sz + (1 - eo(xA)) * 1.2 * u; const ck = capKey(p);
       c.save(); c.globalAlpha = xA; c.textAlign = 'left'; c.shadowColor = 'rgba(0,0,0,.8)'; c.shadowBlur = 1.4 * u; c.shadowOffsetY = 0.3 * u;
-      for (const w of ws) { const on = t >= w.s && t <= w.e + 0.05; const kk = kws.has(nrm(w.w)); c.fillStyle = !sub && (on || kk) ? pl.key : '#fff'; c.save(); if (!sub && on) { c.translate(x + w.wd / 2, y - sz * 0.35); c.scale(1.08, 1.08); c.translate(-(x + w.wd / 2), -(y - sz * 0.35)); } c.fillText(w.w, x, y);
-        if (kk) { c.shadowColor = 'transparent'; c.fillStyle = sub ? '#fff' : pl.icon; c.fillRect(x, y + 1 * u, w.wd, 0.4 * u); } c.restore(); x += w.wd + sp; }
+      for (const w of ws) { const on = t >= w.s && t <= w.e + 0.05; const kk = kws.has(nrm(w.w)); c.fillStyle = !sub && (on || kk) ? (ck || pl.key) : '#fff'; c.save(); if (!sub && on) { c.translate(x + w.wd / 2, y - sz * 0.35); c.scale(1.08, 1.08); c.translate(-(x + w.wd / 2), -(y - sz * 0.35)); } c.fillText(w.w, x, y);
+        if (kk) { c.shadowColor = 'transparent'; c.fillStyle = sub ? '#fff' : (ck || pl.icon); c.fillRect(x, y + 1 * u, w.wd, 0.4 * u); } c.restore(); x += w.wd + sp; }
       c.restore();
     }
   }
@@ -4235,7 +4244,7 @@ function wireTrImport(btnId, inputId, area) {
       salvar no banco, o backup mais novo é recuperado sozinho;
    2) a primeira abertura de uma versão nova cria um ponto salvo do projeto aberto ("Antes da atualização …");
    3) o lugar onde você estava (projeto, tempo, abas, zoom) e o histórico de desfazer voltam depois de recarregar. */
-const STUDIO_VERSAO = '2026.11.08-b';
+const STUDIO_VERSAO = '2026.11.13-a';
 const BK = 'docon-bk-';
 let bkT = {};
 function bkSchedule(id) {

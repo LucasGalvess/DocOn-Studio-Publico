@@ -451,7 +451,7 @@ class Edit:
             sprs = []
             for j in ln:
                 kw = norm(self.WORDS[j]['w']) in KEY
-                s = text_sprite(self.WORDS[j]['w'], FK if kw else FN, P['key'] if kw and style != 'subtle' else (255, 255, 255), pad=0)
+                s = text_sprite(self.WORDS[j]['w'], FK if kw else FN, (getattr(self, 'cap_key', None) or P['key']) if kw and style != 'subtle' else (255, 255, 255), pad=0)
                 sprs.append((j, add_shadow(s, shadow, 12, (0, 3)), kw, s.width))
             total = sum(s.width - 48 for _, s, _, _ in sprs) + space * (len(sprs) - 1); x = (W - total) / 2; items = []
             for j, s, kw, tw in sprs: items.append((j, to_np(s), x - 24, y - s.height / 2, kw, tw)); x += s.width - 48 + space
@@ -478,7 +478,7 @@ class Edit:
                     u = ease_out(min(max((t - d['os']) / 0.35, 0), 1)); uw = int(tw * u)
                     if uw > 2:
                         ux, uy = int(x + 24), int(y + h / 2 + (30 if subtle else 34) + dy); seg = fr[uy:uy + (3 if subtle else 5), ux:ux + uw]
-                        seg[:] = seg * (1 - 0.95 * op) + np.array(P['icon'], np.float32) / 255 * 0.95 * op
+                        seg[:] = seg * (1 - 0.95 * op) + np.array(getattr(self, 'cap_key', None) or P['icon'], np.float32) / 255 * 0.95 * op
 
     # ---------------- B-roll (Pexels ou outro): 'full' = corte em tela cheia; 'band' = faixa inferior com degradê
     def broll(self, path, t0, t1, mode='full', trans=7 / 30):

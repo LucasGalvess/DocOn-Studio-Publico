@@ -435,6 +435,11 @@ Estudado do HyperFrames (HeyGen, código aberto, Apache 2.0): critérios medidos
 
 ## Lições aprendidas (não repita)
 
+- **13/11/2026 (legenda):**
+  - A equipe pediu a legenda no centro e o destaque numa cor mais clara.
+  - O Studio ganhou `legenda.pos_y` (% da tela) e `legenda.cor_destaque` (hex). Valem na prévia, na exportação e no pipeline (`run_brief` converte `pos_y` para px; `core` usa `cap_key` no destaque e no sublinhado).
+  - Destaque com o `key` escuro do estilo some sobre roupa escura: use o tom mais claro da paleta.
+
 - **12/11/2026 (abertura recortada):**
   - **Formato comentário/react:** o vídeo do caso fica como fundo em tela cheia, e a profissional aparece recortada (RVM em alta), menor, presa ao canto de baixo e à lateral (`motion/recorte_fundo.py`). O efeito dura o tempo do vídeo de fundo.
   - **Saída sem dissolve:** o dissolve duplicava a pessoa. Agora o recorte cresce até a tela cheia.

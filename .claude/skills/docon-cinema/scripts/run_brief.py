@@ -311,7 +311,9 @@ if leg != 'nenhuma':
     try: cap_s = min(2.5, max(0.4, float((PJ.get('legenda') or {}).get('fonte_px') or 0) / (44 if leg == 'subtle' else 54))) or 1.0
     except (TypeError, ValueError): cap_s = 1.0
     if not (PJ.get('legenda') or {}).get('fonte_px'): cap_s = 1.0
-    cap_y = int((PJ.get('legenda') or {}).get('y') or (1600 if leg == 'subtle' else 1585))          # legenda.y: altura do centro da legenda (padrão embaixo)
+    _lg = PJ.get('legenda') or {}
+    cap_y = int(_lg.get('y') or (float(_lg['pos_y']) / 100 * 1920 + 38 if _lg.get('pos_y') not in (None, '') else (1600 if leg == 'subtle' else 1585)))   # legenda.y (px) ou pos_y (% da tela, do Studio)
+    if _lg.get('cor_destaque'): ed.cap_key = rgb(_lg['cor_destaque'])                     # cor das palavras em destaque (Studio: legenda.cor_destaque)
     ed.captions(style='subtle' if leg == 'subtle' else 'docon', y=cap_y, maxc=30 if leg == 'subtle' else 26, keywords=kwords, s=cap_s)
     ed.cap_y0 = cap_y; ed.cap_split_y = int((PJ.get('legenda') or {}).get('y_divisao') or 940)
 warn = ed.check(); plan += ['AVISO ' + w for w in warn]
