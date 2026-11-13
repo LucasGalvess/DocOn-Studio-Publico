@@ -576,3 +576,4 @@ python3 scripts/music.py OUT.wav DURACAO --bpm 92 --key D --mood warm|calm
 - Texto de painel e CTA nunca passa da caixa de vidro: `Panel.add` (render) e o `fillText` dos painéis na exportação do Studio encolhem o que não cabe. Mesmo assim, prefira textos curtos (item de lista até ~28 caracteres).
 - Cartão final (CTA): kicker, subtítulo, nome ou rodapé vazios somem e a caixa encolhe junto. Um subtítulo vazio quebrava o render (sprite de largura 0).
 - Antes de renderizar a partir do Studio, releia o projeto: a equipe edita ao vivo (ex.: trocou o botão do CTA e a escala do painel) e o render segue a versão mais nova dela.
+- Tráfego pago com fala de oferta: a equipe pode querer só a voz original. Desligue `musica.ativa` e use `efeitos_sonoros: false` no projeto (tira o whoosh e o tick dos painéis; os sons escolhidos no Studio ficam). Para confirmar que a trilha saiu, correlacione o áudio final com o `music.wav` (deve dar ~0).

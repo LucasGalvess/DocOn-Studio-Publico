@@ -384,6 +384,7 @@ if A.stage in ('all', 'render'):
     if mu.get('ativa'):
         music = bank_wav(mu.get('banco_id')) or (mu.get('arquivo') if mu.get('arquivo') and os.path.isfile(mu.get('arquivo')) else os.path.join(A.work, 'music.wav'))
         if not os.path.isfile(music): sh(['python3', HERE + '/music.py', music, f'{ed.TOTAL + 0.5:.2f}', '--bpm', str(mu.get('bpm', 92)), '--key', 'D', '--mood', mu.get('clima', 'warm')])
+    if PJ.get('efeitos_sonoros') is False: ed.sfx[:] = [x for x in ed.sfx if str(x[1]).startswith('file:')]   # só a voz original (mantém sons escolhidos no Studio)
     audio.build(ed, os.path.join(A.work, 'mix.wav'), music=music, music_db=vol, duck_db=7, voice='light')
     sh(['ffmpeg', '-v', 'error', '-y', '-i', os.path.join(A.work, 'video_only.mp4'), '-i', os.path.join(A.work, 'mix.wav'), '-map', '0:v', '-map', '1:a', '-c:v', 'copy',
         '-c:a', 'aac', '-b:a', '192k', '-ar', '48000', '-shortest', '-movflags', '+faststart', out])
