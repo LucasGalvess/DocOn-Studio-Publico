@@ -1,0 +1,261 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:M;font-weight:500;src:url(fonts/Montserrat-500.ttf)}
+@font-face{font-family:M;font-weight:600;src:url(fonts/Montserrat-600.ttf)}
+@font-face{font-family:M;font-weight:700;src:url(fonts/Montserrat-700.ttf)}
+@font-face{font-family:M;font-weight:800;src:url(fonts/Montserrat-800.ttf)}
+:root{--bg:#1e130c;--fg:#f4e9dc;--ac:#d9a273;--mu:#c9b6a3}
+html,body{margin:0;background:var(--bg);overflow:hidden}
+#st{position:relative;width:1080px;height:1920px;background:var(--bg)}
+canvas#gl{position:absolute;inset:0;width:1080px;height:1920px}
+.tx,#card,#fol{text-shadow:0 3px 16px rgba(24,12,6,.78),0 1px 3px rgba(24,12,6,.65)}
+.tx{position:absolute;left:84px;right:84px;color:var(--fg);font-family:M;will-change:opacity,transform}
+.k{font:700 30px/1 M;letter-spacing:8px;color:var(--ac);text-transform:uppercase;margin-bottom:22px}
+.t{font:800 76px/1.08 M;letter-spacing:-1px}
+.t em{font-style:normal;color:var(--ac)}
+.s{font:500 40px/1.3 M;color:var(--mu);margin-top:18px}
+#card{position:absolute;left:84px;right:84px;bottom:250px;color:var(--fg);font-family:M}
+#card .n{font:700 30px/1 M;color:var(--ac);letter-spacing:6px}
+#card .h{font:800 68px/1.1 M;margin-top:16px}
+#card .d{font:500 38px/1.3 M;color:var(--mu);margin-top:12px}
+#card .bar{height:5px;background:var(--ac);width:120px;margin-top:26px;border-radius:3px;transform-origin:left}
+#fol{position:absolute;color:var(--fg);font:600 38px/1.25 M;left:84px;right:84px;bottom:150px;text-align:left}
+#fol b{color:var(--ac);font-weight:800}
+</style></head><body><div id="st"><canvas id="gl" width="1080" height="1920"></canvas>
+<div class="tx" id="t1" style="top:200px"><div class="k">Sobrancelhas</div><div class="t">A perda de pelos pode ter <em>vários motivos</em></div></div>
+<div class="tx" id="t2" style="top:200px"><div class="k">Observe o início</div><div class="t">Como as falhas <em>começaram</em>?</div><div class="s">É o que ajuda a entender a causa.</div></div>
+<div class="tx" id="t3" style="top:200px"><div class="k">Algumas causas</div><div class="t">Doenças e hábitos que <em>alteram os pelos</em></div></div>
+<div id="card"><div class="n" id="cn">1 / 6</div><div class="h" id="ch">Alopecia areata</div><div class="d" id="cd">Falhas arredondadas e lisas</div><div class="bar" id="cb"></div></div>
+<div class="tx" id="t4" style="top:200px"><div class="k">Em alguns casos</div><div class="t">A perda é <em>temporária</em></div><div class="s">O pelo pode voltar a crescer.</div></div>
+<div class="tx" id="t5" style="top:200px"><div class="k">Em outros</div><div class="t">O folículo é <em>danificado</em></div><div class="s">E a perda se torna permanente.</div></div>
+<div id="fol"></div>
+</div>
+<script type="importmap">{"imports":{"three":"./three/build/three.module.js","three/addons/":"./three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const W = 1080, H = 1920, BG = new THREE.Color('#1e130c');
+const cl = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), ss = (a, b, v) => { const x = cl((v - a) / (b - a)); return x * x * (3 - 2 * x); };
+const lerp = (a, b, k) => a + (b - a) * k, eo = (x) => 1 - Math.pow(1 - cl(x), 3);
+function rnd(i) { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+
+const renderer = new THREE.WebGLRenderer({canvas: document.getElementById('gl'), antialias: true, preserveDrawingBuffer: true});
+renderer.setSize(W, H, false); renderer.setPixelRatio(1); renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.setClearColor(BG, 1);
+
+// ---------------- cena do rosto ----------------
+const scene = new THREE.Scene(); scene.background = BG;
+const cam = new THREE.PerspectiveCamera(24, W / H, 0.01, 100);
+const key = new THREE.DirectionalLight(0xffe2c4, 2.6); key.position.set(-1.2, 1.4, 2.2); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 4; key.shadow.bias = -0.0004;
+scene.add(key); scene.add(new THREE.HemisphereLight(0xffe9d6, 0x3a2416, 0.75));
+const rimL = new THREE.DirectionalLight(0xe0a070, 1.6); rimL.position.set(-2.5, 0.8, -1.5); scene.add(rimL);
+const rimR = new THREE.DirectionalLight(0xf0b888, 1.2); rimR.position.set(2.6, 0.6, -1.2); scene.add(rimR);
+const fill = new THREE.DirectionalLight(0xffd8bc, 0.55); fill.position.set(1.8, 0.2, 1.6); scene.add(fill);
+
+const D = await (await fetch('fios.json')).json(); const RG = D.regiao, HAIRS = D.hairs, BROWS = D.brows;
+const tl = new THREE.TextureLoader();
+const base = await tl.loadAsync('pele4k.jpg'); base.flipY = true; base.colorSpace = THREE.SRGBColorSpace; base.anisotropy = 8;
+const nrm = await tl.loadAsync('Infinite-Level_02_Tangent_SmoothUV.jpg'); nrm.flipY = true;
+const baseImg = base.image;
+// textura viva das sobrancelhas: recorte da pele + fios desenhados a cada quadro
+const bc = document.createElement('canvas'); bc.width = RG.w; bc.height = RG.h; const bx = bc.getContext('2d');
+const crop = document.createElement('canvas'); crop.width = RG.w; crop.height = RG.h; crop.getContext('2d').drawImage(baseImg, RG.x0, RG.y0, RG.w, RG.h, 0, 0, RG.w, RG.h);
+const smooth = document.createElement('canvas'); smooth.width = RG.w; smooth.height = RG.h; { const s = smooth.getContext('2d'); s.filter = 'blur(10px)'; s.drawImage(crop, 0, 0); }
+const browTex = new THREE.CanvasTexture(bc); browTex.flipY = true; browTex.colorSpace = THREE.SRGBColorSpace;
+
+const gltf = await new GLTFLoader().loadAsync('LeePerrySmith.glb');
+let head = null; gltf.scene.traverse((o) => { if (o.isMesh && !head) head = o; });
+const mat = new THREE.MeshStandardMaterial({map: base, normalMap: nrm, normalScale: new THREE.Vector2(0.55, 0.55), roughness: 0.6, metalness: 0});
+const uFade = {value: new THREE.Vector2(0, 1)};
+mat.onBeforeCompile = (sh) => {   // o pescoço some no fundo sólido (sem borda cortada)
+  sh.uniforms.uFade = uFade; sh.uniforms.uBg = {value: BG};
+  sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying float vWy;').replace('#include <project_vertex>', '#include <project_vertex>\nvWy = (modelMatrix * vec4(transformed,1.0)).y;');
+  sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vWy; uniform vec2 uFade; uniform vec3 uBg;')
+    .replace('#include <dithering_fragment>', '#include <dithering_fragment>\nfloat fk = smoothstep(uFade.x, uFade.y, vWy); gl_FragColor.rgb = mix(uBg, gl_FragColor.rgb, fk);');
+};
+head.material = mat; head.castShadow = true; head.receiveShadow = true;
+const g = head.geometry; g.computeBoundingBox(); const bb = g.boundingBox; const ctr = bb.getCenter(new THREE.Vector3()); const size = bb.getSize(new THREE.Vector3());
+const S = 1 / size.y; const holder = new THREE.Group(); head.position.set(0, 0, 0); head.rotation.set(0, 0, 0); head.scale.setScalar(1);
+const pivot = new THREE.Group(); head.position.copy(ctr).multiplyScalar(-1); pivot.add(head); pivot.scale.setScalar(S); holder.add(pivot); scene.add(holder);
+holder.updateMatrixWorld(true);
+// orientação: a cabeça fica de pé (boca embaixo, sobrancelhas em cima) e de frente para a câmera (+Z)
+const P = g.attributes.position, UV = g.attributes.uv, NN = g.attributes.normal;
+const near = (ux, uy, rad) => { const out = []; for (let i = 0; i < UV.count; i++) { const du = UV.getX(i) * 4096 - ux, dv = (1 - UV.getY(i)) * 4096 - uy; if (du * du + dv * dv < rad * rad) out.push(i); } return out; };
+const wp = (i) => new THREE.Vector3(P.getX(i), P.getY(i), P.getZ(i)).applyMatrix4(head.matrixWorld);
+const wn = (i) => new THREE.Vector3(NN.getX(i), NN.getY(i), NN.getZ(i)).transformDirection(head.matrixWorld);
+const avgP = (ids) => ids.reduce((c, i) => c.add(wp(i)), new THREE.Vector3()).multiplyScalar(1 / ids.length);
+const avgN = (ids) => ids.reduce((c, i) => c.add(wn(i)), new THREE.Vector3()).normalize();
+{ const brow = avgP(near(2048, 1070, 260)), mouth = avgP(near(2040, 1920, 120)), fwd = avgN(near(2048, 1300, 500));
+  const up = brow.clone().sub(mouth); up.addScaledVector(fwd, -up.dot(fwd)).normalize(); const right = up.clone().cross(fwd).normalize();
+  const M = new THREE.Matrix4().makeBasis(right, up, fwd); holder.quaternion.setFromRotationMatrix(M.invert()); holder.updateMatrixWorld(true); }
+const vs = []; for (let i = 0; i < UV.count; i++) { const u = UV.getX(i) * 4096 - RG.x0, v = (1 - UV.getY(i)) * 4096 - RG.y0; if (u > -40 && v > -40 && u < RG.w + 40 && v < RG.h + 40) vs.push(i); }
+for (const h of HAIRS) { let best = 1e9, bi = vs[0]; for (const i of vs) { const du = UV.getX(i) * 4096 - RG.x0 - h.x, dv = (1 - UV.getY(i)) * 4096 - RG.y0 - h.y, d = du * du + dv * dv; if (d < best) { best = d; bi = i; } } h.p = wp(bi); h.n = wn(bi); }
+const browC = BROWS.map((b) => { const hs = HAIRS.filter((h) => h.sd === b.side); const c = new THREE.Vector3(); hs.forEach((h) => c.add(h.p)); return c.multiplyScalar(1 / hs.length); });
+const midC = browC[0].clone().add(browC[1]).multiplyScalar(0.5);
+uFade.value.set(midC.y - 0.62, midC.y - 0.46);
+
+// fios caindo em 3D (só uma parte dos que somem, para não pesar)
+const hairGeo = new THREE.CylinderGeometry(0.0002, 0.00012, 1, 5, 1); hairGeo.translate(0, 0.5, 0);
+const hairMat = new THREE.MeshStandardMaterial({color: 0x4a362a, roughness: 0.55, transparent: true});
+const fallPool = []; for (let i = 0; i < 160; i++) { const m = new THREE.Mesh(hairGeo, hairMat.clone()); m.visible = false; scene.add(m); fallPool.push(m); }
+
+// ---------------- estados (causas) ----------------
+const B1 = BROWS[1], B0 = BROWS[0]; const bx1 = (s) => B1.x0 + (B1.x1 - B1.x0) * (B1.dl > 0 ? s : 1 - s), bx0 = (s) => B0.x0 + (B0.x1 - B0.x0) * (B0.dl > 0 ? s : 1 - s);
+const AREATA = [{x: bx1(0.46), y: B1.cy + 4, r: 62}, {x: bx0(0.62), y: B0.cy + 2, r: 34}];
+const inCirc = (h, cs) => cs.some((c) => (h.x - c.x) ** 2 + (h.y - c.y) ** 2 < c.r * c.r);
+const noise1 = (x) => 0.5 + 0.5 * Math.sin(x * 0.031) * Math.sin(x * 0.0173 + 1.7);
+// cada estado: (h) => {a: alfa 0..1, l: comprimento 0..1}
+const ST = {
+  cheio: () => ({a: 1, l: 1}),
+  inicio: (h) => ({a: h.u < 0.16 + 0.25 * (h.s > 0.6 && h.sd === 1 ? 1 : 0) * (h.v < 0.5 ? 1 : 0) ? 0 : 1, l: 1}),
+  areata: (h) => ({a: inCirc(h, AREATA) ? 0 : 1, l: 1}),
+  tireoide: (h) => ({a: h.s > 0.6 + 0.08 * h.v ? (h.s > 0.75 ? 0 : (h.u < 0.75 ? 0 : 1)) : 1, l: 1}),
+  dermatite: (h) => ({a: h.u < 0.22 ? 0 : 1, l: h.v < 0.2 ? 0.6 : 1}),
+  infeccao: (h) => ({a: h.sd === 1 && h.s > 0.25 && h.s < 0.7 && h.u < 0.5 ? 0 : 1, l: h.sd === 1 && h.s > 0.2 && h.s < 0.75 && h.v < 0.45 ? 0.35 : 1}),
+  inflamatoria: (h) => ({a: h.u < 0.48 ? 0 : 1, l: 1}),
+  tracao: (h) => ({a: noise1(h.x * 1.0 + h.sd * 300) > 0.62 && h.u < 0.85 ? 0 : (h.u < 0.12 ? 0 : 1), l: h.v < 0.3 ? 0.4 + 0.3 * h.u : 1}),
+  rebrota: (h) => ({a: 1, l: 1}), cicatriz: (h) => ({a: inCirc(h, [AREATA[0]]) ? 0 : 1, l: 1}),
+};
+// efeitos de pele por estado (intensidade 0..1 vem da linha do tempo)
+function drawSkinFx(fx) {
+  if (fx.red > 0) { for (const b of BROWS) { const n = 9; for (let i = 0; i < n; i++) { const s = (i + 0.5) / n, x = b.side ? bx1(s) : bx0(s); const r = 70 + 30 * rnd(i + b.side * 9);
+      const gr = bx.createRadialGradient(x, b.cy + 6, 0, x, b.cy + 6, r); gr.addColorStop(0, `rgba(196,70,62,${0.22 * fx.red})`); gr.addColorStop(1, 'rgba(200,60,55,0)'); bx.fillStyle = gr; bx.fillRect(x - r, b.cy - r, 2 * r, 2 * r); } } }
+  if (fx.scar > 0) { const c = AREATA[0]; bx.save(); bx.globalAlpha = fx.scar; bx.beginPath(); bx.ellipse(c.x, c.y, c.r * 1.05, c.r * 0.8, 0, 0, 7); bx.clip(); bx.drawImage(smooth, 0, 0);
+    const gr = bx.createRadialGradient(c.x - 10, c.y - 8, 0, c.x, c.y, c.r); gr.addColorStop(0, 'rgba(255,236,228,.55)'); gr.addColorStop(0.7, 'rgba(240,205,195,.35)'); gr.addColorStop(1, 'rgba(240,205,195,0)'); bx.fillStyle = gr; bx.fillRect(c.x - c.r * 1.2, c.y - c.r, c.r * 2.4, c.r * 2); bx.restore(); }
+  if (fx.patch > 0) { for (const c of AREATA) { bx.save(); bx.globalAlpha = 0.6 * fx.patch; bx.beginPath(); bx.arc(c.x, c.y, c.r * 0.9, 0, 7); bx.clip(); bx.drawImage(smooth, 0, 0); bx.restore(); } }
+}
+function drawSkinTop(fx) {
+  if (fx.flake > 0) for (let i = 0; i < 90; i++) { const b = BROWS[i % 2]; const s = rnd(i * 3.1), x = b.side ? bx1(s) : bx0(s), y = b.cy - 30 + 70 * rnd(i * 7.3); const r = 1.2 + 2.2 * rnd(i * 1.9);
+    bx.fillStyle = `rgba(246,236,214,${(0.35 + 0.3 * rnd(i)) * fx.flake})`; bx.beginPath(); bx.ellipse(x, y, r * 1.6, r, rnd(i * 5) * 3, 0, 7); bx.fill(); }
+  if (fx.pap > 0) for (let i = 0; i < 6; i++) { const s = 0.28 + 0.4 * rnd(i * 4.7), x = bx1(s), y = B1.cy - 16 + 40 * rnd(i * 2.3), r = 5 + 3 * rnd(i);
+    const gr = bx.createRadialGradient(x, y, 0, x, y, r * 2.2); gr.addColorStop(0, `rgba(245,226,190,${0.85 * fx.pap})`); gr.addColorStop(0.3, `rgba(196,74,64,${0.7 * fx.pap})`); gr.addColorStop(1, 'rgba(214,70,60,0)'); bx.fillStyle = gr; bx.beginPath(); bx.arc(x, y, r * 2.2, 0, 7); bx.fill(); }
+}
+function drawHair(h, a, l, thin) {
+  if (a <= 0.01 || l <= 0.02) return; const L = h.l * l, ca = Math.cos(h.a), sa = Math.sin(h.a);
+  const ex = h.x + L * ca, ey = h.y + L * sa, mx = (h.x + ex) / 2 - h.c * L * sa, my = (h.y + ey) / 2 + h.c * L * ca;
+  const k = thin ? 0.55 : 1; const col = thin ? [Math.min(255, h.col[0] + 60), Math.min(255, h.col[1] + 50), Math.min(255, h.col[2] + 45)] : h.col;
+  bx.strokeStyle = `rgba(${col[0]},${col[1]},${col[2]},${h.al * a})`; bx.lineCap = 'round';
+  bx.lineWidth = h.w * k; bx.beginPath(); bx.moveTo(h.x, h.y); bx.quadraticCurveTo(mx, my, ex, ey); bx.stroke();
+  bx.lineWidth = h.w * 1.25 * k; bx.beginPath(); bx.moveTo(h.x, h.y); bx.lineTo((h.x + mx) / 2, (h.y + my) / 2); bx.stroke();
+}
+
+// ---------------- linha do tempo ----------------
+const DUR = 40;
+const CAUSAS = [
+  {k: 'areata', n: 'Alopecia areata', d: 'Falhas arredondadas e lisas', cam: 'R'},
+  {k: 'tireoide', n: 'Alterações da tireoide', d: 'Rarefação no terço externo', cam: 'B'},
+  {k: 'dermatite', n: 'Dermatites', d: 'Vermelhidão e descamação', cam: 'L'},
+  {k: 'infeccao', n: 'Infecções', d: 'Inflamação e pelos quebrados', cam: 'R'},
+  {k: 'inflamatoria', n: 'Doenças inflamatórias', d: 'Afinamento difuso dos pelos', cam: 'B'},
+  {k: 'tracao', n: 'Tração repetitiva', d: 'Falhas irregulares de tanto puxar', cam: 'L'},
+];
+const C0 = 10.5, CD = 2.5;     // início e duração de cada causa
+function stateAt(t) {   // devolve [estadoA, estadoB, mistura, fx]
+  const fx = {red: 0, flake: 0, pap: 0, scar: 0, patch: 0, grow: 1};
+  if (t < 5.8) return ['cheio', 'cheio', 0, fx];
+  if (t < C0) { const m = ss(5.8, 8.6, t); if (t > 9.9) return ['inicio', 'cheio', ss(9.9, 10.4, t), fx]; return ['cheio', 'inicio', m, fx]; }
+  if (t < C0 + 6 * CD) { const i = Math.floor((t - C0) / CD), q = t - C0 - i * CD; const cur = CAUSAS[i].k, prev = i ? CAUSAS[i - 1].k : 'cheio';
+    const m = ss(0.05, 0.75, q); const w = (k) => (cur === k ? m : 0) + (prev === k ? 1 - m : 0);
+    fx.red = 0.9 * w('dermatite') + 0.55 * w('infeccao') + 0.6 * w('inflamatoria'); fx.flake = w('dermatite'); fx.pap = w('infeccao'); fx.patch = w('areata');
+    return [prev, cur, m, fx]; }
+  const T4 = C0 + 6 * CD;   // 25.5: temporária (rosto: área volta a crescer)
+  if (t < 28.0) { fx.patch = 1 - ss(T4 + 0.9, 27.6, t); const m = ss(T4, T4 + 0.6, t); fx.grow = ss(T4 + 0.9, 27.7, t); return [CAUSAS[5].k, 'areata', m, fx]; }
+  if (t < 35.0) return ['cheio', 'cheio', 0, fx];          // (cena do folículo)
+  const m = ss(35.0, 36.0, t); fx.scar = ss(35.3, 36.6, t); return ['cheio', 'cicatriz', m, fx];
+}
+let lastVis = new Map(); let falls = [];
+function paintBrows(t) {
+  const [A, Bk, m, fx] = stateAt(t); bx.globalAlpha = 1; bx.drawImage(crop, 0, 0); drawSkinFx(fx);
+  const regrow = t >= C0 + 6 * CD && t < 28.0;
+  for (const h of HAIRS) {
+    const sa = ST[A](h), sb = ST[Bk](h); let a = lerp(sa.a, sb.a, m), l = lerp(sa.l, sb.l, m), thin = false;
+    if (regrow && inCirc(h, [AREATA[0]])) { const gk = cl(fx.grow * 1.25 - h.u * 0.25); a = Math.max(a, cl(gk * 3)); l = Math.max(0.05, gk); thin = gk < 0.6; }
+    // caiu agora? solta um fio em 3D
+    const was = lastVis.get(h) ?? 1; if (was > 0.5 && a <= 0.5 && h.u * 1000 % 8 < 1) spawnFall(h, t); lastVis.set(h, a);
+    drawHair(h, a, l, thin);
+  }
+  drawSkinTop(fx);
+  browTex.needsUpdate = true; renderer.copyTextureToTexture(browTex, base, null, new THREE.Vector2(RG.x0, 4096 - RG.y0 - RG.h));   // UV de baixo para cima
+}
+function spawnFall(h, t) { const m = fallPool.find((x) => !x.visible); if (!m) return; m.visible = true; m.userData = {t0: t, p: h.p.clone().addScaledVector(h.n, 0.002), n: h.n.clone(), L: h.l / 4096 * 0.42, r: rnd(h.u * 99)}; falls.push(m); }
+function updateFalls(t) { for (const m of falls) { const d = m.userData, q = t - d.t0; if (q < 0 || q > 1.4) { m.visible = false; continue; }
+  m.visible = true; m.position.copy(d.p).addScaledVector(d.n, 0.01 * q).add(new THREE.Vector3((d.r - 0.5) * 0.02 * q, -0.55 * q * q, 0)); m.scale.set(1, d.L, 1);
+  m.rotation.set(0.25 * Math.sin(q * 2 + d.r * 6), d.r * 6, Math.PI / 2 + (d.r - 0.5) * 0.8 + q * (0.8 + d.r)); m.material.opacity = 0.85 * (1 - ss(0.8, 1.4, q)); }
+  falls = falls.filter((m) => m.visible); }
+
+// câmera: chaves (posição relativa ao centro das sobrancelhas)
+function camAt(t) {
+  const shots = {W: {o: [0, 0.03, 2.15], tg: [0, 0.03, 0]}, B: {o: [0, 0.01, 0.95], tg: [0, 0.035, 0]}, R: {o: [0, 0.01, 0.6], tg: 'R'}, L: {o: [0, 0.01, 0.6], tg: 'L'}};
+  const keys = [[0, 'W', -0.55], [4.6, 'W', 0.0], [6.0, 'B', 0.06], [10.3, 'B', 0.0]];
+  CAUSAS.forEach((c, i) => { keys.push([C0 + i * CD + 0.15, c.cam, i % 2 ? 0.12 : -0.12]); keys.push([C0 + (i + 1) * CD - 0.05, c.cam, i % 2 ? 0.08 : -0.08]); });
+  keys.push([C0 + 6 * CD + 0.3, 'R', 0.15], [28.0, 'R', 0.1], [35.0, 'R', -0.12], [36.8, 'R', -0.05], [37.6, 'W', 0.2], [40, 'W', 0.32]);
+  let a = keys[0], b = keys[keys.length - 1]; for (let i = 0; i < keys.length - 1; i++) if (t >= keys[i][0] && t <= keys[i + 1][0]) { a = keys[i]; b = keys[i + 1]; break; }
+  const k = ss(a[0], b[0], t); const pt = (s) => { const sh = shots[s]; const tg = sh.tg === 'R' ? browC[1].clone().add(new THREE.Vector3(0, 0.012, 0)) : sh.tg === 'L' ? browC[0].clone().add(new THREE.Vector3(0, 0.012, 0)) : midC.clone().add(new THREE.Vector3(...sh.tg)); return {tg, o: new THREE.Vector3(...sh.o)}; };
+  const A = pt(a[1]), Bp = pt(b[1]); const tg = A.tg.lerp(Bp.tg, k); const o = A.o.lerp(Bp.o, k); const yaw = lerp(a[2], b[2], k);
+  const pos = tg.clone().add(o.applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw)); return {pos, tg};
+}
+
+// ---------------- cena do folículo (fatia de pele em corte) ----------------
+const fs = new THREE.Scene(); fs.background = BG; const fcam = new THREE.PerspectiveCamera(28, W / H, 0.1, 100);
+fs.add(new THREE.HemisphereLight(0xfff0e0, 0x3a2416, 0.9)); const fk = new THREE.DirectionalLight(0xffe4cc, 2.4); fk.position.set(-3, 6, 7); fk.castShadow = true; fk.shadow.mapSize.set(1024, 1024); fs.add(fk);
+const fr = new THREE.DirectionalLight(0xe0a070, 1.3); fr.position.set(4, 2, -5); fs.add(fr); const ff = new THREE.DirectionalLight(0xffd8bc, 0.5); ff.position.set(4, 1, 6); fs.add(ff);
+const BW = 3.0, BD = 1.6, TOP = 1.6;
+const layer = (h, yTop, c, r = 0.7) => { const m = new THREE.Mesh(new THREE.BoxGeometry(BW, h, BD), new THREE.MeshStandardMaterial({color: c, roughness: r})); m.position.y = yTop - h / 2; m.receiveShadow = true; fs.add(m); return m; };
+layer(0.22, TOP, 0xe8bfa0, 0.5); layer(2.5, TOP - 0.22, 0xd79583); layer(1.3, TOP - 2.72, 0xe9cd8f, 0.85);
+// textura leve na derme: fibras (colágeno) em relevo discreto na face do corte
+for (let i = 0; i < 26; i++) { const y = TOP - 0.4 - 2.2 * rnd(i * 3.3), x0 = -BW / 2 + 0.1 + (BW - 0.9) * rnd(i * 5.1); const c = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.35 + 0.4 * rnd(i), 6), new THREE.MeshStandardMaterial({color: 0xe7aea0, roughness: 0.8}));
+  c.rotation.z = Math.PI / 2 + (rnd(i * 7) - 0.5) * 0.6; c.position.set(x0, y, BD / 2 + 0.005); fs.add(c); }
+const fol = new THREE.Group(); fs.add(fol); fol.position.set(-0.15, TOP - 1.5, BD / 2); fol.rotation.z = -0.22;   // superfície no y local = 1.5
+const sheathPts = []; for (let i = 0; i <= 40; i++) { const y = -1.75 + i * (3.25 / 40); let r = 0.17; if (y < -1.15) r = 0.17 + 0.17 * Math.sin(cl((y + 1.75) / 0.6) * Math.PI); sheathPts.push(new THREE.Vector2(Math.max(0.015, r), y)); }
+const sheathMat = new THREE.MeshStandardMaterial({color: 0xf6d2c4, roughness: 0.55, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false});
+const sheath = new THREE.Mesh(new THREE.LatheGeometry(sheathPts, 32, -Math.PI / 2, Math.PI), sheathMat); fol.add(sheath);
+const bulbo = new THREE.Mesh(new THREE.SphereGeometry(0.26, 28, 20, 0, Math.PI * 2, 0, Math.PI), new THREE.MeshStandardMaterial({color: 0x8a4a32, roughness: 0.5})); bulbo.scale.set(1, 1.1, 0.7); bulbo.position.y = -1.42; fol.add(bulbo);
+const papila = new THREE.Mesh(new THREE.SphereGeometry(0.12, 20, 14), new THREE.MeshStandardMaterial({color: 0xc0574e, roughness: 0.5})); papila.scale.set(1, 1.2, 0.7); papila.position.set(0, -1.6, 0.06); fol.add(papila);
+const glandula = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 14), new THREE.MeshStandardMaterial({color: 0xf0d27c, roughness: 0.6})); glandula.scale.set(1.25, 0.8, 0.5); glandula.position.set(0.32, 0.55, 0.02); fol.add(glandula);
+const shaftGeo = new THREE.CylinderGeometry(0.055, 0.07, 1, 14); shaftGeo.translate(0, 0.5, 0);
+const shaft = new THREE.Mesh(shaftGeo, new THREE.MeshStandardMaterial({color: 0x24160f, roughness: 0.4, transparent: true})); shaft.castShadow = true; fol.add(shaft);
+const infl = []; for (let i = 0; i < 44; i++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.035 + 0.025 * rnd(i), 12, 10), new THREE.MeshStandardMaterial({color: i % 4 ? 0xb8443c : 0x8e3d6a, roughness: 0.45}));
+  const side = rnd(i * 3) < 0.5 ? -1 : 1; m.userData = {x: side * (0.24 + 0.32 * rnd(i * 11)), y: -0.3 + 1.6 * rnd(i * 7), z: 0.04 + 0.12 * rnd(i * 13), ph: rnd(i * 17) * 6.28}; fol.add(m); infl.push(m); }
+const fib = []; for (let i = 0; i < 9; i++) { const xo = (i - 4) * 0.045; const pts = []; for (let k = 0; k <= 10; k++) { const y = -1.55 + k * 0.3; pts.push(new THREE.Vector3(xo + 0.03 * Math.sin(k * 1.7 + i), y, 0.05)); }
+  const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 40, 0.018, 6), new THREE.MeshStandardMaterial({color: 0xf3ebe6, roughness: 0.85, transparent: true})); fol.add(m); fib.push(m); }
+const folLabel = document.getElementById('fol');
+function follicleAt(t) {   // 28.0–31.5 temporário; 31.5–35.0 permanente
+  const temp = t < 31.5; const q = temp ? t - 28.0 : t - 31.5;
+  const ang = -0.5 + 0.25 * Math.sin((t - 28) * 0.3); fcam.position.set(Math.sin(ang) * 12.4, 2.4, Math.cos(ang) * 12.4); fcam.lookAt(0, -0.05, 0);
+  let L = 3.9, op = 1, y0 = -1.42, scl = 1, inf = 0, fibA = 0; const sc0 = new THREE.Color(0xf6d2c4);
+  if (temp) {      // o pelo cai (sai pela superfície) e o folículo vivo produz um novo
+    if (q < 1.2) { y0 = -1.42 + eo(q / 1.2) * 3.6; op = 1 - ss(0.7, 1.2, q); } else { L = 3.9 * eo((q - 1.3) / 2.0); y0 = -1.42; }
+    folLabel.innerHTML = q < 1.3 ? 'O pelo <b>cai</b>…' : '…e o folículo, vivo, <b>produz um novo pelo</b>';
+  } else {         // inflamação ao redor do folículo; ele vira cicatriz e não produz mais pelo
+    inf = ss(0.1, 1.0, q) * (1 - ss(2.3, 3.1, q)); y0 = -1.42 + eo(cl((q - 0.9) / 1.0)) * 3.6; op = 1 - ss(1.3, 1.9, q); scl = 1 - 0.7 * ss(1.4, 2.8, q); fibA = ss(1.9, 3.1, q);
+    folLabel.innerHTML = q < 1.7 ? 'Uma <b>inflamação</b> atinge o folículo…' : '…que vira <b>cicatriz</b> e não produz mais pelo';
+  }
+  shaft.position.y = y0; shaft.scale.y = Math.max(0.001, L); shaft.material.opacity = op; shaft.visible = L > 0.02 && op > 0.01;
+  sheath.scale.set(scl, 1, scl); bulbo.scale.set(scl, 1.1 * scl, 0.7 * scl); papila.scale.set(Math.max(0.15, scl), 1.2 * Math.max(0.15, scl), 0.7); glandula.scale.set(1.25 * Math.max(0.4, scl), 0.8 * Math.max(0.4, scl), 0.5);
+  sheathMat.color.copy(sc0).lerp(new THREE.Color(0xcfc3bc), 1 - scl); sheathMat.opacity = 0.5 + 0.3 * (1 - scl);
+  bulbo.material.color.set(0x8a4a32).lerp(new THREE.Color(0xbfb2aa), (1 - scl) / 0.7); papila.material.color.set(0xc0574e).lerp(new THREE.Color(0xcbbdb6), (1 - scl) / 0.7);
+  infl.forEach((m, i) => { const d = m.userData; m.visible = inf > 0.02; m.scale.setScalar(Math.max(0.01, inf * (0.85 + 0.25 * Math.sin(t * 5 + d.ph)))); m.position.set(d.x * (1.25 - 0.25 * inf) + 0.02 * Math.sin(t * 2 + d.ph), d.y, d.z); });
+  fib.forEach((m, i) => { m.material.opacity = cl(fibA * 1.6 - i / 14); m.visible = fibA > 0.01; });
+}
+// ---------------- textos ----------------
+const el = (id) => document.getElementById(id);
+function show(id, t, a, b, din = 0.5, dout = 0.4) { const e = el(id); const k = Math.min(ss(a, a + din, t), 1 - ss(b - dout, b, t)); e.style.opacity = k; e.style.transform = `translateY(${(1 - eo(ss(a, a + din, t))) * 30}px)`; e.style.display = k > 0.001 ? 'block' : 'none'; }
+function texts(t) {
+  show('t1', t, 0.6, 5.7); show('t2', t, 6.0, 10.3); show('t3', t, 10.5, 25.3, 0.5, 0.3);
+  const c = el('card'); if (t >= C0 && t < C0 + 6 * CD) { const i = Math.floor((t - C0) / CD), q = t - C0 - i * CD; const C = CAUSAS[i];
+    el('cn').textContent = `${i + 1} / 6`; el('ch').textContent = C.n; el('cd').textContent = C.d; const k = Math.min(ss(0.1, 0.45, q), 1 - ss(CD - 0.25, CD, q)); c.style.opacity = k; c.style.transform = `translateX(${(1 - eo(ss(0.1, 0.5, q))) * -40}px)`; el('cb').style.transform = `scaleX(${ss(0.2, CD - 0.1, q) * 5})`; c.style.display = 'block'; } else c.style.display = 'none';
+  show('t4', t, 25.6, 31.4); show('t5', t, 31.6, 38.4); folLabel.style.display = t >= 28.1 && t < 35.0 ? 'block' : 'none'; folLabel.style.opacity = Math.min(ss(28.1, 28.5, t), 1 - ss(34.6, 35.0, t), t < 31.5 ? 1 - ss(31.2, 31.5, t) : ss(31.5, 31.8, t));
+}
+// ---------------- quadro ----------------
+window.renderAt = (t) => {
+  texts(t);
+  const folScene = t >= 28.0 && t < 35.0;
+  if (folScene) { follicleAt(t); renderer.render(fs, fcam); }
+  else { paintBrows(t); updateFalls(t); const c = camAt(t); cam.position.copy(c.pos); cam.lookAt(c.tg); renderer.render(scene, cam); }
+  // transições: escurece rápido para o fundo entre o rosto e o folículo, e no começo/fim
+  const fade = Math.max(1 - ss(0, 0.6, t), ss(27.7, 28.0, t) * (1 - ss(28.0, 28.3, t)), ss(34.7, 35.0, t) * (1 - ss(35.0, 35.3, t)), ss(39.3, 40, t));
+  document.getElementById('gl').style.opacity = 1 - fade;
+};
+await document.fonts.ready; window.DUR = DUR; window.pronto = true;
+</script></body></html>
