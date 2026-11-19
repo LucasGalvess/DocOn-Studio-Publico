@@ -165,6 +165,8 @@ def ys_for(pg):
     for h in hs: out.append(y + h / 2); y += h
     return tuple(int(v) for v in out)
 if DIN or not ed.WORDS: pages = []            # sem fala não há gancho falado: use blocos "texto"
+SEM_GANCHO = hk is None and PJ.get('gancho') is False          # projeto sem título de abertura (ex.: lower third logo no início)
+if SEM_GANCHO: pages = []
 if pages: ed.hook([{'lines': p, 'ys': ys_for(p)} for p in pages], keyword_word=kw or None, icon=icon_hook, kw_width=min(1000, int(860 * HK_S)), size=int(92 * HK_S), kw_size=int(150 * HK_S))
 if IMG.get('cor_original'): ed.leak = False; ed.vig_amt = 0.0; ed._vig = None     # cor original: sem flash de luz e sem vinheta sobre a pessoa
 if hk and bgk(hk) > 0: ed.bg_blur(0, ed.hook_end + 0.2, bgk(hk)); plan.append(f'desfoque de fundo com o gancho {round(bgk(hk) * 100)}%')
