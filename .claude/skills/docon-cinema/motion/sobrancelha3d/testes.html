@@ -1,0 +1,159 @@
+<!doctype html><html><head><meta charset="utf-8">
+<style>
+@font-face{font-family:M;font-weight:500;src:url(fonts/Montserrat-500.ttf)}
+@font-face{font-family:M;font-weight:600;src:url(fonts/Montserrat-600.ttf)}
+@font-face{font-family:M;font-weight:700;src:url(fonts/Montserrat-700.ttf)}
+@font-face{font-family:M;font-weight:800;src:url(fonts/Montserrat-800.ttf)}
+:root{--bg:#1e130c;--ink:#2b1a10;--ac:#c4712f}
+html,body{margin:0;background:var(--bg);overflow:hidden}
+#st{position:relative;background:var(--bg)}
+canvas#gl{position:absolute;inset:0}
+/* cartão no padrão do 12NOV: caixa clara, pílula escura e título com destaque */
+#card{position:absolute;left:64px;top:96px;max-width:640px;background:#fbf6ef;border-radius:22px;padding:22px 28px 24px;box-shadow:0 10px 30px rgba(0,0,0,.35);font-family:M;color:var(--ink);transform-origin:left top}
+#card .p{display:inline-block;background:#3a2417;color:#f6e7d6;font:700 19px/1 M;letter-spacing:4px;padding:8px 14px;border-radius:99px;text-transform:uppercase}
+#card .t{font:800 44px/1.12 M;margin-top:14px}
+#card .t em{font-style:normal;color:var(--ac)}
+#card .s{font:500 26px/1.3 M;color:#6a5444;margin-top:8px}
+</style></head><body><div id="st"><canvas id="gl"></canvas><div id="card"><span class="p" id="cp"></span><div class="t" id="ct"></div><div class="s" id="cs"></div></div></div>
+<script type="importmap">{"imports":{"three":"./three/build/three.module.js","three/addons/":"./three/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+const Q = new URLSearchParams(location.search); const CENA = +(Q.get('s') || 1); const FULL = CENA === 4;
+const W = 1080, H = FULL ? 1920 : 960; const BG = new THREE.Color('#1e130c');
+document.getElementById('st').style.cssText = `width:${W}px;height:${H}px`; const glc = document.getElementById('gl'); glc.width = W; glc.height = H; glc.style.cssText = `width:${W}px;height:${H}px`;
+const DUR = {1: 7.4, 2: 7.6, 3: 9.2, 4: 6.3}[CENA];
+const cl = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), ss = (a, b, v) => { const x = cl((v - a) / (b - a)); return x * x * (3 - 2 * x); }, eo = (x) => 1 - Math.pow(1 - cl(x), 3), lerp = (a, b, k) => a + (b - a) * k;
+function rnd(i) { const s = Math.sin(i * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+const renderer = new THREE.WebGLRenderer({canvas: glc, antialias: true, preserveDrawingBuffer: true}); renderer.setSize(W, H, false); renderer.setPixelRatio(1);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05; renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const card = (p, t, s) => { document.getElementById('cp').textContent = p; document.getElementById('ct').innerHTML = t; document.getElementById('cs').textContent = s; };
+const showCard = (t, a, b) => { const c = document.getElementById('card'); const k = Math.min(ss(a, a + 0.45, t), 1 - ss(b - 0.35, b, t)); c.style.opacity = k; c.style.transform = `translateY(${(1 - eo(ss(a, a + 0.5, t))) * 24}px) scale(${0.96 + 0.04 * eo(ss(a, a + 0.5, t))})`; };
+
+let renderAt;
+if (!FULL) {
+  // ---------------- busto (o mesmo da animação das sobrancelhas) ----------------
+  const scene = new THREE.Scene(); scene.background = BG; const cam = new THREE.PerspectiveCamera(22, W / H, 0.01, 100);
+  const key = new THREE.DirectionalLight(0xffe2c4, 2.6); key.position.set(-1.2, 1.4, 2.2); key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 4; key.shadow.bias = -0.0004; scene.add(key);
+  scene.add(new THREE.HemisphereLight(0xffe9d6, 0x3a2416, 0.75));
+  const rimL = new THREE.DirectionalLight(0xe0a070, 1.6); rimL.position.set(-2.5, 0.8, -1.5); scene.add(rimL); const rimR = new THREE.DirectionalLight(0xf0b888, 1.2); rimR.position.set(2.6, 0.6, -1.2); scene.add(rimR);
+  const fill = new THREE.DirectionalLight(0xffd8bc, 0.55); fill.position.set(1.8, 0.2, 1.6); scene.add(fill);
+  const D = await (await fetch('fios.json')).json(); const RG = D.regiao, HAIRS = D.hairs;
+  const img = await new Promise((r) => { const i = new Image(); i.onload = () => r(i); i.src = 'pele4k.jpg'; });
+  const master = document.createElement('canvas'); master.width = 4096; master.height = 4096; const mx = master.getContext('2d'); mx.drawImage(img, 0, 0);
+  // sobrancelhas cheias (mesmos fios da animação aprovada)
+  mx.save(); mx.translate(RG.x0, RG.y0); mx.lineCap = 'round';
+  for (const h of HAIRS) { const L = h.l, ca = Math.cos(h.a), sa = Math.sin(h.a); const ex = h.x + L * ca, ey = h.y + L * sa, qx = (h.x + ex) / 2 - h.c * L * sa, qy = (h.y + ey) / 2 + h.c * L * ca;
+    mx.strokeStyle = `rgba(${h.col[0]},${h.col[1]},${h.col[2]},${h.al})`; mx.lineWidth = h.w; mx.beginPath(); mx.moveTo(h.x, h.y); mx.quadraticCurveTo(qx, qy, ex, ey); mx.stroke();
+    mx.lineWidth = h.w * 1.25; mx.beginPath(); mx.moveTo(h.x, h.y); mx.lineTo((h.x + qx) / 2, (h.y + qy) / 2); mx.stroke(); }
+  mx.restore();
+  const base = new THREE.CanvasTexture(master); base.flipY = true; base.colorSpace = THREE.SRGBColorSpace; base.anisotropy = 8;
+  const nrm = await new THREE.TextureLoader().loadAsync('Infinite-Level_02_Tangent_SmoothUV.jpg'); nrm.flipY = true;
+  // região viva do meio do rosto (bochecha, sulco, boca)
+  const FR = {x0: 1440, y0: 1320, w: 1200, h: 760}; const fc = document.createElement('canvas'); fc.width = FR.w; fc.height = FR.h; const fx = fc.getContext('2d', {willReadFrequently: true});
+  const fcrop = document.createElement('canvas'); fcrop.width = FR.w; fcrop.height = FR.h; fcrop.getContext('2d').drawImage(master, FR.x0, FR.y0, FR.w, FR.h, 0, 0, FR.w, FR.h);
+  window._fc = fc; const ovTex = new THREE.CanvasTexture(fc); ovTex.flipY = false; ovTex.colorSpace = THREE.NoColorSpace;
+  const P1k = (x, y) => [x * 4 - FR.x0, y * 4 - FR.y0];   // ponto da textura 1024 -> recorte
+  const gltf = await new GLTFLoader().loadAsync('LeePerrySmith.glb'); let head = null; gltf.scene.traverse((o) => { if (o.isMesh && !head) head = o; });
+  const g = head.geometry; const UV = g.attributes.uv, P = g.attributes.position, NN = g.attributes.normal;
+  // pesos por vértice (na UV): bochecha (pinça), sulco nasolabial (aprofunda), bochecha do sorriso (sobe)
+  const CHEEK = [418, 418], FOLD = [[474, 418], [466, 440], [460, 460], [456, 478]], SMILE = [432, 440];
+  const segD = (p, a, b) => { const vx = b[0] - a[0], vy = b[1] - a[1], k = cl(((p[0] - a[0]) * vx + (p[1] - a[1]) * vy) / (vx * vx + vy * vy)); return Math.hypot(p[0] - a[0] - k * vx, p[1] - a[1] - k * vy); };
+  const aw = new Float32Array(UV.count * 3);
+  for (let i = 0; i < UV.count; i++) { const p = [UV.getX(i) * 1024, (1 - UV.getY(i)) * 1024];
+    const dc = Math.hypot(p[0] - CHEEK[0], p[1] - CHEEK[1]); let df = 1e9; for (let k = 0; k < FOLD.length - 1; k++) df = Math.min(df, segD(p, FOLD[k], FOLD[k + 1])); const dsm = Math.hypot(p[0] - SMILE[0], p[1] - SMILE[1]);
+    aw[i * 3] = Math.exp(-(dc * dc) / (2 * 34 * 34)) * (p[0] < 512 ? 1 : 0); aw[i * 3 + 1] = Math.exp(-(df * df) / (2 * 5 * 5)) * (p[0] < 512 ? 1 : 0) * (1 - ss(470, 486, p[1])); aw[i * 3 + 2] = Math.exp(-(dsm * dsm) / (2 * 30 * 30)) * (p[0] < 512 ? 1 : 0); }
+  g.setAttribute('aW', new THREE.BufferAttribute(aw, 3)); g.computeBoundingBox(); const size = g.boundingBox.getSize(new THREE.Vector3()), ctr = g.boundingBox.getCenter(new THREE.Vector3());
+  const uDef = {value: new THREE.Vector3()}, uScale = {value: size.y}, uOv = {value: ovTex}, uFR = {value: new THREE.Vector4(FR.x0, FR.y0, FR.w, FR.h)};
+  const mat = new THREE.MeshStandardMaterial({map: base, normalMap: nrm, normalScale: new THREE.Vector2(0.55, 0.55), roughness: 0.6});
+  const uFade = {value: new THREE.Vector2(0, 1)};
+  mat.onBeforeCompile = (sh) => { sh.uniforms.uDef = uDef; sh.uniforms.uScale = uScale; sh.uniforms.uFade = uFade; sh.uniforms.uBg = {value: BG}; sh.uniforms.uOv = uOv; sh.uniforms.uFR = uFR;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aW; uniform vec3 uDef; uniform float uScale; varying float vWy;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed += objectNormal * (uDef.x * aW.x - uDef.y * aW.y + uDef.z * aW.z) * uScale;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvWy = (modelMatrix * vec4(transformed,1.0)).y;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying float vWy; uniform vec2 uFade; uniform vec3 uBg; uniform sampler2D uOv; uniform vec4 uFR;')
+      .replace('#include <map_fragment>', '#include <map_fragment>\n{ vec2 tp = vec2(vMapUv.x * 4096.0, (1.0 - vMapUv.y) * 4096.0); vec2 ov = (tp - uFR.xy) / uFR.zw; if (ov.x > 0.0 && ov.y > 0.0 && ov.x < 1.0 && ov.y < 1.0) { vec4 oc = texture2D(uOv, ov); diffuseColor.rgb = mix(diffuseColor.rgb, pow(oc.rgb, vec3(2.2)), oc.a); } }')
+      .replace('#include <dithering_fragment>', '#include <dithering_fragment>\ngl_FragColor.rgb = mix(uBg, gl_FragColor.rgb, smoothstep(uFade.x, uFade.y, vWy));'); };
+  head.material = mat; head.castShadow = true; head.receiveShadow = true;
+  const holder = new THREE.Group(), pivot = new THREE.Group(); head.position.copy(ctr).multiplyScalar(-1); head.rotation.set(0, 0, 0); head.scale.setScalar(1); pivot.add(head); pivot.scale.setScalar(1 / size.y); holder.add(pivot); scene.add(holder); holder.updateMatrixWorld(true);
+  const near = (ux, uy, rad) => { const out = []; for (let i = 0; i < UV.count; i++) { const du = UV.getX(i) * 4096 - ux, dv = (1 - UV.getY(i)) * 4096 - uy; if (du * du + dv * dv < rad * rad) out.push(i); } return out; };
+  const wp = (i) => new THREE.Vector3(P.getX(i), P.getY(i), P.getZ(i)).applyMatrix4(head.matrixWorld), wn = (i) => new THREE.Vector3(NN.getX(i), NN.getY(i), NN.getZ(i)).transformDirection(head.matrixWorld);
+  const avgP = (ids) => ids.reduce((c, i) => c.add(wp(i)), new THREE.Vector3()).multiplyScalar(1 / ids.length), avgN = (ids) => ids.reduce((c, i) => c.add(wn(i)), new THREE.Vector3()).normalize();
+  { const brow = avgP(near(2048, 1070, 260)), mouth = avgP(near(2040, 1920, 120)), fwd = avgN(near(2048, 1300, 500)); const up = brow.clone().sub(mouth); up.addScaledVector(fwd, -up.dot(fwd)).normalize(); const right = up.clone().cross(fwd).normalize();
+    holder.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(right, up, fwd).invert()); holder.updateMatrixWorld(true); }
+  const ptW = (x, y) => { const ids = near(x * 4, y * 4, 60); return {p: avgP(ids), n: avgN(ids)}; };
+  const cheek = ptW(...CHEEK), fold = ptW(458, 465), smile = ptW(...SMILE), brow = avgP(near(2048, 1070, 260)), mouthW = avgP(near(2040, 1920, 120));
+  uFade.value.set(mouthW.y - 0.36, mouthW.y - 0.24);
+  // dedos-guia da pinça (translúcidos)
+  const fingMat = new THREE.MeshStandardMaterial({color: 0xe7b496, roughness: 0.5, transparent: true, opacity: 0.0});
+  const fing = [0, 1].map(() => { const m = new THREE.Mesh(new THREE.CapsuleGeometry(0.0115, 0.05, 8, 16), fingMat); m.castShadow = true; scene.add(m); return m; });
+  const tUp = new THREE.Vector3(0, 1, 0); const tSide = cheek.n.clone().cross(tUp).normalize();
+  function camLook(target, dir, dist, yawAdd = 0) { const d = dir.clone().applyAxisAngle(tUp, yawAdd).normalize(); cam.position.copy(target).addScaledVector(d, dist); cam.lookAt(target); }
+  // camera olha a bochecha visível: direção = normal da bochecha, um pouco para a frente
+  const viewDir = cheek.n.clone().lerp(new THREE.Vector3(0, 0, 1), 0.45).normalize();
+  renderAt = (t) => {
+    fx.globalAlpha = 1; fx.clearRect(0, 0, FR.w, FR.h); const def = new THREE.Vector3();
+    if (CENA === 1) {      // 1º teste: pinça na bochecha
+      card('1º teste', 'Faça uma <em>pinça</em> na bochecha', 'Observe se a pele está mais flácida e solta.'); showCard(t, 0.4, DUR);
+      const ap = ss(1.0, 2.0, t), pin = ss(2.0, 3.0, t) * (1 - ss(5.6, 6.6, t)); fingMat.opacity = 0; fing.forEach((m) => m.visible = false); def.x = 0.022 * pin;
+      { const [qx, qy] = P1k(...CHEEK); const k = ap * (1 - ss(6.0, 6.8, t)); if (k > 0.01) { const g = lerp(190, 120, pin); fx.save(); fx.fillStyle = `rgba(232,150,80,${0.9 * k})`; fx.strokeStyle = fx.fillStyle; fx.lineWidth = 10; fx.lineCap = 'round';
+        for (const sgn of [-1, 1]) { const y0 = qy + sgn * (g + 70), y1 = qy + sgn * g; fx.beginPath(); fx.moveTo(qx, y0); fx.lineTo(qx, y1); fx.stroke(); fx.beginPath(); fx.moveTo(qx - 22, y1 + sgn * 26); fx.lineTo(qx, y1 - sgn * 4); fx.lineTo(qx + 22, y1 + sgn * 26); fx.closePath(); fx.fill(); } fx.restore(); } }
+      { const [qx, qy] = P1k(...CHEEK); if (pin > 0.01) { fx.save(); for (const [r, al] of [[150, 0.05], [110, 0.07], [70, 0.09]]) { fx.fillStyle = `rgba(110,48,34,${al * pin})`; fx.beginPath(); fx.ellipse(qx, qy + 60, r * 1.3, r * 0.45, 0, 0, 7); fx.fill(); } fx.restore(); } }
+      const [cx, cy] = P1k(...CHEEK); const k = ss(2.6, 3.4, t) * (1 - ss(6.0, 6.8, t)); if (k > 0) { fx.strokeStyle = `rgba(217,140,80,${0.75 * k})`; fx.lineWidth = 6; fx.setLineDash([18, 12]); fx.beginPath(); fx.arc(cx, cy, 120 + 12 * Math.sin(t * 4), 0, 7); fx.stroke(); fx.setLineDash([]); }
+      cam.setViewOffset(W, H, -90, -150, W, H); camLook(cheek.p.clone(), viewDir, lerp(0.72, 0.6, ss(0, 3, t)), lerp(0.5, 0.4, ss(0, DUR, t)));
+    } else if (CENA === 2) {   // 2º teste: bigode chinês mais fundo, maquiagem marcando
+      card('2º teste', 'Observe o <em>bigode chinês</em>', 'Mais fundo? A maquiagem marca mais?'); showCard(t, 0.4, DUR);
+      const deep = ss(1.6, 4.2, t); def.y = 0.011 * deep;
+      const pts = FOLD.map((p) => P1k(...p)); const path = () => { fx.beginPath(); fx.moveTo(...pts[0]); for (let i = 1; i < pts.length; i++) fx.lineTo(...pts[i]); };
+      fx.save(); fx.shadowColor = `rgba(92,42,30,${0.6 * deep})`; fx.shadowBlur = 36; fx.strokeStyle = `rgba(105,50,36,${0.38 * deep})`; fx.lineWidth = 30 + 14 * deep; fx.lineCap = 'round'; fx.lineJoin = 'round'; path(); fx.stroke(); fx.restore();
+      fx.save(); fx.lineCap = 'round'; fx.lineJoin = 'round'; for (const [w, a] of [[46, 0.10], [30, 0.14], [18, 0.2], [9, 0.32]]) { fx.strokeStyle = `rgba(88,38,28,${a * deep})`; fx.lineWidth = w; path(); fx.stroke(); }
+      fx.translate(10, 4); fx.strokeStyle = `rgba(255,232,215,${0.22 * deep})`; fx.lineWidth = 8; path(); fx.stroke(); fx.restore();
+      const mk = ss(4.2, 6.2, t); for (let i = 0; i < 140; i++) { const sgi = Math.floor(rnd(i) * (pts.length - 1)), u = rnd(i * 3.7); const a = pts[sgi], b = pts[sgi + 1]; const x = lerp(a[0], b[0], u) + (rnd(i * 5.1) - 0.5) * 70 * (1 - mk), y = lerp(a[1], b[1], u) + (rnd(i * 2.3) - 0.5) * 30 * (1 - mk);
+        fx.fillStyle = `rgba(232,196,160,${0.75 * cl(mk * 1.4 - rnd(i * 9) * 0.4)})`; fx.beginPath(); fx.arc(x, y, 3 + 3 * rnd(i * 4), 0, 7); fx.fill(); }
+      const gk = ss(0.8, 1.6, t) * (1 - ss(3.6, 4.4, t)); if (gk > 0) { fx.save(); fx.strokeStyle = `rgba(230,150,80,${0.8 * gk})`; fx.lineWidth = 7; fx.setLineDash([16, 12]); fx.lineCap = 'round'; fx.beginPath(); fx.moveTo(pts[0][0] - 40, pts[0][1]); for (let i = 1; i < pts.length; i++) fx.lineTo(pts[i][0] - 40, pts[i][1]); fx.stroke(); fx.restore(); }
+      fingMat.opacity = 0; fing.forEach((m) => m.visible = false);
+      cam.setViewOffset(W, H, -40, -160, W, H); camLook(fold.p.clone(), fold.n.clone().lerp(new THREE.Vector3(0, 0, 1), 0.7), lerp(0.66, 0.54, ss(0, DUR, t)), lerp(0.18, 0.08, ss(0, DUR, t)));
+    } else {                   // 3º teste: sorriso largo, linhas de acordeom na lateral
+      card('3º teste', 'Dê um <em>sorriso</em> bem largo', 'Linhas de acordeom (ou “linhas de wifi”) na lateral do rosto.'); showCard(t, 0.4, DUR);
+      const sm = ss(1.2, 2.6, t) * (1 - ss(8.0, 9.0, t)); def.z = 0.03 * sm; def.y = 0.006 * sm;
+      const [mxc, myc] = P1k(466, 462); for (let i = 0; i < 4; i++) { const k = ss(2.4 + i * 0.5, 3.2 + i * 0.5, t) * (1 - ss(8.0, 9.0, t)); if (k <= 0) continue; const r = 210 + i * 58;
+        fx.save(); fx.lineCap = 'round'; const a0 = Math.PI * (0.86 - 0.015 * i), a1 = Math.PI * (1.12 + 0.015 * i); for (const [w, a] of [[22, 0.08], [12, 0.16], [6, 0.34]]) { fx.strokeStyle = `rgba(96,44,34,${a * k})`; fx.lineWidth = w; fx.beginPath(); fx.arc(mxc + 30, myc - 10, r, a0, a1); fx.stroke(); }
+        fx.strokeStyle = `rgba(255,232,216,${0.3 * k})`; fx.lineWidth = 5; fx.beginPath(); fx.arc(mxc + 30, myc - 10, r + 11, a0, a1); fx.stroke(); fx.restore(); }
+      const gk = ss(5.2, 6.0, t) * (1 - ss(8.2, 9.0, t)); if (gk > 0) { fx.save(); fx.strokeStyle = `rgba(230,150,80,${0.8 * gk})`; fx.lineWidth = 6; fx.setLineDash([16, 12]); fx.beginPath(); fx.ellipse(mxc - 260, myc - 10, 230, 300, 0, 0, 7); fx.stroke(); fx.restore(); }
+      fing.forEach((m) => m.visible = false);
+      cam.setViewOffset(W, H, -60, -170, W, H); camLook(smile.p.clone(), smile.n.clone().lerp(new THREE.Vector3(0, 0, 1), 0.25), lerp(0.72, 0.6, ss(0, DUR, t)), lerp(0.4, 0.28, ss(0, DUR, t)));
+    }
+    uDef.value.copy(def); ovTex.needsUpdate = true;     renderer.render(scene, cam);
+  };
+} else {
+  // ---------------- 4: colágeno e sustentação (corte da pele) ----------------
+  const fs = new THREE.Scene(); fs.background = BG; const fcam = new THREE.PerspectiveCamera(28, W / H, 0.1, 100);
+  fs.add(new THREE.HemisphereLight(0xfff0e0, 0x3a2416, 0.9)); const fk = new THREE.DirectionalLight(0xffe4cc, 2.4); fk.position.set(-3, 6, 7); fs.add(fk);
+  const fr = new THREE.DirectionalLight(0xe0a070, 1.3); fr.position.set(4, 2, -5); fs.add(fr); const ff = new THREE.DirectionalLight(0xffd8bc, 0.5); ff.position.set(4, 1, 6); fs.add(ff);
+  const BW = 3.0, BD = 1.6, TOP = 1.4, SEG = 80;
+  const mkLayer = (h, yTop, c, r) => { const geo = new THREE.BoxGeometry(BW, h, BD, SEG, 1, 1); geo.translate(0, yTop - h / 2, 0); const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color: c, roughness: r})); m.userData.y0 = Float32Array.from(geo.attributes.position.array); fs.add(m); return m; };
+  const epi = mkLayer(0.2, TOP, 0xe8bfa0, 0.5), der = mkLayer(2.3, TOP - 0.2, 0xd79583, 0.7), hip = mkLayer(1.2, TOP - 2.5, 0xe9cd8f, 0.85);
+  const sagAt = (x, s) => s * (0.28 * Math.exp(-(x * x) / (2 * 0.16 * 0.16)) + 0.07 * (x * x) / 2.25);   // ruga no centro + leve queda
+  function deform(m, s, yTopLim) { const a = m.geometry.attributes.position, y0 = m.userData.y0; for (let i = 0; i < a.count; i++) { const x = y0[i * 3], y = y0[i * 3 + 1]; const w = cl((y - yTopLim) / (TOP - yTopLim)); a.setY(i, y - sagAt(x, s) * w); } a.needsUpdate = true; m.geometry.computeVertexNormals(); }
+  // rede de colágeno (fibras onduladas na face do corte) e fragmentos que aparecem quando se rompem
+  const fib = []; for (let i = 0; i < 64; i++) { const y = TOP - 0.35 - 1.95 * rnd(i * 3.3), ang = (rnd(i * 5.7) - 0.5) * 0.9, len = 0.9 + 1.1 * rnd(i * 2.1), x0 = -BW / 2 + 0.15 + (BW - 0.3 - len * Math.cos(ang)) * rnd(i * 7.9);
+    const pts = []; for (let k = 0; k <= 12; k++) { const u = k / 12; pts.push(new THREE.Vector3(x0 + u * len * Math.cos(ang), y + u * len * Math.sin(ang) + 0.03 * Math.sin(u * 14 + i), BD / 2 + 0.015)); }
+    const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 48, 0.022 + 0.012 * rnd(i), 6), new THREE.MeshStandardMaterial({color: i % 5 ? 0xf6e0d4 : 0xf3e3a8, roughness: 0.55, transparent: true}));
+    m.userData = {tb: 1.6 + 2.6 * rnd(i * 13), keep: rnd(i * 17) < 0.3, x: x0 + len / 2 * Math.cos(ang)}; fs.add(m); fib.push(m); }
+  const frag = []; for (let i = 0; i < 60; i++) { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.1 + 0.15 * rnd(i), 6), new THREE.MeshStandardMaterial({color: 0xeed6ca, roughness: 0.7, transparent: true}));
+    m.position.set(-BW / 2 + 0.2 + (BW - 0.4) * rnd(i * 2.9), TOP - 0.4 - 1.9 * rnd(i * 4.1), BD / 2 + 0.015); m.rotation.z = rnd(i * 6.3) * 3.14; m.userData = {tb: 2.0 + 2.4 * rnd(i * 8.8)}; fs.add(m); frag.push(m); }
+  const lbl = document.createElement('div'); lbl.style.cssText = 'position:absolute;left:84px;right:84px;bottom:420px;color:#f4e9dc;font:600 40px/1.25 M;text-shadow:0 3px 14px rgba(0,0,0,.6)'; document.getElementById('st').appendChild(lbl);
+  renderAt = (t) => {
+    card('Colágeno', 'Degradação do <em>colágeno</em>', 'A pele perde firmeza e sustentação.'); showCard(t, 0.3, DUR);
+    const sag = ss(1.8, 5.2, t); deform(epi, sag, TOP - 0.2); deform(der, sag, TOP - 2.5);
+    fib.forEach((m) => { const d = m.userData; const k = d.keep ? 1 - 0.35 * sag : 1 - ss(d.tb, d.tb + 0.8, t); m.material.opacity = k; m.visible = k > 0.02; m.position.y = -sagAt(d.x, sag) * 0.6; m.scale.x = d.keep ? 1 : 1 - 0.3 * (1 - k); });
+    frag.forEach((m) => { const k = ss(m.userData.tb, m.userData.tb + 0.5, t) * (1 - 0.5 * ss(5.4, 6.3, t)); m.material.opacity = 0.85 * k; m.visible = k > 0.02; });
+    lbl.innerHTML = t < 1.9 ? 'Rede de colágeno <b style="color:#e3a56c">firme</b>' : 'As fibras se rompem e a pele <b style="color:#e3a56c">cede</b>'; lbl.style.opacity = Math.min(ss(0.5, 0.9, t), t < 1.9 ? 1 - ss(1.6, 1.9, t) : ss(1.9, 2.3, t)) * (1 - ss(DUR - 0.3, DUR, t));
+    const ang = -0.42 + 0.12 * Math.sin(t * 0.35); fcam.position.set(Math.sin(ang) * 11.2, 2.6, Math.cos(ang) * 11.2); fcam.lookAt(0, -0.5, 0);
+    renderer.render(fs, fcam);
+  };
+}
+// entrada e saída suaves (o pipeline não faz fade na sequência)
+const r0 = renderAt; window.renderAt = (t) => { r0(t); const k = Math.min(ss(0, 0.35, t), 1 - ss(DUR - 0.35, DUR, t)); document.getElementById('st').style.opacity = k; };
+await document.fonts.ready; window.DUR = DUR; window.pronto = true;
+</script></body></html>

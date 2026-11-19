@@ -15,6 +15,6 @@ m=cv2.morphologyEx(m,cv2.MORPH_OPEN,np.ones((2,2),np.uint8)); m=cv2.morphologyEx
 n,lab,st,_=cv2.connectedComponentsWithStats(m); keep=[i for i in range(1,n) if st[i,4]>300]; cv2.imwrite('mask_brow1k.png',np.isin(lab,keep).astype(np.uint8)*255)
 PY
 python3 scripts/pele.py && python3 scripts/fios.py
-cp "$A"/cena.html www/; cp modelo/LeePerrySmith.glb modelo/Infinite-Level_02_Tangent_SmoothUV.jpg pele4k.jpg fios.json www/
+cp "$A"/cena.html "$A"/testes.html www/; cp modelo/LeePerrySmith.glb modelo/Infinite-Level_02_Tangent_SmoothUV.jpg pele4k.jpg fios.json www/
 ln -sfn ~/.docon/motion/node_modules/three www/three; cp ~/.docon/fonts/gf/Montserrat-{500,600,700,800}.ttf www/fonts/ 2>/dev/null || true
 echo pronto
